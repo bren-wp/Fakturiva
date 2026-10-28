@@ -5,6 +5,7 @@ import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Log;
+import android.util.AtomicFile;
 import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -92,9 +93,21 @@ public final class RecoveryVault {
         cipher.updateAAD(MAGIC);
         return cipher.doFinal(sealed,16,sealed.length-16);
     }
-    private static void move(File from,File to){
-        if(from.exists()&&!from.renameTo(to))
-            throw new IllegalStateException("Nije moguće sačuvati stariju kopiju");
+    /** Copy-on-write: a power loss never removes the previous generation. */
+    private static void copyAtomically(File source,File destination) throws Exception{
+        if(!source.isFile())return;
+        if(source.length()>MAX_BYTES)throw new IllegalArgumentException("Prevelika lokalna kopija");
+        AtomicFile atomic=new AtomicFile(destination);
+        FileOutputStream out=null;
+        try(FileInputStream in=new FileInputStream(source)){
+            out=atomic.startWrite();
+            byte[] block=new byte[8192];int n;
+            while((n=in.read(block))!=-1)out.write(block,0,n);
+            atomic.finishWrite(out);out=null;
+        }catch(Exception e){
+            if(out!=null)atomic.failWrite(out);
+            throw e;
+        }
     }
     /** Always called after the SQLite commit, never inside a transaction. */
     public static synchronized void snapshot(Context ctx,Store store) throws Exception{
@@ -108,10 +121,11 @@ public final class RecoveryVault {
         try(FileOutputStream out=new FileOutputStream(tmp)){
             out.write(sealed);out.flush();out.getFD().sync();
         }finally{Arrays.fill(sealed,(byte)0);}
-        File oldest=file(dir,COPIES-1);
-        if(oldest.exists()&&!oldest.delete())throw new IllegalStateException("Nije moguće rotirati kopiju");
-        for(int i=COPIES-2;i>=0;i--)move(file(dir,i),file(dir,i+1));
-        move(tmp,file(dir,0));
+        // Preserve recovery-0 until the new snapshot is DURABLY committed.
+        // Older generations are atomically copied, never destructively renamed.
+        for(int i=COPIES-1;i>0;i--)copyAtomically(file(dir,i-1),file(dir,i));
+        copyAtomically(tmp,file(dir,0));
+        if(!tmp.delete())Log.w("FakturivaRecovery","Temporary recovery copy will be cleaned later");
     }
     public static synchronized int count(Context ctx){
         File dir=directory(ctx);int n=0;
@@ -124,7 +138,7 @@ public final class RecoveryVault {
         if(!file.isFile())throw new IllegalArgumentException("Kopija ne postoji");
         if(file.length()>MAX_BYTES)throw new IllegalArgumentException("Prevelika kopija");
         byte[] sealed=new byte[(int)file.length()];
-        try(FileInputStream in=new FileInputStream(file)){
+        try(FileInputStream in=new AtomicFile(file).openRead()){
             int off=0,n;while(off<sealed.length&&(n=in.read(sealed,off,sealed.length-off))>0)off+=n;
             if(off!=sealed.length)throw new IllegalArgumentException("Nepotpuna kopija");
         }
@@ -134,6 +148,49 @@ public final class RecoveryVault {
         try{return new JSONObject(new String(plain,StandardCharsets.UTF_8));}
         finally{Arrays.fill(plain,(byte)0);}
     }
+    private static File workingFile(Context ctx){
+        return new File(directory(ctx),"working-draft.fv");
+    }
+    public static synchronized boolean hasWorkingDraft(Context ctx){
+        return new AtomicFile(workingFile(ctx)).exists();
+    }
+    /** Crash-safe, device-key encrypted draft in progress (not a numbered invoice). */
+    public static synchronized void saveWorkingDraft(Context ctx,JSONObject data)throws Exception{
+        byte[] raw=data.toString().getBytes(StandardCharsets.UTF_8);
+        if(raw.length>1024*1024)throw new IllegalArgumentException("Prevelik radni nacrt");
+        byte[] encrypted;
+        try{encrypted=seal(raw);}finally{Arrays.fill(raw,(byte)0);}
+        AtomicFile atomic=new AtomicFile(workingFile(ctx));FileOutputStream out=null;
+        try{
+            out=atomic.startWrite();out.write(encrypted);
+            atomic.finishWrite(out);out=null;
+        }catch(Exception e){
+            if(out!=null)atomic.failWrite(out);
+            throw e;
+        }finally{Arrays.fill(encrypted,(byte)0);}
+    }
+    public static synchronized JSONObject readWorkingDraft(Context ctx)throws Exception{
+        AtomicFile atomic=new AtomicFile(workingFile(ctx));
+        if(!atomic.exists())return null;
+        byte[] encrypted;
+        try(FileInputStream in=atomic.openRead()){
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+            byte[] buffer=new byte[4096];int n;
+            while((n=in.read(buffer))!=-1){
+                if(bytes.size()+n>1024*1024+128)throw new IllegalArgumentException("Prevelika datoteka nacrta");
+                bytes.write(buffer,0,n);
+            }
+            encrypted=bytes.toByteArray();
+        }
+        byte[] raw;
+        try{raw=open(encrypted);}finally{Arrays.fill(encrypted,(byte)0);}
+        try{return new JSONObject(new String(raw,StandardCharsets.UTF_8));}
+        finally{Arrays.fill(raw,(byte)0);}
+    }
+    public static synchronized void clearWorkingDraft(Context ctx){
+        new AtomicFile(workingFile(ctx)).delete();
+    }
+
     public static synchronized String summary(Context ctx){
         File f=file(directory(ctx),0);
         if(!f.isFile())return "Lokalna kopija još nije stvorena";
