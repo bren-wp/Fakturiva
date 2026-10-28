@@ -152,7 +152,8 @@ public final class RecoveryVault {
         return new File(directory(ctx),"working-draft.fv");
     }
     public static synchronized boolean hasWorkingDraft(Context ctx){
-        return new AtomicFile(workingFile(ctx)).exists();
+        File file=workingFile(ctx);
+        return file.isFile()||new File(file.getPath()+".bak").isFile();
     }
     /** Crash-safe, device-key encrypted draft in progress (not a numbered invoice). */
     public static synchronized void saveWorkingDraft(Context ctx,JSONObject data)throws Exception{
@@ -171,7 +172,7 @@ public final class RecoveryVault {
     }
     public static synchronized JSONObject readWorkingDraft(Context ctx)throws Exception{
         AtomicFile atomic=new AtomicFile(workingFile(ctx));
-        if(!atomic.exists())return null;
+        if(!hasWorkingDraft(ctx))return null;
         byte[] encrypted;
         try(FileInputStream in=atomic.openRead()){
             ByteArrayOutputStream bytes=new ByteArrayOutputStream();
