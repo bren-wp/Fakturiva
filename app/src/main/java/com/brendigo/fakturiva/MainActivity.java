@@ -834,9 +834,20 @@ public final class MainActivity extends Activity {
         place(c,row);place(body,c);gap(body,9);c.setOnClickListener(v->action.run());
     }
     private void company(){
-        setup("company",true);toolbar("Profil tvrtke","Podaci koji se prikazuju na računima i ponudama",true);
-        caption(body,"Jednom unesite svoje podatke. Novi potvrđeni dokumenti čuvaju vlastitu kopiju podataka izdavatelja.");
-        gap(body,12);
+        setup("company",true);toolbar("Profil tvrtke","Podaci za dokumente",true);
+        LinearLayout hero=horizontal();pad(hero,15,15);
+        background(hero,dark?0xff26365a:0xffe9edff,18);
+        ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.brand_mark);
+        hero.addView(brand,lp(60,60));
+        LinearLayout heroText=vertical();pad(heroText,10,0);
+        String companyName=db.setting("name").trim();
+        heroText.addView(label(companyName.isEmpty()?"Moja tvrtka / obrt":companyName,15,ink(),true));
+        gap(heroText,5);
+        heroText.addView(label("Profil izdavatelja računa",11,sub(),false));
+        hero.addView(heroText,new LinearLayout.LayoutParams(0,-2,1));
+        place(body,hero);gap(body,14);
+        caption(body,"Podaci se prikazuju na novim računima i ponudama. Potvrđeni dokumenti trajno čuvaju podatke iz trenutka potvrde.");
+        gap(body,14);
         LinearLayout form=card();
         title(form,"Osnovni podaci");
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note"};
@@ -852,7 +863,7 @@ public final class MainActivity extends Activity {
             if(i==7)fields[i].setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         }
         place(body,form);gap(body,16);
-        button(body,"Spremi sve podatke",()->{
+        Runnable saveCompany=()->{
             try{
                 String name=fields[0].getText().toString().trim();
                 String oib=fields[1].getText().toString().trim();
@@ -865,8 +876,14 @@ public final class MainActivity extends Activity {
                 db.companySettings(keys,vals);
                 toast("Podaci tvrtke uspješno spremljeni");settings();
             }catch(Exception e){error(e);}
-        });
+        };
+        // Keep the primary action visible while scrolling the long form, as in the reference.
+        LinearLayout bottomAction=vertical();pad(bottomAction,16,7);
+        bottomAction.setBackgroundColor(bg());
+        bottomAction.addView(action("✓  Spremi promjene",BLUE,true,saveCompany),lp(-1,52));
+        root.addView(bottomAction,1,new LinearLayout.LayoutParams(-1,-2));
         gap(body,12);caption(body,"Fiskalizacija nije podržana u ovoj verziji. Podaci o poslovnom prostoru i operateru služe samo za pripremu profila.");
+        gap(body,16);
     }
     private void eracun(){
         setup("eracun",true);toolbar("eRačuni i fiskalizacija","Trenutačni status integracije",true);
