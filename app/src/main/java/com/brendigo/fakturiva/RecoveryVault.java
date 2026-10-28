@@ -129,7 +129,10 @@ public final class RecoveryVault {
     }
     public static synchronized int count(Context ctx){
         File dir=directory(ctx);int n=0;
-        for(int i=0;i<COPIES;i++)if(file(dir,i).exists())n++;
+        for(int i=0;i<COPIES;i++){
+            File current=file(dir,i);
+            if(current.isFile()||new File(current.getPath()+".bak").isFile())n++;
+        }
         return n;
     }
     public static synchronized JSONObject read(Context ctx,int index) throws Exception{
