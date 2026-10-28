@@ -44,7 +44,8 @@ public final class DocumentPreview {
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         image.setBackgroundColor(Color.WHITE);
         image.setContentDescription("Stvarni pregled prve stranice PDF dokumenta");
-        image.setLayoutParams(new LinearLayout.LayoutParams(-1,-2));
+        int previewHeight=Math.round(activity.getResources().getDisplayMetrics().density*300f);
+        image.setLayoutParams(new LinearLayout.LayoutParams(-1,previewHeight));
         return image;
     }
 }
