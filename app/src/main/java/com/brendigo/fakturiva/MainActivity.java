@@ -276,8 +276,19 @@ public final class MainActivity extends Activity {
         button(body,"Započni  ›",()->{prefs.edit().putBoolean("welcomed",true).apply();navigate("home");});
         gap(body,20);caption(body,"Bez registracije, oglasa i mrežnih servisa.");
     }
+    private void backupAlert(){
+        if(db.backupWarning().isEmpty())return;
+        LinearLayout warning=card();
+        warning.addView(label("Provjerite sigurnosnu kopiju",14,RED,true));
+        gap(warning,6);
+        warning.addView(label(db.backupWarning(),12,ink(),false));
+        gap(warning,9);
+        warning.addView(action("Izvezi šifriranu kopiju",BLUE,false,this::backupScreen));
+        place(body,warning);gap(body,12);
+    }
     private void home(){
         setup("home",true);
+        backupAlert();
         LinearLayout bar=horizontal();
         LinearLayout text=vertical();
         text.addView(label("Fakturiva",23,ink(),true));
@@ -701,6 +712,7 @@ public final class MainActivity extends Activity {
         currentDocumentId=id;Store.Document d;
         try{d=db.document(id);}catch(Exception e){error(e);navigate("home");return;}
         setup("detail",true);toolbar(Store.INVOICE.equals(d.type)?"Pregled računa":"Pregled ponude","Detalji dokumenta",true);
+        backupAlert();
         LinearLayout card=card();card.addView(label(d.number==null?"Nacrt #"+d.id:d.number,21,BLUE,true));gap(card,4);
         card.addView(label("Status: "+status(d.status),12,sub(),false));gap(card,18);
         card.addView(label(d.issuerName,15,ink(),true));gap(card,4);
