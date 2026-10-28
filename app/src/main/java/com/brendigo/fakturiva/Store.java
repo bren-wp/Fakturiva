@@ -140,7 +140,8 @@ public final class Store extends SQLiteOpenHelper {
     public long createDraft(String type,long clientId,String issueDate,String dueDate,String notes,List<Item> items) {
         if(!type.equals(INVOICE)&&!type.equals(QUOTE)) throw new IllegalArgumentException("Neispravna vrsta dokumenta");
         if(items.isEmpty()) throw new IllegalArgumentException("Dodajte barem jednu stavku");
-        if(issueDate.isEmpty() || dueDate.isEmpty()) throw new IllegalArgumentException("Unesite datume");
+        if(!issueDate.matches("\\d{4}-\\d{2}-\\d{2}")||!dueDate.matches("\\d{4}-\\d{2}-\\d{2}"))
+            throw new IllegalArgumentException("Unesite ispravne datume");
         SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
         boolean saved=false;
         try {
@@ -246,7 +247,8 @@ public final class Store extends SQLiteOpenHelper {
                 type=c.getString(0);issueDate=c.getString(1);status=c.getString(2);
             }
             if(!DRAFT.equals(status)) throw new IllegalStateException("Dokument je već potvrđen");
-            if(setting("name").trim().isEmpty()) throw new IllegalStateException("Unesite podatke svoje tvrtke u Postavkama");
+            String issuerName=setting("name").trim();
+            if(issuerName.isEmpty()) throw new IllegalStateException("Unesite podatke svoje tvrtke u Postavkama");
             int year=Integer.parseInt(issueDate.substring(0,4));
             int num=1;
             try(Cursor c=db.rawQuery("SELECT last_num FROM sequences WHERE type=? AND year=?",new String[]{type,String.valueOf(year)})){
@@ -256,6 +258,8 @@ public final class Store extends SQLiteOpenHelper {
             db.insertWithOnConflict("sequences",null,seq,SQLiteDatabase.CONFLICT_REPLACE);
             String code=(INVOICE.equals(type)?"R":"P")+"-"+year+"-"+String.format(java.util.Locale.ROOT,"%04d",num);
             ContentValues v=new ContentValues();v.put("number",code);v.put("status",INVOICE.equals(type)?ISSUED:SENT);
+            // Freeze issuer identity and payment details at document confirmation time.
+            for(String key:new String[]{"name","address","oib","email","iban","tax_note"})v.put("issuer_"+key,setting(key));
             if(db.update("documents",v,"id=? AND status=?",new String[]{String.valueOf(id),DRAFT})!=1)
                 throw new IllegalStateException("Dokument se promijenio");
             db.setTransactionSuccessful();saved=true;
