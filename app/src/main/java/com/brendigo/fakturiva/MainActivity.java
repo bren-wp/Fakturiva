@@ -48,6 +48,7 @@ public final class MainActivity extends Activity {
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103;
     private Store db; private SharedPreferences prefs;
     private LinearLayout root,body; private ScrollView scroller;
+    private int paymentFilter=0;
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private boolean dark=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
@@ -949,69 +950,93 @@ public final class MainActivity extends Activity {
     private void payments(){
         setup("payments",true);
         toolbar("Naplata","Evidencija uplata i potraživanja",true);
+        List<Store.Payment> history=db.payments();
+        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
+        int monthlyCount=0;long monthlyAmount=0;
+        for(Store.Payment p:history)if(p.paidOn.startsWith(month)){
+            monthlyCount++;monthlyAmount=Math.addExact(monthlyAmount,p.amountCents);
+        }
         LinearLayout hero=vertical();pad(hero,19,18);
-        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff173b69,0xff102844});
-        gradient.setCornerRadius(dp(18));hero.setBackground(gradient);
-        hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,8);
-        hero.addView(label(Money.euros(db.receivedCents()),28,WHITE,true));gap(hero,8);
-        hero.addView(label("Preostala potraživanja: "+Money.euros(db.outstandingCents()),11,0xff9ededa,false));
-        place(body,hero);gap(body,16);
+        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            new int[]{0xff173b69,0xff102844});
+        gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
+        hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
+        hero.addView(label(Money.euros(db.receivedCents()),29,WHITE,true));gap(hero,13);
+        hero.addView(label("✓  "+monthlyCount+" uplata ovaj mjesec · "+Money.euros(monthlyAmount),
+            11,0xff73dfd0,false));
+        place(body,hero);gap(body,15);
+
         LinearLayout filters=horizontal();
-        String[] names={"Sve uplate","Nenaplaćeni računi"};
-        for(int i=0;i<names.length;i++){
-            final int section=i;
-            TextView tab=label(names[i],12,i==0?BLUE:sub(),i==0);
+        filters.setTag("payment-filters");
+        filters.setBackground(shape(dark?0xff263852:0xffe9eef6,15));
+        pad(filters,3,3);
+        String[] names={"Sve uplate","Ovaj mjesec","Za naplatu"};
+        for(int n=0;n<names.length;n++){
+            final int selected=n;
+            TextView tab=label(names[n],11,paymentFilter==n?BLUE:sub(),paymentFilter==n);
             tab.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(42),1);
+            if(paymentFilter==n)tab.setBackground(shape(panel(),12));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
             filters.addView(tab,p);
-            tab.setOnClickListener(v->showPaymentSection(section));
+            tab.setOnClickListener(v->{paymentFilter=selected;payments();});
         }
-        place(body,filters);gap(body,10);
-        LinearLayout transactions=vertical();transactions.setTag("payment-rows");
-        place(body,transactions);
-        showPaymentSection(0);
-    }
-    private void showPaymentSection(int selected){
-        if(!"payments".equals(screen))return;
-        LinearLayout content=null;
-        for(int i=0;i<body.getChildCount();i++){
-            View v=body.getChildAt(i);
-            if("payment-rows".equals(v.getTag()) && v instanceof LinearLayout){content=(LinearLayout)v;break;}
+        place(body,filters);gap(body,17);
+        LinearLayout heading=horizontal();
+        heading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",17,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        if(paymentFilter!=2){
+            TextView export=label("Izvoz CSV",11,BLUE,true);
+            heading.addView(export);export.setOnClickListener(v->createFile(104,"text/csv","Fakturiva-uplate.csv"));
         }
-        if(content==null)return;
-        content.removeAllViews();
-        if(selected==0){
-            List<Store.Payment> history=db.payments();
-            if(history.isEmpty()){
-                TextView empty=label("Nema evidentiranih uplata. Uplatu možete unijeti u detaljima izdanog računa.",12,sub(),false);
-                place(content,empty);
+        place(body,heading);gap(body,11);
+
+        LinearLayout card=card();pad(card,0,0);
+        if(paymentFilter==2){
+            int n=0;
+            for(Store.Document d:db.documents(Store.INVOICE)){
+                if(!Store.ISSUED.equals(d.status)||d.outstanding()<=0)continue;
+                if(n++>0)paymentDivider(card);
+                LinearLayout row=horizontal();pad(row,14,15);
+                LinearLayout detail=vertical();
+                detail.addView(label(d.clientName,13,ink(),true));
+                detail.addView(label(d.number+" · "+d.dueDate,11,sub(),false));
+                row.addView(detail,new LinearLayout.LayoutParams(0,-2,1));
+                LinearLayout right=vertical();right.setGravity(Gravity.RIGHT);
+                right.addView(label(Money.euros(d.outstanding()),13,BLUE,true));
+                right.addView(label("Za naplatu",10,sub(),false));
+                row.addView(right);place(card,row);
+                row.setOnClickListener(v->showDocument(d.id));
             }
-            for(Store.Payment payment:history){
-                LinearLayout item=card();LinearLayout top=horizontal();
-                TextView check=label("✓",18,TEAL,true);check.setGravity(Gravity.CENTER);
-                check.setBackground(shape(dark?0xff1d4b45:0xffddf8ee,12));
-                top.addView(check,lp(38,38));
-                LinearLayout description=vertical();pad(description,10,0);
-                description.addView(label(payment.clientName,13,ink(),true));
-                description.addView(label(payment.invoiceNumber+" · "+payment.paidOn,11,sub(),false));
-                top.addView(description,new LinearLayout.LayoutParams(0,-2,1));
-                top.addView(label("+"+Money.euros(payment.amountCents),13,TEAL,true));
-                place(item,top);place(content,item);gap(content,9);
-                item.setOnClickListener(v->showDocument(payment.documentId));
-            }
+            if(n==0){pad(card,16,16);place(card,label("Nema nenaplaćenih potvrđenih računa.",12,sub(),false));}
         }else{
-            int count=0;
-            for(Store.Document invoice:db.documents(Store.INVOICE)){
-                if(Store.ISSUED.equals(invoice.status) && invoice.outstanding()>0){
-                    LinearLayout item=card();
-                    item.addView(label(invoice.number+" · "+invoice.clientName,13,ink(),true));gap(item,6);
-                    item.addView(label("Za naplatu: "+Money.euros(invoice.outstanding()),14,BLUE,true));
-                    gap(item,8);item.addView(action("Evidentiraj uplatu",BLUE,false,()->payDialog(invoice.id)));
-                    place(content,item);gap(content,9);count++;
-                }
+            int n=0;
+            for(Store.Payment p:history){
+                if(paymentFilter==1&&!p.paidOn.startsWith(month))continue;
+                if(n++>0)paymentDivider(card);
+                LinearLayout row=horizontal();pad(row,12,17);
+                TextView check=label("✓",19,TEAL,true);check.setGravity(Gravity.CENTER);
+                check.setBackground(shape(dark?0xff22463e:0xffdbf7ea,12));
+                row.addView(check,lp(42,42));
+                LinearLayout description=vertical();pad(description,10,0);
+                description.addView(label(p.clientName,13,ink(),true));
+                description.addView(label(p.invoiceNumber+" · "+p.paidOn,11,sub(),false));
+                row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+                row.addView(label("+"+Money.euros(p.amountCents),12,TEAL,true));
+                place(card,row);
+                row.setOnClickListener(v->showDocument(p.documentId));
             }
-            if(count==0)place(content,label("Svi potvrđeni računi su naplaćeni.",12,sub(),false));
+            if(n==0){pad(card,16,16);place(card,label(
+                paymentFilter==1?"Nema evidentiranih uplata ovaj mjesec.":"Nema evidentiranih uplata.",
+                12,sub(),false));}
         }
+        place(body,card);gap(body,15);
+        caption(body,"Naplate se prikazuju prema stvarno evidentiranim uplatama.");
+        gap(body,20);
+    }
+    private void paymentDivider(LinearLayout card){
+        View divider=new View(this);
+        divider.setBackgroundColor(border());
+        card.addView(divider,lp(-1,1));
     }
     private String getPackageVersion(){
         try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}
