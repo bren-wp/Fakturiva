@@ -864,12 +864,71 @@ public final class MainActivity extends Activity {
         secondary(body,"Pregled uplata",this::payments);
     }
     private void payments(){
-        setup("payments",true);toolbar("Naplata","Evidencija uplata i potraživanja",true);
-        LinearLayout sum=card();caption(sum,"Ukupno naplaćeno");gap(sum,10);
-        sum.addView(label(Money.euros(db.receivedCents()),28,BLUE,true));place(body,sum);
-        section("Računi");
-        for(Store.Document d:db.documents(Store.INVOICE))
-            if(!Store.DRAFT.equals(d.status)){documentRow(d);}
+        setup("payments",true);
+        toolbar("Naplata","Evidencija uplata i potraživanja",true);
+        LinearLayout hero=vertical();pad(hero,19,18);
+        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff173b69,0xff102844});
+        gradient.setCornerRadius(dp(18));hero.setBackground(gradient);
+        hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,8);
+        hero.addView(label(Money.euros(db.receivedCents()),28,WHITE,true));gap(hero,8);
+        hero.addView(label("Preostala potraživanja: "+Money.euros(db.outstandingCents()),11,0xff9ededa,false));
+        place(body,hero);gap(body,16);
+        LinearLayout filters=horizontal();
+        String[] names={"Sve uplate","Nenaplaćeni računi"};
+        for(int i=0;i<names.length;i++){
+            final int section=i;
+            TextView tab=label(names[i],12,i==0?BLUE:sub(),i==0);
+            tab.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(42),1);
+            filters.addView(tab,p);
+            tab.setOnClickListener(v->showPaymentSection(section));
+        }
+        place(body,filters);gap(body,10);
+        LinearLayout transactions=vertical();transactions.setTag("payment-rows");
+        place(body,transactions);
+        showPaymentSection(0);
+    }
+    private void showPaymentSection(int selected){
+        if(!"payments".equals(screen))return;
+        LinearLayout content=null;
+        for(int i=0;i<body.getChildCount();i++){
+            View v=body.getChildAt(i);
+            if("payment-rows".equals(v.getTag()) && v instanceof LinearLayout){content=(LinearLayout)v;break;}
+        }
+        if(content==null)return;
+        content.removeAllViews();
+        if(selected==0){
+            List<Store.Payment> history=db.payments();
+            if(history.isEmpty()){
+                TextView empty=label("Nema evidentiranih uplata. Uplatu možete unijeti u detaljima izdanog računa.",12,sub(),false);
+                place(content,empty);
+            }
+            for(Store.Payment payment:history){
+                LinearLayout item=card();LinearLayout top=horizontal();
+                TextView check=label("✓",18,TEAL,true);check.setGravity(Gravity.CENTER);
+                check.setBackground(shape(dark?0xff1d4b45:0xffddf8ee,12));
+                top.addView(check,lp(38,38));
+                LinearLayout description=vertical();pad(description,10,0);
+                description.addView(label(payment.clientName,13,ink(),true));
+                description.addView(label(payment.invoiceNumber+" · "+payment.paidOn,11,sub(),false));
+                top.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+                top.addView(label("+"+Money.euros(payment.amountCents),13,TEAL,true));
+                place(item,top);place(content,item);gap(content,9);
+                item.setOnClickListener(v->showDocument(payment.documentId));
+            }
+        }else{
+            int count=0;
+            for(Store.Document invoice:db.documents(Store.INVOICE)){
+                if(Store.ISSUED.equals(invoice.status) && invoice.outstanding()>0){
+                    LinearLayout item=card();
+                    item.addView(label(invoice.number+" · "+invoice.clientName,13,ink(),true));gap(item,6);
+                    item.addView(label("Za naplatu: "+Money.euros(invoice.outstanding()),14,BLUE,true));
+                    gap(item,8);item.addView(action("Evidentiraj uplatu",BLUE,false,()->payDialog(invoice.id)));
+                    place(content,item);gap(content,9);count++;
+                }
+            }
+            if(count==0)place(content,label("Svi potvrđeni računi su naplaćeni.",12,sub(),false));
+        }
     }
     private String getPackageVersion(){
         try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}
