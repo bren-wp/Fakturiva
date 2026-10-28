@@ -22,16 +22,22 @@ jobs:
           gradle-version: '8.9'
       - name: Build Android application
         run: gradle :app:assembleDebug
+      - name: Enable emulator hardware acceleration
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          fi
       - name: Capture genuine emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 29
           arch: x86_64
-          target: google_apis
-          profile: pixel_6
+          target: default
+          profile: pixel_2
           ram-size: 3072M
           disk-size: 4096M
-          disable-animations: true
+          disable-animations: false
           script: bash ci/capture_screenshots.sh
       - uses: actions/upload-artifact@v4
         with:
