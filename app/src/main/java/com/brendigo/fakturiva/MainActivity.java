@@ -49,7 +49,7 @@ public final class MainActivity extends Activity {
     private LinearLayout root,body; private ScrollView scroller;
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private boolean dark=false;
-    private long currentDocumentId=-1,editClientId=-1;
+    private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
     private String draftIssue="",draftDue="",draftNote="";
     private final ArrayList<Store.Item> draftItems=new ArrayList<>();
     private long pendingPdfId=-1;private char[] pendingPassword;
@@ -58,7 +58,13 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){super.onCreate(b);
         db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
         dark=prefs.getBoolean("dark",false);
-        if(!prefs.getBoolean("welcomed",false)) welcome(); else navigate("home");
+        try{
+            try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
+                if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
+                    throw new IllegalStateException("Neuspjela provjera baze");
+            }
+            if(!prefs.getBoolean("welcomed",false)) welcome(); else navigate("home");
+        }catch(Exception openError){damagedDatabase(openError);}
     }
     @Override protected void onDestroy(){if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');db.close();super.onDestroy();}
     private int bg(){return dark?0xff101c30:BG;}
@@ -112,20 +118,58 @@ public final class MainActivity extends Activity {
         row.addView(more,lp(36,42));more.setOnClickListener(v->navigate("settings"));
         place(body,row);gap(body,18);
     }
+    private ImageView icon(int id,int tint){
+        ImageView img=new ImageView(this);img.setImageResource(id);
+        img.setColorFilter(tint);img.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        return img;
+    }
     private void bottomNav(){
-        LinearLayout bar=horizontal();bar.setBackgroundColor(panel());pad(bar,6,9);
+        LinearLayout bar=horizontal();bar.setBackgroundColor(panel());pad(bar,6,7);
         String[] pages={"home","invoices","quotes","clients","settings"};
         String[] names={"Početna","Računi","Ponude","Klijenti","Više"};
-        String[] glyph={"⌂","▤","▣","♧","•••"};
+        int[] icons={R.drawable.ic_home,R.drawable.ic_invoice,R.drawable.ic_quote,R.drawable.ic_clients,R.drawable.ic_more};
         for(int i=0;i<pages.length;i++){final String destination=pages[i];
+            boolean selected=screen.equals(destination);
             LinearLayout tab=vertical();tab.setGravity(Gravity.CENTER);
-            TextView icon=label(glyph[i],22,screen.equals(destination)?BLUE:sub(),true);icon.setGravity(Gravity.CENTER);
-            TextView name=label(names[i],10,screen.equals(destination)?BLUE:sub(),screen.equals(destination));
-            name.setGravity(Gravity.CENTER);
-            tab.addView(icon,lp(-1,28));tab.addView(name,lp(-1,18));
-            bar.addView(tab,new LinearLayout.LayoutParams(0,dp(53),1));tab.setOnClickListener(v->navigate(destination));
+            LinearLayout badge=vertical();badge.setGravity(Gravity.CENTER);
+            if(selected)background(badge,dark?0xff273D66:0xffECEEFF,12);
+            badge.addView(icon(icons[i],selected?BLUE:sub()),lp(23,23));
+            LinearLayout.LayoutParams badgeLp=lp(39,35);badgeLp.gravity=Gravity.CENTER_HORIZONTAL;tab.addView(badge,badgeLp);
+            TextView name=label(names[i],10,selected?BLUE:sub(),selected);
+            name.setGravity(Gravity.CENTER);tab.addView(name,lp(-1,19));
+            bar.addView(tab,new LinearLayout.LayoutParams(0,dp(56),1));tab.setOnClickListener(v->navigate(destination));
         }
         place(root,bar);
+    }
+    /** Never silently delete or overwrite a damaged database. */
+    private void damagedDatabase(Exception cause){
+        setup("damaged",false);
+        gap(body,40);title(body,"Potreban je oporavak podataka");gap(body,16);
+        caption(body,"Baza se nije mogla sigurno otvoriti. Izvorna datoteka neće biti obrisana. Ako postoji lokalna kopija, možete je pokušati vratiti.");
+        gap(body,25);
+        button(body,"Pokušaj oporavak iz lokalne kopije",()->{
+            new AlertDialog.Builder(this).setTitle("Oporavak aplikacije")
+                .setMessage("Prije vraćanja sačuvat ćemo postojeću bazu u zasebnu datoteku. Lokalna kopija može biti starija od posljednjih izmjena.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Pokušaj",(dlg,w)->recoverDamagedDatabase()).show();
+        });
+    }
+    private void recoverDamagedDatabase(){
+        try{
+            JSONObject snapshot=RecoveryVault.read(this,0);
+            db.close();
+            File old=getDatabasePath("fakturiva.db");
+            File location=new File(getFilesDir(),"damaged-db-"+System.currentTimeMillis());
+            if(!location.mkdirs())throw new IllegalStateException("Nema mjesta za spremanje oštećene baze");
+            for(String suffix:new String[]{"","-wal","-shm","-journal"}){
+                File original=new File(old.getAbsolutePath()+suffix);
+                if(original.exists()&&!original.renameTo(new File(location,"fakturiva.db"+suffix)))
+                    throw new IllegalStateException("Nije moguće sigurno arhivirati bazu");
+            }
+            db=new Store(this);db.restore(snapshot);
+            toast("Oporavak je dovršen. Pregledajte dokumente i izvezite novu kopiju.");
+            navigate("home");
+        }catch(Exception e){error(e);damagedDatabase(e);}
     }
     private void navigate(String dest){
         filter="Svi";
@@ -159,27 +203,35 @@ public final class MainActivity extends Activity {
     private void home(){
         setup("home",true);
         LinearLayout bar=horizontal();
-        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.brand_mark);
-        bar.addView(logo,lp(39,39));
-        LinearLayout text=vertical();pad(text,10,0);
-        text.addView(label("Fakturiva",21,ink(),true));
-        text.addView(label("Upravljajte poslovanjem",10,sub(),false));
+        LinearLayout text=vertical();
+        text.addView(label("Fakturiva",23,ink(),true));
+        text.addView(label("Upravljajte poslovanjem",11,sub(),false));
         bar.addView(text,new LinearLayout.LayoutParams(0,-2,1));
-        TextView config=label("⚙",23,sub(),false);bar.addView(config,lp(35,45));config.setOnClickListener(v->settings());
-        place(body,bar);gap(body,25);
-        caption(body,dateFormat.format(new java.util.Date()).toUpperCase(Locale.forLanguageTag("hr-HR")));
-        gap(body,5);title(body,"Dobro jutro! 👋");caption(body,"Evo pregleda vašeg poslovanja.");gap(body,17);
+        ImageView search=icon(R.drawable.ic_search,ink());search.setBackground(shape(panel(),12));
+        LinearLayout.LayoutParams searchLp=lp(38,38);searchLp.setMargins(0,0,dp(8),0);bar.addView(search,searchLp);
+        search.setOnClickListener(v->documents(Store.INVOICE));
+        ImageView alerts=icon(R.drawable.ic_bell,ink());alerts.setBackground(shape(panel(),12));
+        bar.addView(alerts,lp(38,38));alerts.setOnClickListener(v->showNotifications());
+        place(body,bar);gap(body,26);
+        java.text.SimpleDateFormat fullDate=new java.text.SimpleDateFormat("EEEE, d. MMMM",Locale.forLanguageTag("hr-HR"));
+        TextView date=label(fullDate.format(new java.util.Date()).toUpperCase(Locale.forLanguageTag("hr-HR")),11,0xff6A81A5,true);
+        place(body,date);gap(body,7);
+        int hour=Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        title(body,(hour<11?"Dobro jutro":hour<18?"Dobar dan":"Dobra večer")+"! 👋");
+        gap(body,4);caption(body,"Evo pregleda vašeg poslovanja.");gap(body,17);
         LinearLayout hero=vertical();pad(hero,18,19);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff14263f,0xff254d87});
         gradient.setCornerRadius(dp(20));hero.setBackground(gradient);
-        hero.addView(label("Naplaćeno ukupno",12,0xffcedbf2,false));gap(hero,12);
-        hero.addView(label(Money.euros(db.receivedCents()),30,WHITE,true));gap(hero,5);
-        hero.addView(label("Evidentirane uplate",11,0xffa5d7e2,false));
+        long[] monthly=db.monthlyReceipts();
+        hero.addView(label("Naplaćeno ovaj mjesec",12,0xffcedbf2,false));gap(hero,12);
+        hero.addView(label(Money.euros(monthly[11]),30,WHITE,true));gap(hero,5);
+        hero.addView(label("Prema evidentiranim uplatama",11,0xffa5d7e2,false));
         gap(hero,13);hero.addView(new RevenueLine(this),lp(-1,53));place(body,hero);
         gap(body,12);
         LinearLayout stats=horizontal();
-        metric(stats,"Računi",String.valueOf(db.documents(Store.INVOICE).size()),"▤",BLUE);
-        metric(stats,"Ponude",String.valueOf(db.documents(Store.QUOTE).size()),"▣",TEAL);
+        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
+        metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
+        metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
         section("Brze radnje");
         LinearLayout fast=horizontal();
@@ -192,10 +244,26 @@ public final class MainActivity extends Activity {
         for(Store.Document d:db.documents(Store.INVOICE)){if(count++>=3)break;documentRow(d);}
         if(count==0)caption(body,"Još nema računa. Dodajte prvi dokument.");
         gap(body,18);secondary(body,"Svi računi",()->documents(Store.INVOICE));
+        if(!db.backupWarning().isEmpty()){
+            gap(body,15);TextView warning=label(db.backupWarning(),12,RED,true);place(body,warning);
+        }
+    }
+    private void showNotifications(){
+        ArrayList<Store.Document> open=new ArrayList<>();
+        for(Store.Document d:db.documents(Store.INVOICE))
+            if(Store.ISSUED.equals(d.status)&&d.outstanding()>0)open.add(d);
+        if(open.isEmpty()){new AlertDialog.Builder(this).setTitle("Obavijesti")
+            .setMessage("Trenutačno nema nenaplaćenih potvrđenih računa.").setPositiveButton("U redu",null).show();return;}
+        String[] items=new String[open.size()];
+        for(int i=0;i<items.length;i++){Store.Document d=open.get(i);
+            items[i]=(d.number==null?"Nacrt":d.number)+" · "+d.clientName+" · "+Money.euros(d.outstanding());}
+        new AlertDialog.Builder(this).setTitle("Nepodmireni računi").setItems(items,(dialog,position)->
+            showDocument(open.get(position).id)).setNegativeButton("Zatvori",null).show();
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
         LinearLayout c=card();c.addView(label(glyph,20,accent,true));gap(c,12);
-        c.addView(label(value,25,ink(),true));c.addView(label(label,12,sub(),false));
+        c.addView(label(label,12,sub(),false));gap(c,3);
+        c.addView(label(value,25,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
     }
     private void quick(LinearLayout row,String glyph,String label,Runnable action){
@@ -210,14 +278,22 @@ public final class MainActivity extends Activity {
         toolbar(Store.INVOICE.equals(type)?"Računi":"Ponude","Pregled i pretraga dokumenata",false);
         EditText search=field("Pretraži dokumente…","");place(body,search);gap(body,12);
         LinearLayout filters=horizontal();
-        String[] states=Store.INVOICE.equals(type)?new String[]{"Svi","Nacrt","Potvrđeni","Plaćeni"}:new String[]{"Svi","Nacrt","Poslane"};
+        String[] states=Store.INVOICE.equals(type)?new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:new String[]{"Svi","Poslane","Skice"};
         for(String s:states){TextView f=label(s,11,filter.equals(s)?WHITE:sub(),true);f.setGravity(Gravity.CENTER);
             if(filter.equals(s))background(f,BLUE,12);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(35),1);p.setMargins(dp(2),0,dp(2),0);
             filters.addView(f,p);f.setOnClickListener(v->{filter=s;documents(type);});
         }
-        place(body,filters);gap(body,16);
+        place(body,filters);gap(body,12);
+        LinearLayout totals=horizontal();
         List<Store.Document> all=db.documents(type);
+        TextView totalCount=label("Ukupno: "+all.size(),11,sub(),false);
+        totals.addView(totalCount,new LinearLayout.LayoutParams(0,dp(30),1));
+        if(Store.INVOICE.equals(type)){
+            long unpaid=0;for(Store.Document d:all)if(Store.ISSUED.equals(d.status))unpaid+=d.outstanding();
+            totals.addView(label("Neplaćeno: "+Money.euros(unpaid),11,sub(),false));
+        }
+        place(body,totals);gap(body,7);
         int shown=0;for(Store.Document d:all){
             if(!matches(d,filter))continue;
             documentRow(d);shown++;
@@ -240,9 +316,9 @@ public final class MainActivity extends Activity {
         });
     }
     private boolean matches(Store.Document d,String f){
-        if("Nacrt".equals(f))return Store.DRAFT.equals(d.status);
+        if("Skice".equals(f))return Store.DRAFT.equals(d.status);
         if("Plaćeni".equals(f))return Store.PAID.equals(d.status);
-        if("Potvrđeni".equals(f))return Store.ISSUED.equals(d.status);
+        if("Neplaćeni".equals(f))return Store.ISSUED.equals(d.status);
         if("Poslane".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
@@ -284,8 +360,18 @@ public final class MainActivity extends Activity {
     }
     private String later(int days){Calendar c=Calendar.getInstance();c.add(Calendar.DAY_OF_MONTH,days);return dateFormat.format(c.getTime());}
     private void newDocument(String type){
-        editType=type;draftItems.clear();draftIssue=later(0);draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
+        editType=type;editingDraftId=-1;draftItems.clear();draftIssue=later(0);draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
         editDocumentScreen();
+    }
+    private void resumeSavedDraft(long id){
+        try{
+            Store.Document d=db.document(id);
+            if(!Store.DRAFT.equals(d.status))throw new IllegalStateException("Možete uređivati samo nacrt");
+            editingDraftId=d.id;editType=d.type;editClientId=d.clientId;
+            draftIssue=d.issueDate;draftDue=d.dueDate;draftNote=d.notes;
+            draftItems.clear();draftItems.addAll(d.items);
+            editDocumentScreen();
+        }catch(Exception e){error(e);}
     }
     private void editDocumentScreen(){
         setup("new_doc",true);toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda","Korak 1 od 3 · Osnovni podaci",true);
@@ -395,8 +481,14 @@ public final class MainActivity extends Activity {
         gap(body,15);caption(body,"Potvrda dodjeljuje broj dokumenta. Fiskalizacija i slanje strukturiranih eRačuna nisu podržani.");
     }
     private void saveNew(boolean confirm){
-        try{long id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
-            if(confirm)db.confirm(id);draftItems.clear();showDocument(id);
+        try{
+            long id;
+            if(editingDraftId>0){
+                id=editingDraftId;
+                db.updateDraft(id,editClientId,draftIssue,draftDue,draftNote,draftItems);
+            }else id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
+            if(confirm)db.confirm(id);
+            editingDraftId=-1;draftItems.clear();showDocument(id);
         }catch(Exception e){error(e);}
     }
     private void confirmWarning(Runnable yes){
@@ -427,9 +519,13 @@ public final class MainActivity extends Activity {
         place(body,card);gap(body,15);
         button(body,"Preuzmi PDF",()->savePdf(id));gap(body,9);
         secondary(body,"Podijeli PDF",()->sharePdf(id));gap(body,9);
-        if(Store.DRAFT.equals(d.status))secondary(body,"Potvrdi dokument",()->confirmWarning(()->{
+        if(Store.DRAFT.equals(d.status)){
+            secondary(body,"✎ Uredi nacrt",()->resumeSavedDraft(id));
+            gap(body,9);
+            secondary(body,"Potvrdi dokument",()->confirmWarning(()->{
             try{db.confirm(id);showDocument(id);}catch(Exception e){error(e);}
         }));
+        }
         if(Store.INVOICE.equals(d.type)&&Store.ISSUED.equals(d.status)&&d.outstanding()>0){
             gap(body,9);secondary(body,"＋ Evidentiraj uplatu",()->payDialog(id));
         }
@@ -551,7 +647,7 @@ public final class MainActivity extends Activity {
         settingRow("♧  Artikli i usluge","Katalog poslovanja",this::catalog);
         settingRow("▣  Izvještaji","Statistika prihoda i naplate",this::reports);
         settingRow("◈  eRačuni i fiskalizacija","Objašnjenje ograničenja",this::eracun);
-        settingRow("⇩  Sigurnosna kopija","Šifrirani izvoz i uvoz",this::backupScreen);
+        settingRow("⇩  Sigurnosna kopija","Zaštita i oporavak podataka",this::backupScreen);
         settingRow("◐  Tamna tema","Prebaci prikaz aplikacije",()->{
             dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
         });
@@ -574,7 +670,9 @@ public final class MainActivity extends Activity {
         button(body,"Spremi promjene",()->{
             try{String id=fields[1].getText().toString().trim();
                 if(!id.isEmpty()&&!id.matches("[0-9]{11}"))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
-                for(int i=0;i<keys.length;i++)db.setting(keys[i],fields[i].getText().toString());
+                String[] vals=new String[keys.length];
+                for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString();
+                db.companySettings(keys,vals);
                 toast("Podaci tvrtke spremljeni");settings();
             }catch(Exception e){error(e);}
         });
@@ -592,9 +690,36 @@ public final class MainActivity extends Activity {
         LinearLayout info=card();title(info,"Sačuvajte svoje poslovne podatke");
         gap(info,11);caption(info,"Sigurnosna kopija šifrira se AES-256-GCM algoritmom. Lozinka mora imati barem 10 znakova. Ne postoji mogućnost oporavka ako je izgubite.");
         gap(info,11);caption(info,"Uvoz u potpunosti zamjenjuje postojeće podatke. Prije uvoza izvezite aktualnu kopiju.");
-        place(body,info);gap(body,18);
+        place(body,info);gap(body,15);
+        LinearLayout local=card();
+        title(local,"Automatska zaštita");gap(local,9);
+        local.addView(label(db.backupSummary(),12,ink(),false));gap(local,7);
+        caption(local,"Posljednje tri lokalne kopije šifrirane su ključem uređaja. One ne preživljavaju brisanje aplikacije ili gubitak telefona.");
+        if(!db.backupWarning().isEmpty()){gap(local,8);local.addView(label(db.backupWarning(),12,RED,true));}
+        gap(local,12);
+        secondary(local,"Vrati prethodno lokalno stanje",this::showLocalRecovery);
+        place(body,local);gap(body,18);
         button(body,"Izvezi šifriranu kopiju",()->passwordPrompt(false));
         gap(body,10);secondary(body,"Uvezi sigurnosnu kopiju",()->passwordPrompt(true));
+        gap(body,15);
+        caption(body,"Za zaštitu od krađe, kvara ili gubitka telefona kopirajte izvezenu datoteku na sigurno mjesto izvan uređaja. Bez te kopije ne možemo zajamčiti povrat dokumenata.");
+    }
+    private void showLocalRecovery(){
+        try{
+            int count=RecoveryVault.count(this);
+            if(count==0){toast("Nema dostupnih lokalnih kopija");return;}
+            String[] labels=new String[count];
+            for(int i=0;i<count;i++)labels[i]="Lokalna kopija "+(i+1)+(i==0?" (najnovija)":"");
+            new AlertDialog.Builder(this).setTitle("Odaberite kopiju za oporavak")
+                .setItems(labels,(dialog,index)->new AlertDialog.Builder(this)
+                    .setTitle("Potvrdite zamjenu podataka")
+                    .setMessage("Oporavak mijenja trenutačno stanje. Postojeće stanje se prije promjene dodatno pohranjuje. Provjerite datume i izvezite lozinkom zaštićenu kopiju na drugi uređaj.")
+                    .setNegativeButton("Odustani",null)
+                    .setPositiveButton("Vrati",(d,w)->{
+                        try{db.restoreLocal(index);toast("Podaci su vraćeni");navigate("home");}
+                        catch(Exception e){error(e);}
+                    }).show()).show();
+        }catch(Exception e){error(e);}
     }
     private void passwordPrompt(boolean importing){
         EditText pass=field("Lozinka (barem 10 znakova)","");
