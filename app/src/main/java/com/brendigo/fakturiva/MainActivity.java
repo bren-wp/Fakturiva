@@ -1220,6 +1220,12 @@ public final class MainActivity extends Activity {
                     PdfMaker.write(db,db.document(pendingPdfId),out);
                 }
                 toast("PDF uspješno spremljen");
+            }else if(code==104){
+                try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
+                    if(out==null)throw new IllegalStateException("Datoteka nije dostupna");
+                    PaymentsCsv.write(db.payments(),out);
+                }
+                toast("CSV evidencija uplata spremljena");
             }else if(code==BACKUP_EXPORT){
                 byte[] dataBytes=db.backup().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 byte[] secure=SecureBackup.encrypt(dataBytes,pendingPassword);
