@@ -368,6 +368,29 @@ public final class Store extends SQLiteOpenHelper {
         return DatabaseUtils.longForQuery(getReadableDatabase(),
             "SELECT COALESCE(SUM(total_cents),0) FROM documents WHERE type='INVOICE' AND status IN ('ISSUED','PAID')",null);
     }
+    /** Individually logged payments; never infer a receipt from invoice status alone. */
+    public static final class Payment {
+        public long id,documentId,amountCents;
+        public String paidOn,invoiceNumber,clientName;
+    }
+    public List<Payment> payments() {
+        ArrayList<Payment> out=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery(
+            "SELECT p.id,p.document_id,p.amount_cents,p.paid_on,COALESCE(d.number,'Nacrt'),d.client_name "+
+            "FROM payments p JOIN documents d ON d.id=p.document_id ORDER BY p.paid_on DESC,p.id DESC",null)){
+            while(c.moveToNext()){
+                Payment item=new Payment();item.id=c.getLong(0);item.documentId=c.getLong(1);
+                item.amountCents=c.getLong(2);item.paidOn=c.getString(3);
+                item.invoiceNumber=c.getString(4);item.clientName=c.getString(5);out.add(item);
+            }
+        }
+        return out;
+    }
+    public long outstandingCents() {
+        return DatabaseUtils.longForQuery(getReadableDatabase(),
+            "SELECT COALESCE(SUM(total_cents-(SELECT COALESCE(SUM(amount_cents),0) FROM payments p WHERE p.document_id=d.id)),0) "+
+            "FROM documents d WHERE d.type='INVOICE' AND d.status IN ('ISSUED','PAID')",null);
+    }
     public long receivedCents() {
         return DatabaseUtils.longForQuery(getReadableDatabase(),
             "SELECT COALESCE(SUM(amount_cents),0) FROM payments",null);
