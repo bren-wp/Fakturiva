@@ -50,7 +50,11 @@ Kad potvrdite dokument, podaci izdavatelja i klijenta ostaju zabilježeni u doku
 Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — poznato Android iskustvo na hrvatskom jeziku.
 </div>
 
-Prikazi zaslona iz stvarne Android aplikacije objavljuju se nakon provjere na emulatoru. Fotografije grafičkog koncepta nisu zamjena za potvrđene snimke aplikacije.
+### Stvarni prikazi svih 20 zaslona
+
+[**Pogledajte galeriju od 20 stvarnih Android snimki**](https://github.com/bren-wp/Fakturiva/actions/runs/40784278650) · [**Preuzmite originalne PNG snimke**](https://github.com/bren-wp/Fakturiva/actions/runs/40782723051/artifacts/12857668423)
+
+Snimke su iz stvarnog Android emulatora, a ne dizajnerske makete. Izvorni vizualni identitet služi kao referenca za detaljno usklađivanje ekrana. Ugradnja galerije izravno u README čeka odobrenje GitHub Actions pisanja u repozitorij; slike se do tada nude kao zaseban arhiv.
 
 ## Preuzimanje
 
