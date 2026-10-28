@@ -1,10 +1,11 @@
 name: Verify native Android screens
 on:
   push:
-    branches: [feature/reliable-documents-ui-release]
+    branches: [feature/v0.6-native-ui-recovery-hardening]
+  workflow_dispatch:
 jobs:
   capture:
-    if: contains(github.event.head_commit.message, '[capture]')
+    if: contains(github.event.head_commit.message, '[capture]') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -12,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feature/reliable-documents-ui-release
+          ref: feature/v0.6-native-ui-recovery-hardening
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -52,7 +53,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/screenshots/
           git diff --cached --quiet || git commit -m "docs: add genuine Android emulator screenshots"
-          if ! git push origin HEAD:feature/reliable-documents-ui-release; then
+          if ! git push origin HEAD:feature/v0.6-native-ui-recovery-hardening; then
             echo "::warning::Screenshots captured and uploaded to Actions artifacts. Commit needs GitHub Actions write permission."
             exit 1
           fi
