@@ -282,6 +282,12 @@ public final class Store extends SQLiteOpenHelper {
             throw new IllegalStateException("Potvrdite ponudu prije pretvaranja");
         return createDraft(INVOICE,d.clientId,d.issueDate,d.dueDate,"Prema ponudi "+d.number,d.items);
     }
+    public long countMonth(String type,String yearMonth){
+        if(!INVOICE.equals(type)&&!QUOTE.equals(type))throw new IllegalArgumentException("Nepoznati dokument");
+        return DatabaseUtils.longForQuery(getReadableDatabase(),
+            "SELECT COUNT(*) FROM documents WHERE type=? AND substr(issue_date,1,7)=?",
+            new String[]{type,yearMonth});
+    }
     public long count(String table) {
         if(!table.equals("clients")&&!table.equals("catalog")&&!table.equals("documents")) return 0;
         return DatabaseUtils.longForQuery(getReadableDatabase(),"SELECT COUNT(*) FROM "+table,null);
