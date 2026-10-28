@@ -31,6 +31,8 @@ public final class NativeCoreSmoke {
         boolean wrongOrder=false;
         try{IsoDates.validate("2026-10-28","2026-10-27");}catch(IllegalArgumentException expected){wrongOrder=true;}
         require(wrongOrder,"Due date must not precede issue date");
+        require(Iban.valid("HR1210010051863000160"),"Valid Croatian IBAN");
+        require(!Iban.valid("HR1210010051863000161"),"IBAN check digits validated");
         byte[] original="Fakturiva šifrirana kopija".getBytes(StandardCharsets.UTF_8);
         char[] password="test-backup-password-2026".toCharArray();
         byte[] encrypted=SecureBackup.encrypt(original,password);
