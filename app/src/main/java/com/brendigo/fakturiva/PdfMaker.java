@@ -85,6 +85,6 @@ public final class PdfMaker {
         }
         pdf.finishPage(active);active=null;
     }
-    private static String status(String s){switch(s){case Store.PAID:return "Plaćeno";case Store.ISSUED:return "Potvrđeno";case Store.SENT:return "Prihvaćena/poslana ponuda";default:return s;}}
+    private static String status(String s){switch(s){case Store.PAID:return "Plaćeno";case Store.ISSUED:return "Potvrđeno";case Store.SENT:return "Potvrđena ponuda";default:return s;}}
     private static String cut(String s,int max){return s==null?"":s.length()>max?s.substring(0,max-1)+"…":s;}
 }
