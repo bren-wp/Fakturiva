@@ -360,8 +360,7 @@ public final class MainActivity extends Activity {
                     }
                 }
             });
-            fieldLabel(form,"Iz kataloga",new TextDummy(this)); // see form addition below
-            form.removeViewAt(form.getChildCount()-1);
+            gap(form,12);form.addView(label("Iz kataloga",12,ink(),true));gap(form,6);
             place(form,product);
         }
         fieldLabel(form,"Količina",qty);fieldLabel(form,"Jedinična cijena bez PDV-a",price);
@@ -376,9 +375,6 @@ public final class MainActivity extends Activity {
                     draftItems.add(i);editItemsScreen();
                 }catch(Exception e){error(e);}
             }).show();
-    }
-    private static final class TextDummy extends EditText {
-        TextDummy(android.content.Context c){super(c);}
     }
     private void reviewDraft(){
         setup("review",true);toolbar("Pregled dokumenta","Korak 3 od 3 · Potvrda",true);
@@ -631,11 +627,17 @@ public final class MainActivity extends Activity {
     }
     private void sharePdf(long id){
         try{
-            File f=new File(getCacheDir(),"share.pdf");
+            for(File old:getCacheDir().listFiles()==null?new File[0]:getCacheDir().listFiles()){
+                if(old.getName().startsWith("share-") && old.getName().endsWith(".pdf")
+                   && System.currentTimeMillis()-old.lastModified()>3L*24*60*60*1000)old.delete();
+            }
+            String filename="share-"+java.util.UUID.randomUUID().toString()+".pdf";
+            File f=new File(getCacheDir(),filename);
             try(FileOutputStream output=new FileOutputStream(f)){PdfMaker.write(db,db.document(id),output);}
+            Uri shared=PdfShareProvider.uri(filename);
             Intent share=new Intent(Intent.ACTION_SEND);share.setType("application/pdf");
-            share.putExtra(Intent.EXTRA_STREAM,PdfShareProvider.URI);
-            share.setClipData(ClipData.newUri(getContentResolver(),"Fakturiva PDF",PdfShareProvider.URI));
+            share.putExtra(Intent.EXTRA_STREAM,shared);
+            share.setClipData(ClipData.newUri(getContentResolver(),"Fakturiva PDF",shared));
             share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(Intent.createChooser(share,"Podijeli PDF"));
         }catch(Exception e){error(e);}
@@ -694,9 +696,10 @@ public final class MainActivity extends Activity {
             super.onDraw(canvas);
             float w=getWidth(),h=getHeight();
             android.graphics.Path path=new android.graphics.Path();
-            float[] point={.81f,.83f,.72f,.74f,.51f,.58f,.48f,.49f,.29f,.37f,.22f,.17f};
-            for(int i=0;i<point.length;i++){
-                float x=i*w/(point.length-1),y=point[i]*h;
+            long[] monthly=db.monthlyReceipts();
+            long max=1;for(long value:monthly)max=Math.max(max,value);
+            for(int i=0;i<monthly.length;i++){
+                float x=i*w/(monthly.length-1),y=h-(h*0.85f*monthly[i]/max);
                 if(i==0)path.moveTo(x,y);else path.lineTo(x,y);
             }
             paint.setColor(0xff72dadb);paint.setStrokeWidth(dp(2));paint.setStyle(android.graphics.Paint.Style.STROKE);
