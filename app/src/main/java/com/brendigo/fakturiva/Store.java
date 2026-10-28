@@ -21,7 +21,11 @@ public final class Store extends SQLiteOpenHelper {
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
     private final Context appContext;
     private volatile String lastBackupWarning="";
-    public Store(Context c) { super(c, DB_NAME, null, VERSION);appContext=c.getApplicationContext(); }
+    public Store(Context c) {
+        super(c, DB_NAME, null, VERSION);
+        appContext=c.getApplicationContext();
+        setWriteAheadLoggingEnabled(true);
+    }
     private void snapshotAfterWrite(){
         try{RecoveryVault.snapshot(appContext,this);lastBackupWarning="";}
         catch(Exception e){
@@ -36,6 +40,11 @@ public final class Store extends SQLiteOpenHelper {
         restore(restored);
     }
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
+    @Override public void onOpen(SQLiteDatabase db){
+        super.onOpen(db);
+        // Favor completed transactions when Android is interrupted.
+        if(!db.isReadOnly())db.execSQL("PRAGMA synchronous=FULL");
+    }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE company (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, oib TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '')");
@@ -140,8 +149,7 @@ public final class Store extends SQLiteOpenHelper {
     public long createDraft(String type,long clientId,String issueDate,String dueDate,String notes,List<Item> items) {
         if(!type.equals(INVOICE)&&!type.equals(QUOTE)) throw new IllegalArgumentException("Neispravna vrsta dokumenta");
         if(items.isEmpty()) throw new IllegalArgumentException("Dodajte barem jednu stavku");
-        if(!issueDate.matches("\\d{4}-\\d{2}-\\d{2}")||!dueDate.matches("\\d{4}-\\d{2}-\\d{2}"))
-            throw new IllegalArgumentException("Unesite ispravne datume");
+        IsoDates.validate(issueDate,dueDate);
         SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
         boolean saved=false;
         try {
@@ -178,8 +186,7 @@ public final class Store extends SQLiteOpenHelper {
     /** Edit only a draft. Confirmed invoices and quotes stay immutable. */
     public void updateDraft(long id,long clientId,String issueDate,String dueDate,String notes,List<Item> items){
         if(items.isEmpty())throw new IllegalArgumentException("Dodajte barem jednu stavku");
-        if(!issueDate.matches("\\d{4}-\\d{2}-\\d{2}")||!dueDate.matches("\\d{4}-\\d{2}-\\d{2}"))
-            throw new IllegalArgumentException("Datum mora biti u formatu YYYY-MM-DD");
+        IsoDates.validate(issueDate,dueDate);
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
         boolean saved=false;
         try{
@@ -320,6 +327,10 @@ public final class Store extends SQLiteOpenHelper {
         return values;
     }
     public JSONObject backup() throws JSONException {
+        // All backup tables must describe a single consistent database snapshot.
+        SQLiteDatabase source=getReadableDatabase();
+        source.beginTransactionNonExclusive();
+        try {
         JSONObject root=new JSONObject();root.put("format","fakturiva-backup-v1");root.put("schema",VERSION);
         for(String table:new String[]{"company","clients","catalog","documents","lines","payments","sequences"}){
             JSONArray rows=new JSONArray();
@@ -335,7 +346,9 @@ public final class Store extends SQLiteOpenHelper {
             }
             root.put(table,rows);
         }
+        source.setTransactionSuccessful();
         return root;
+        }finally{source.endTransaction();}
     }
     public void restore(JSONObject root) throws JSONException {
         if(!"fakturiva-backup-v1".equals(root.optString("format")) || root.optInt("schema")<1 || root.optInt("schema")>VERSION)
