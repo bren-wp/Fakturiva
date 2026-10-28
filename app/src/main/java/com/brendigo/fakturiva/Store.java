@@ -202,6 +202,21 @@ public final class Store extends SQLiteOpenHelper {
         return DatabaseUtils.longForQuery(getReadableDatabase(),
             "SELECT COALESCE(SUM(amount_cents),0) FROM payments",null);
     }
+    /** Twelve chronological monthly receipt totals, with zeroes for empty months. */
+    public long[] monthlyReceipts(){
+        long[] values=new long[12];
+        java.util.Calendar month=java.util.Calendar.getInstance();
+        month.set(java.util.Calendar.DAY_OF_MONTH,1);
+        month.add(java.util.Calendar.MONTH,-11);
+        java.text.SimpleDateFormat fmt=new java.text.SimpleDateFormat("yyyy-MM",java.util.Locale.ROOT);
+        for(int i=0;i<values.length;i++){
+            values[i]=DatabaseUtils.longForQuery(getReadableDatabase(),
+                "SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE substr(paid_on,1,7)=?",
+                new String[]{fmt.format(month.getTime())});
+            month.add(java.util.Calendar.MONTH,1);
+        }
+        return values;
+    }
     public JSONObject backup() throws JSONException {
         JSONObject root=new JSONObject();root.put("format","fakturiva-backup-v1");root.put("schema",VERSION);
         for(String table:new String[]{"company","clients","catalog","documents","lines","payments","sequences"}){
