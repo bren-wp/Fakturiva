@@ -16,7 +16,7 @@ import java.util.Calendar;
 /** Single-device storage. All document state transitions are transactional. */
 public final class Store extends SQLiteOpenHelper {
     private static final String DB_NAME = "fakturiva.db";
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
     public Store(Context c) { super(c, DB_NAME, null, VERSION); }
@@ -25,7 +25,7 @@ public final class Store extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE company (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, oib TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL)");
-        db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', client_address TEXT NOT NULL DEFAULT '', client_oib TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', issuer_address TEXT NOT NULL DEFAULT '', issuer_oib TEXT NOT NULL DEFAULT '', issuer_email TEXT NOT NULL DEFAULT '', issuer_iban TEXT NOT NULL DEFAULT '', issuer_tax_note TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE lines (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), name TEXT NOT NULL, qty_milli INTEGER NOT NULL CHECK(qty_milli>0), unit_cents INTEGER NOT NULL CHECK(unit_cents>=0), tax_rate INTEGER NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), paid_on TEXT NOT NULL)");
         db.execSQL("CREATE TABLE sequences (type TEXT NOT NULL, year INTEGER NOT NULL, last_num INTEGER NOT NULL, PRIMARY KEY(type,year))");
@@ -38,7 +38,14 @@ public final class Store extends SQLiteOpenHelper {
         }
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldV,int newV) {
-        // Intentionally no destructive migration: future schema updates must be additive.
+        if(oldV==1 && newV>=2){
+            for(String column:new String[]{"client_name","client_address","client_oib","issuer_name","issuer_address","issuer_oib","issuer_email","issuer_iban","issuer_tax_note"})
+                db.execSQL("ALTER TABLE documents ADD COLUMN "+column+" TEXT NOT NULL DEFAULT ''");
+            db.execSQL("UPDATE documents SET client_name=(SELECT name FROM clients WHERE clients.id=documents.client_id),client_address=(SELECT address FROM clients WHERE clients.id=documents.client_id),client_oib=(SELECT oib FROM clients WHERE clients.id=documents.client_id)");
+            for(String key:new String[]{"name","address","oib","email","iban","tax_note"})
+                db.execSQL("UPDATE documents SET issuer_"+key+"=(SELECT value FROM company WHERE company.key='"+key+"')");
+            return;
+        }
         throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
     }
     public static final class Client {
@@ -53,6 +60,7 @@ public final class Store extends SQLiteOpenHelper {
     public static final class Document {
         public long id,clientId,netCents,taxCents,totalCents;
         public String type,number,clientName,clientAddress,clientOib,issueDate,dueDate,notes,status;
+        public String issuerName,issuerAddress,issuerOib,issuerEmail,issuerIban,issuerTaxNote;
         public List<Item> items = new ArrayList<>();
         public long paidCents;
         public long outstanding() { return Math.max(0, totalCents - paidCents); }
@@ -113,6 +121,11 @@ public final class Store extends SQLiteOpenHelper {
             doc.put("notes",notes);doc.put("status",DRAFT);
             doc.put("net_cents",net);doc.put("tax_cents",tax);doc.put("total_cents",Math.addExact(net,tax));
             doc.put("created_at",System.currentTimeMillis());
+            try(Cursor client=db.rawQuery("SELECT name,address,oib FROM clients WHERE id=?",new String[]{String.valueOf(clientId)})){
+                if(!client.moveToFirst())throw new IllegalArgumentException("Odabrani klijent ne postoji");
+                doc.put("client_name",client.getString(0));doc.put("client_address",client.getString(1));doc.put("client_oib",client.getString(2));
+            }
+            for(String key:new String[]{"name","address","oib","email","iban","tax_note"})doc.put("issuer_"+key,setting(key));
             long id=db.insertOrThrow("documents",null,doc);
             for(Item i:items) {
                 ContentValues v=new ContentValues();
@@ -126,13 +139,15 @@ public final class Store extends SQLiteOpenHelper {
     }
     public Document document(long id) {
         try(Cursor c=getReadableDatabase().rawQuery(
-            "SELECT d.id,d.type,d.number,d.client_id,c.name,c.address,c.oib,d.issue_date,d.due_date,d.notes,d.status,d.net_cents,d.tax_cents,d.total_cents,(SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE document_id=d.id) FROM documents d JOIN clients c ON c.id=d.client_id WHERE d.id=?",
+            "SELECT d.id,d.type,d.number,d.client_id,d.client_name,d.client_address,d.client_oib,d.issue_date,d.due_date,d.notes,d.status,d.net_cents,d.tax_cents,d.total_cents,(SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE document_id=d.id),d.issuer_name,d.issuer_address,d.issuer_oib,d.issuer_email,d.issuer_iban,d.issuer_tax_note FROM documents d WHERE d.id=?",
             new String[]{String.valueOf(id)})) {
             if(!c.moveToFirst()) throw new IllegalArgumentException("Dokument ne postoji");
             Document d=new Document();d.id=c.getLong(0);d.type=c.getString(1);d.number=c.getString(2);
             d.clientId=c.getLong(3);d.clientName=c.getString(4);d.clientAddress=c.getString(5);d.clientOib=c.getString(6);
             d.issueDate=c.getString(7);d.dueDate=c.getString(8);d.notes=c.getString(9);d.status=c.getString(10);
             d.netCents=c.getLong(11);d.taxCents=c.getLong(12);d.totalCents=c.getLong(13);d.paidCents=c.getLong(14);
+            d.issuerName=c.getString(15);d.issuerAddress=c.getString(16);d.issuerOib=c.getString(17);
+            d.issuerEmail=c.getString(18);d.issuerIban=c.getString(19);d.issuerTaxNote=c.getString(20);
             try(Cursor l=getReadableDatabase().rawQuery("SELECT id,name,qty_milli,unit_cents,tax_rate FROM lines WHERE document_id=? ORDER BY id",new String[]{String.valueOf(id)})){
                 while(l.moveToNext()) { Item i=new Item();i.id=l.getLong(0);i.name=l.getString(1);i.qtyMilli=l.getLong(2);i.unitCents=l.getLong(3);i.taxRate=l.getInt(4);d.items.add(i); }
             }
@@ -236,7 +251,7 @@ public final class Store extends SQLiteOpenHelper {
         return root;
     }
     public void restore(JSONObject root) throws JSONException {
-        if(!"fakturiva-backup-v1".equals(root.optString("format")) || root.optInt("schema")!=VERSION)
+        if(!"fakturiva-backup-v1".equals(root.optString("format")) || root.optInt("schema")<1 || root.optInt("schema")>VERSION)
             throw new IllegalArgumentException("Nepodržana sigurnosna kopija");
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
         try {
@@ -254,6 +269,11 @@ public final class Store extends SQLiteOpenHelper {
                     }
                     db.insertOrThrow(table,null,v);
                 }
+            }
+            if(root.optInt("schema")==1){
+                db.execSQL("UPDATE documents SET client_name=(SELECT name FROM clients WHERE clients.id=documents.client_id),client_address=(SELECT address FROM clients WHERE clients.id=documents.client_id),client_oib=(SELECT oib FROM clients WHERE clients.id=documents.client_id)");
+                for(String key:new String[]{"name","address","oib","email","iban","tax_note"})
+                    db.execSQL("UPDATE documents SET issuer_"+key+"=(SELECT value FROM company WHERE company.key='"+key+"')");
             }
             try(Cursor c=db.rawQuery("PRAGMA foreign_key_check",null)){
                 if(c.moveToFirst()) throw new IllegalArgumentException("Neispravne veze u sigurnosnoj kopiji");
