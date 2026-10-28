@@ -1,52 +1,52 @@
 <div align="center">
-  <img src="docs/assets/fakturiva-logo.svg" width="420" alt="Fakturiva — Računi i ponude, jednostavno."/>
-  <p><strong>Više kontrole nad računima. Manje papirologije.</strong></p>
-  <p>Jednostavna Android aplikacija za račune, ponude, klijente i svakodnevne poslovne obveze.</p>
+  <img src="docs/assets/fakturiva-logo.svg" width="440" alt="Fakturiva — Računi i ponude, jednostavno." />
+  <h3>Računi i ponude, jednostavno.</h3>
+  <p>Sve za vaše poslovanje. Bez viška koraka.</p>
 </div>
 
-![Fakturiva — računi, ponude i poslovanje](docs/assets/fakturiva-banner.svg)
+![Fakturiva — jednostavnije poslovanje](docs/assets/fakturiva-banner.svg)
+
+## Poslovanje pod kontrolom
+
+**Fakturiva** pomaže malim poduzećima, obrtnicima i samostalnim profesionalcima pripremiti račune i ponude, uredno pratiti dokumente te organizirati poslovanje — iz pregledne Android aplikacije.
+
+| 🧾 **Računi** | 📑 **Ponude** | 👥 **Klijenti** |
+|:--|:--|:--|
+| Kreirajte dokumente i pratite naplatu | Pošaljite ponudu i pretvorite je u nacrt računa | Svi poslovni kontakti na jednom mjestu |
+
+| 🛍️ **Artikli i usluge** | 📊 **Pregled poslovanja** | 📄 **PDF dokumenti** |
+|:--|:--|:--|
+| Cijene i stavke spremne za uporabu | Vidite što je izdano i naplaćeno | Spremanje i dijeljenje izravno s uređaja |
+
+## Vaši dokumenti zaslužuju sigurnost
+
+- **Automatsko čuvanje promjena.** Nedovršeni računi i ponude obnavljaju se nakon neočekivanog prekida rada.
+- **Lokalni šifrirani oporavak.** Više generacija kopija štiti od pojedinih kvarova datoteka.
+- **Prijenosna sigurnosna kopija.** Spremite šifriranu kopiju na mjesto koje sami odaberete.
+- **Bez obaveznog računa.** Fakturiva radi lokalno i bez internetske veze.
+- **Poznato Android iskustvo.** Hrvatsko sučelje, euro, svijetla i tamna tema.
+
+> Važno: za zaštitu od krađe, kvara ili gubitka uređaja **redovito izvozite sigurnosnu kopiju izvan telefona**. Nijedna aplikacija koja čuva podatke samo na jednom uređaju ne može jamčiti njihovo očuvanje u svim okolnostima.
+
+## Profesionalan izgled od prve minute
 
 <div align="center">
-  <img src="docs/assets/fakturiva-icon.svg" width="88" alt="Fakturiva ikona"/>
-  <p><strong>Računi i ponude, jednostavno.</strong></p>
+  <img src="docs/assets/fakturiva-icon.svg" width="92" alt="Fakturiva ikona aplikacije" />
+  <p><strong>Fakturiva by Brendigo</strong></p>
+  <p>Od prve ponude do evidentirane uplate, svaki je korak oblikovan da bude jasan i jednostavan.</p>
 </div>
 
-## Sve što vam treba za preglednije poslovanje
+## Preuzmite Fakturivu
 
-**Fakturiva** stavlja vaše najvažnije poslovne dokumente na jedno mjesto. Pripremite račun ili ponudu, odaberite klijenta i stavke, pratite naplatu i podijelite profesionalni PDF — iz poznatog, preglednog Android sučelja.
+**[Pregled izdanja za Android](https://github.com/bren-wp/Fakturiva/releases)**
 
-| 🧾 Računi | 📋 Ponude | 👥 Klijenti |
-| :--- | :--- | :--- |
-| Jednostavna priprema i potvrda dokumenata | Izrada ponuda i pretvaranje u nacrt računa | Kontakti i poslovni podaci uvijek pri ruci |
+Podržan je Android 7.0 i noviji. Uz svako izdanje navedena je njegova namjena i status potpisivanja. Prije uporabe za službene poslovne dokumente potrebno je potvrditi primjenjive zakonske obveze.
 
-| 📦 Artikli i usluge | 📊 Poslovni pregled | 📄 PDF |
-| :--- | :--- | :--- |
-| Uredan katalog cijena i usluga | Pregled izdanih dokumenata i evidentiranih uplata | Lokalna izrada, spremanje i dijeljenje |
-
-## Dizajnirano da vam olakša rad
-
-- **Sve na dohvat ruke.** Jasna početna ploča i pristup najčešćim radnjama.
-- **Računi bez prepisivanja.** Ponudu možete pretvoriti u nacrt računa i nastaviti uređivanje.
-- **Evidencija naplate.** Pregled evidentiranih uplata i nepodmirenih iznosa.
-- **Vaša privatnost.** Poslovni podaci ostaju na uređaju, bez računa u oblaku, oglasa i analitike.
-- **Vaši podaci pod kontrolom.** Automatske šifrirane lokalne kopije i zaseban izvoz sigurnosne kopije za čuvanje izvan uređaja.
-- **Ugodno sučelje.** Svijetla i tamna tema, hrvatski jezik i iznosi u eurima.
-
-## Dostupno za Android
-
-**[Preuzmite najnovije izdanje](https://github.com/bren-wp/Fakturiva/releases)**
-
-Fakturiva se razvija za Android 7.0 i novije uređaje. Dostupni paketi mogu biti pretpregledne razvojne verzije; prije poslovne upotrebe provjerite opis odgovarajućeg izdanja.
-
-## Važni poslovni dokumenti zaslužuju dodatnu zaštitu
-
-Aplikacija omogućuje šifrirani izvoz sigurnosne kopije. Preporučujemo čuvanje kopije na drugom uređaju ili zasebnom sigurnom mjestu. Lokalna zaštita ne može jamčiti oporavak nakon fizičkog gubitka uređaja.
-
-> **Napomena o eRačunima:** Izvezeni PDF nije strukturirani eRačun ni potvrda fiskalizacije. Odgovarajuće zakonske integracije nisu dio trenutačnog pretpregleda aplikacije.
+**Napomena za hrvatsko tržište:** PDF dokument nije strukturirani eRačun niti dokaz provedene fiskalizacije. Povezivanje sa sustavima za zakonski obveznu razmjenu eRačuna i fiskalizaciju nije dostupno u ovoj verziji.
 
 ---
 
 <div align="center">
-  <strong>Fakturiva</strong> · Brendigo<br/>
+  <strong>Fakturiva</strong> · Brendigo<br />
   <em>Računi i ponude, jednostavno.</em>
 </div>
