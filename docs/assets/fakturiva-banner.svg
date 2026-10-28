@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="490" viewBox="0 0 1200 490">
+<defs><linearGradient id="hero" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0C213C"/><stop offset="1" stop-color="#284B93"/></linearGradient><linearGradient id="card" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#164472"/><stop offset="1" stop-color="#0A2038"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="14" stdDeviation="19" flood-color="#07142D" flood-opacity=".36"/></filter></defs>
+<rect width="1200" height="490" rx="32" fill="url(#hero)"/>
+<circle cx="110" cy="440" r="270" fill="#5566F8" opacity=".13"/><circle cx="1040" cy="-30" r="340" fill="#2FD2C5" opacity=".07"/>
+<g transform="translate(77 77)">
+<rect width="79" height="79" rx="19" fill="url(#card)" stroke="#376B99" stroke-width="2"/>
+<path d="M22 24h37a4 4 0 0 1 0 8H35v13h20a4 4 0 0 1 0 8H35v17a4 4 0 0 1-8 0V29a5 5 0 0 1 5-5" fill="#fff" transform="translate(-3 -11) scale(.95)"/>
+<path d="m45 54 9 9 17-19" fill="none" stroke="#2FD2C5" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<g font-family="Arial,sans-serif" fill="#fff"><text x="77" y="221" font-size="67" font-weight="800">Fakturiva</text><text x="79" y="263" font-size="26" fill="#D2E3FC">Računi i ponude, jednostavno.</text><text x="80" y="329" font-size="19" fill="#E9F0FF">Računi · Ponude · Klijenti · PDF · Naplata</text><text x="80" y="379" font-size="17" fill="#8CEAE4">Vaši dokumenti. Vaš uređaj. Vaša kontrola.</text></g>
+<g filter="url(#shadow)" transform="translate(735 38)">
+<rect width="264" height="430" rx="34" fill="#081B32" stroke="#5C7092" stroke-width="4"/>
+<rect x="12" y="13" width="240" height="404" rx="25" fill="#F6F8FC"/>
+<rect x="100" y="18" width="65" height="12" rx="6" fill="#081B32"/>
+<text x="30" y="65" font-family="Arial" font-size="21" font-weight="700" fill="#14263F">Fakturiva</text>
+<text x="30" y="93" font-family="Arial" font-size="11" fill="#7A8BA0">Pregled poslovanja</text>
+<rect x="28" y="115" width="209" height="133" rx="17" fill="#182E67"/>
+<text x="46" y="147" fill="#C8DBF4" font-family="Arial" font-size="11">Naplaćeno ovaj mjesec</text>
+<text x="46" y="193" fill="#FFFFFF" font-family="Arial" font-weight="700" font-size="26">8.420,00 €</text>
+<path d="M44 228 C76 214 83 227 106 209 S135 224 161 204 S200 207 220 189" fill="none" stroke="#69E0D9" stroke-width="3"/>
+<rect x="28" y="265" width="99" height="83" rx="15" fill="#FFFFFF" stroke="#E3E9F4"/>
+<rect x="139" y="265" width="99" height="83" rx="15" fill="#FFFFFF" stroke="#E3E9F4"/>
+<g font-family="Arial"><text x="42" y="290" fill="#74849D" font-size="12">Računi</text><text x="42" y="328" fill="#14263F" font-weight="700" font-size="26">24</text><text x="152" y="290" fill="#74849D" font-size="12">Ponude</text><text x="152" y="328" fill="#14263F" font-weight="700" font-size="26">12</text><text x="29" y="379" fill="#14263F" font-size="13" font-weight="700">Brze radnje</text></g>
+<circle cx="65" cy="402" r="14" fill="#E8EBFF"/><path d="M59 402h12m-6-6v12" stroke="#5566F8" stroke-width="2" stroke-linecap="round"/>
+</g>
+<g transform="translate(1009 112)" filter="url(#shadow)"><rect width="137" height="271" rx="21" fill="#0A2038" stroke="#5069A4" stroke-width="3"/><rect x="7" y="9" width="123" height="253" rx="14" fill="#F8FAFF"/><text x="19" y="40" font-family="Arial" font-size="12" font-weight="700" fill="#14263F">Računi</text><rect x="17" y="58" width="102" height="46" rx="8" fill="#FFFFFF" stroke="#E0E5F0"/><text x="24" y="75" font-family="Arial" font-size="8" fill="#14263F">R-2026-001</text><text x="24" y="89" font-family="Arial" font-size="10" font-weight="700" fill="#5566F8">1.250,00 €</text><rect x="17" y="114" width="102" height="46" rx="8" fill="#FFFFFF" stroke="#E0E5F0"/><text x="24" y="131" font-family="Arial" font-size="8" fill="#14263F">R-2026-002</text><text x="24" y="145" font-family="Arial" font-size="10" font-weight="700" fill="#5566F8">950,00 €</text><rect x="17" y="222" width="102" height="25" rx="8" fill="#5566F8"/><text x="35" y="238" font-family="Arial" fill="#fff" font-size="10">Novi račun</text></g>
+</svg>

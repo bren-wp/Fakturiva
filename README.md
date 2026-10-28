@@ -1,34 +1,52 @@
-# Fakturiva
+<div align="center">
+  <img src="docs/assets/fakturiva-logo.svg" width="420" alt="Fakturiva — Računi i ponude, jednostavno."/>
+  <p><strong>Više kontrole nad računima. Manje papirologije.</strong></p>
+  <p>Jednostavna Android aplikacija za račune, ponude, klijente i svakodnevne poslovne obveze.</p>
+</div>
 
-**Računi i ponude, jednostavno.**
+![Fakturiva — računi, ponude i poslovanje](docs/assets/fakturiva-banner.svg)
 
-Fakturiva je nativna Android aplikacija za samostalno poslovanje: priprema računa i ponuda, evidencija klijenata, katalog usluga, naplate te izvoz čitljivih PDF dokumenata. Vaši podaci ostaju na uređaju.
+<div align="center">
+  <img src="docs/assets/fakturiva-icon.svg" width="88" alt="Fakturiva ikona"/>
+  <p><strong>Računi i ponude, jednostavno.</strong></p>
+</div>
 
-### Što dobivate
+## Sve što vam treba za preglednije poslovanje
 
-- **Dokumenti:** nacrti računa i ponuda, stavke, obračun PDV-a, numeriranje pri potvrdi i PDF.
-- **Klijenti i usluge:** lokalna evidencija bez registracije ili oblaka.
-- **Naplata i pregled:** knjiženje uplata i pregled iznosa.
-- **Izvoz:** ugrađeni Android sustav za spremanje i dijeljenje PDF-a.
-- **Privatnost:** nema oglasa, analitike, vanjskih SDK-ova ni dozvole za internet.
-- **Brending:** Fakturiva; tamnoplava, plava i tirkizna.
+**Fakturiva** stavlja vaše najvažnije poslovne dokumente na jedno mjesto. Pripremite račun ili ponudu, odaberite klijenta i stavke, pratite naplatu i podijelite profesionalni PDF — iz poznatog, preglednog Android sučelja.
 
-> **Pravni status:** Ovo je razvojna verzija. PDF račun nije strukturirani eRačun. Nema mrežne fiskalizacije, slanja eRačuna, certifikata ni potvrđene zakonske usklađenosti. Takvu funkcionalnost treba zasebno integrirati prije upotrebe za obvezno izdavanje. Nemojte koristiti dokumente iz ove verzije kao zamjenu za zakonski obvezan fiskalizirani račun.
+| 🧾 Računi | 📋 Ponude | 👥 Klijenti |
+| :--- | :--- | :--- |
+| Jednostavna priprema i potvrda dokumenata | Izrada ponuda i pretvaranje u nacrt računa | Kontakti i poslovni podaci uvijek pri ruci |
 
-### Tehnički temelj
+| 📦 Artikli i usluge | 📊 Poslovni pregled | 📄 PDF |
+| :--- | :--- | :--- |
+| Uredan katalog cijena i usluga | Pregled izdanih dokumenata i evidentiranih uplata | Lokalna izrada, spremanje i dijeljenje |
 
-100 % nativni Android framework: Java, SQLite, PdfDocument, Storage Access Framework i Android Keystore/JCA za šifriranu sigurnosnu kopiju. Nema Composea, React Nativea, Fluttera, webviewa ni mrežnih servisa. Gradle i Android Gradle Plugin su **isključivo alati za izgradnju**, a nisu runtime ovisnosti.
+## Dizajnirano da vam olakša rad
 
-- Android 7.0+ (minSdk 24), targetSdk 35.
-- Java 17, Android Gradle Plugin 8.7.3 i Gradle 8.9.
-- U Android Studiju otvoriti korijensku mapu i pokrenuti `app`.
-- CI gradi debug APK kao GitHub Actions artifact; release AAB zahtijeva pravilno potpisivanje.
-- Za gradnju iz terminala uz instaliran SDK i Gradle 8.9: `gradle :app:assembleDebug`.
+- **Sve na dohvat ruke.** Jasna početna ploča i pristup najčešćim radnjama.
+- **Računi bez prepisivanja.** Ponudu možete pretvoriti u nacrt računa i nastaviti uređivanje.
+- **Evidencija naplate.** Pregled evidentiranih uplata i nepodmirenih iznosa.
+- **Vaša privatnost.** Poslovni podaci ostaju na uređaju, bez računa u oblaku, oglasa i analitike.
+- **Vaši podaci pod kontrolom.** Automatske šifrirane lokalne kopije i zaseban izvoz sigurnosne kopije za čuvanje izvan uređaja.
+- **Ugodno sučelje.** Svijetla i tamna tema, hrvatski jezik i iznosi u eurima.
 
-### Upute
+## Dostupno za Android
 
-Pri prvom pokretanju upišite podatke tvrtke u Postavkama. Zatim kreirajte klijenta, artikl ili uslugu i nacrt dokumenta. Nakon provjere možete potvrditi dokument, spremiti PDF i upisati uplatu. Prije svake obnove telefona izvezite sigurnosnu kopiju i provjerite da je možete vratiti.
+**[Preuzmite najnovije izdanje](https://github.com/bren-wp/Fakturiva/releases)**
 
-### Autorski identitet
+Fakturiva se razvija za Android 7.0 i novije uređaje. Dostupni paketi mogu biti pretpregledne razvojne verzije; prije poslovne upotrebe provjerite opis odgovarajućeg izdanja.
 
-Brend **Fakturiva** · Autor **Brendigo**.
+## Važni poslovni dokumenti zaslužuju dodatnu zaštitu
+
+Aplikacija omogućuje šifrirani izvoz sigurnosne kopije. Preporučujemo čuvanje kopije na drugom uređaju ili zasebnom sigurnom mjestu. Lokalna zaštita ne može jamčiti oporavak nakon fizičkog gubitka uređaja.
+
+> **Napomena o eRačunima:** Izvezeni PDF nije strukturirani eRačun ni potvrda fiskalizacije. Odgovarajuće zakonske integracije nisu dio trenutačnog pretpregleda aplikacije.
+
+---
+
+<div align="center">
+  <strong>Fakturiva</strong> · Brendigo<br/>
+  <em>Računi i ponude, jednostavno.</em>
+</div>
