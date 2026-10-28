@@ -26,7 +26,7 @@ jobs:
       - name: Verify monetary and encrypted-backup core
         run: |
           mkdir -p build/smoke
-          javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/Money.java app/src/main/java/com/brendigo/fakturiva/SecureBackup.java app/src/main/java/com/brendigo/fakturiva/Oib.java app/src/main/java/com/brendigo/fakturiva/IsoDates.java quality/NativeCoreSmoke.java
+          javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/Money.java app/src/main/java/com/brendigo/fakturiva/SecureBackup.java app/src/main/java/com/brendigo/fakturiva/Oib.java app/src/main/java/com/brendigo/fakturiva/IsoDates.java app/src/main/java/com/brendigo/fakturiva/Iban.java quality/NativeCoreSmoke.java
           java -cp build/smoke com.brendigo.fakturiva.NativeCoreSmoke
       - name: Compile app and lint
         run: gradle :app:assembleDebug :app:lintDebug --stacktrace
