@@ -138,12 +138,20 @@ public final class RecoveryVault {
     public static synchronized JSONObject read(Context ctx,int index) throws Exception{
         if(index<0||index>=COPIES)throw new IllegalArgumentException("Nepoznata kopija");
         File file=file(directory(ctx),index);
-        if(!file.isFile())throw new IllegalArgumentException("Kopija ne postoji");
-        if(file.length()>MAX_BYTES)throw new IllegalArgumentException("Prevelika kopija");
-        byte[] sealed=new byte[(int)file.length()];
-        try(FileInputStream in=new AtomicFile(file).openRead()){
-            int off=0,n;while(off<sealed.length&&(n=in.read(sealed,off,sealed.length-off))>0)off+=n;
-            if(off!=sealed.length)throw new IllegalArgumentException("Nepotpuna kopija");
+        AtomicFile atomic=new AtomicFile(file);
+        // AtomicFile may have to recover a .bak after power loss; never reject it
+        // just because the primary filename temporarily does not exist.
+        if(!file.isFile()&&!new File(file.getPath()+".bak").isFile())
+            throw new IllegalArgumentException("Kopija ne postoji");
+        byte[] sealed;
+        try(FileInputStream in=atomic.openRead()){
+            ByteArrayOutputStream data=new ByteArrayOutputStream();
+            byte[] block=new byte[8192];int n;
+            while((n=in.read(block))!=-1){
+                if(data.size()+n>MAX_BYTES)throw new IllegalArgumentException("Prevelika kopija");
+                data.write(block,0,n);
+            }
+            sealed=data.toByteArray();
         }
         byte[] compressed=open(sealed),plain;
         Arrays.fill(sealed,(byte)0);
@@ -197,7 +205,11 @@ public final class RecoveryVault {
 
     public static synchronized String summary(Context ctx){
         File f=file(directory(ctx),0);
-        if(!f.isFile())return "Lokalna kopija još nije stvorena";
+        if(!f.isFile()){
+            File previous=new File(f.getPath()+".bak");
+            if(!previous.isFile())return "Lokalna kopija još nije stvorena";
+            f=previous;
+        }
         java.text.SimpleDateFormat fmt=new java.text.SimpleDateFormat("dd.MM.yyyy. HH:mm",java.util.Locale.forLanguageTag("hr-HR"));
         return "Posljednja lokalna kopija: "+fmt.format(new java.util.Date(f.lastModified()));
     }
