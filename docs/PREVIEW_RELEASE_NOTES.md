@@ -1,26 +1,23 @@
-# Fakturiva v0.4.0 — Android pretpregled
+# Fakturiva v0.5.0 — nativni Android pretpregled
 
 **Računi i ponude, jednostavno.**
 
-Fakturiva donosi nativno, pregledno Android sučelje za pripremu ponuda i računa, kupce i poslovne partnere, evidenciju uplata, katalog usluga i lokalni PDF izvoz.
+Fakturiva čuva evidenciju vaših poslovnih dokumenata lokalno na Android uređaju — uz pregledno sučelje na hrvatskom jeziku, klijente, ponude, račune, katalog usluga, naplatu i PDF izvoz.
 
-### Što je novo
-- **Detaljan profil tvrtke ili obrta:** naziv, OIB, PDV identifikacijski broj, adresa, grad, država, poštanski broj, e-mail, telefon, web, IBAN, banka, SWIFT, registar, poslovna jedinica, operater, porezna napomena i podaci o plaćanju.
-- **Klijenti:** uređivanje, OIB/PDV ID, adresa, telefon i e-mail, uz povijest računa.
-- **Profesionalniji PDF:** izdavatelj i klijent, datumi izdavanja i isporuke, dospijeće, stavke, porez po stopama, plaćanja i napomene.
-- **Veća pouzdanost podataka:** nedestruktivna SQLite v2→v3 migracija, WAL zapisivanje, stroži datum/OIB/IBAN, konzistentna sigurnosna kopija i oporavak nacrta.
-- **Dosljedan identitet Fakturiva:** prepoznatljiva ikona, svijetla/tamna tema i izvorni Android elementi.
+## Poboljšanja verzije 0.5
+- **Ujednačeniji dizajn:** novi tamni Fakturiva splash zaslon, preglednije kartice i razmaci početne stranice, profil izdavatelja s brendiranom karticom i trajno vidljivim gumbom za spremanje.
+- **Potpuni podaci na dokumentima:** naziv i identitet tvrtke/obrta, OIB, PDV ID, puna adresa, banka, IBAN, SWIFT, klijent, kontakt, datumi, stavke i iznosi.
+- **Višestranični PDF:** dugi nazivi i adrese više se ne odsijecaju; tekst prelazi na novu stranicu i zadržava unose.
+- **Evidencija računa i ponuda:** nacrti, kontrolirano numeriranje, konverzija ponude u račun, djelomične uplate i izvještaji.
+- **Očuvanje podataka:** SQLite s transakcijama i strožim zapisivanjem, šifrirani radni nacrti, rotirajuće lokalne kopije, upozorenje ako kopiranje ne uspije te prijenosni AES-GCM izvoz.
+- **Provjere kvalitete:** automatski build/lint, matematički i kriptografski testovi, testovi baze/PDF-a na Androidu i mjerljiva usporedba svih 20 izvornih ekrana.
 
-### Paketi izdanja
-- `Fakturiva-v0.4.0-preview-debug.apk` — Android debug-potpisan APK za isprobavanje.
-- `Fakturiva-v0.4.0-preview-DEBUG-SIGNED.aab` — AAB s privremenim debug potpisom, **nije produkcijski Google Play upload**.
-- `Fakturiva-v0.4.0-preview-UNSIGNED.aab` — nepotpisani AAB, potrebno produkcijsko potpisivanje vlastitim ključem.
-- `SHA256SUMS.txt` — provjera integriteta datoteka.
+## APK i AAB
+- `Fakturiva-v0.5.0-preview-debug.apk`: instalacijski Android APK potpisan privremenim debug ključem za testiranje.
+- `Fakturiva-v0.5.0-preview-DEBUG-SIGNED.aab`: debug-potpisani AAB, nije produkcijski Google Play upload.
+- `Fakturiva-v0.5.0-preview-UNSIGNED.aab`: nepotpisani release AAB; za trgovinu potreban je vaš produkcijski upload ključ.
+- `SHA256SUMS.txt`: integritet APK/AAB datoteka.
 
-### Očuvanje podataka
-Fakturiva radi bez mrežnog računa i čuva zapise lokalno uz automatske šifrirane kopije i lozinkom zaštićen izvoz. **Ni jedna aplikacija ne može jamčiti nulti rizik od gubitka dokumenata ako su sve kopije na istom uređaju.** Zaštitite svoje podatke redovitim izvozom šifrirane kopije na neovisan medij ili pohranu te povremenom provjerom obnove.
+**Napomena:** Nema fiskalizacije ni razmjene strukturiranih eRačuna. Lokalni PDF nije eRačun niti dokaz fiskalizacije. Sadržaj je razvojni pretpregled dok se ne dovrše testovi i zakonska provjera. Lokalna pohrana ne može jamčiti očuvanje podataka ako uređaj nestane ili se podaci izbrišu; redovito izvozite šifriranu kopiju izvan telefona.
 
-### Važne informacije
-Ovo je **razvojni pretpregled**, a ne verificirani računovodstveni proizvod. PDF nije strukturirani eRačun i ne predstavlja dokaz fiskalizacije. Elektronička fiskalizacija i zakonski obvezna eRačun razmjena nisu implementirane. Pixel-perfect 1:1 provjera svih 20 referentnih ekrana ostaje otvorena dok se ne dovrše testovi stvarnih emulatorskih snimki i vizualna usporedba.
-
-**Fakturiva by Brendigo** · Android 7.0+.
+Fakturiva · Brendigo.
