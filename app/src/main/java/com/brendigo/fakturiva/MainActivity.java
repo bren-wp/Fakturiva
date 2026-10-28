@@ -27,6 +27,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -63,8 +64,14 @@ public final class MainActivity extends Activity {
                 if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
                     throw new IllegalStateException("Neuspjela provjera baze");
             }
-            if(!prefs.getBoolean("welcomed",false)) welcome(); else navigate("home");
+            if(!prefs.getBoolean("welcomed",false)) welcome();
+            else { navigate("home");offerWorkingDraftRecovery(); }
         }catch(Exception openError){damagedDatabase(openError);}
+    }
+    @Override protected void onStop(){
+        if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen))
+            saveWorkingDraft();
+        super.onStop();
     }
     @Override protected void onDestroy(){if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');db.close();super.onDestroy();}
     private int bg(){return dark?0xff101c30:BG;}
@@ -359,9 +366,85 @@ public final class MainActivity extends Activity {
         });
     }
     private String later(int days){Calendar c=Calendar.getInstance();c.add(Calendar.DAY_OF_MONTH,days);return dateFormat.format(c.getTime());}
+    /** An unfinished invoice or quote must survive process death and device reboot. */
+    private void saveWorkingDraft(){
+        try{
+            JSONObject j=new JSONObject();
+            j.put("version",1);j.put("type",editType);j.put("savedId",editingDraftId);
+            j.put("clientId",editClientId);j.put("issue",draftIssue);
+            j.put("due",draftDue);j.put("notes",draftNote);
+            JSONArray lines=new JSONArray();
+            for(Store.Item i:draftItems){
+                JSONObject row=new JSONObject();
+                row.put("name",i.name);row.put("qty",i.qtyMilli);
+                row.put("price",i.unitCents);row.put("vat",i.taxRate);
+                lines.put(row);
+            }
+            j.put("items",lines);
+            RecoveryVault.saveWorkingDraft(this,j);
+        }catch(Exception e){
+            android.util.Log.e("FakturivaRecovery","Working draft could not be saved",e);
+            toast("Upozorenje: radni nacrt nije spremljen. Izvezite ili spremite dokument.");
+        }
+    }
+    private void loadWorkingDraft(){
+        try{
+            JSONObject j=RecoveryVault.readWorkingDraft(this);
+            if(j==null)return;
+            if(j.optInt("version")!=1)throw new IllegalArgumentException("Nepodržan format radnog nacrta");
+            String type=j.getString("type");
+            if(!Store.INVOICE.equals(type)&&!Store.QUOTE.equals(type))
+                throw new IllegalArgumentException("Nepoznata vrsta dokumenta");
+            ArrayList<Store.Item> loaded=new ArrayList<>();
+            JSONArray lines=j.getJSONArray("items");
+            if(lines.length()>300)throw new IllegalArgumentException("Previše stavki nacrta");
+            for(int a=0;a<lines.length();a++){
+                JSONObject row=lines.getJSONObject(a);Store.Item item=new Store.Item();
+                item.name=row.getString("name");item.qtyMilli=row.getLong("qty");
+                item.unitCents=row.getLong("price");item.taxRate=row.getInt("vat");
+                item.net();item.tax();loaded.add(item);
+            }
+            editType=type;editingDraftId=j.getLong("savedId");
+            editClientId=j.getLong("clientId");
+            draftIssue=j.getString("issue");draftDue=j.getString("due");
+            draftNote=j.optString("notes");draftItems.clear();draftItems.addAll(loaded);
+            if(editingDraftId>0){
+                Store.Document existing=db.document(editingDraftId);
+                if(!Store.DRAFT.equals(existing.status))
+                    throw new IllegalStateException("Dokument je u međuvremenu potvrđen. Izaberite drugi nacrt.");
+            }
+            editDocumentScreen();
+        }catch(Exception e){error(e);}
+    }
+    private void offerWorkingDraftRecovery(){
+        if(!RecoveryVault.hasWorkingDraft(this))return;
+        new AlertDialog.Builder(this)
+            .setTitle("Pronađen je nedovršeni dokument")
+            .setMessage("Fakturiva je automatski sačuvala promjene. Nastavite rad bez ponovnog unosa.")
+            .setPositiveButton("Nastavi uređivanje",(d,w)->loadWorkingDraft())
+            .setNegativeButton("Kasnije",null)
+            .show();
+    }
+    private void watchDraft(EditText input,Runnable onChange){
+        input.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int start,int before,int count){onChange.run();saveWorkingDraft();}
+            @Override public void afterTextChanged(android.text.Editable s){}
+        });
+    }
     private void newDocument(String type){
-        editType=type;editingDraftId=-1;draftItems.clear();draftIssue=later(0);draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
-        editDocumentScreen();
+        if(RecoveryVault.hasWorkingDraft(this)){
+            new AlertDialog.Builder(this).setTitle("Nedovršeni dokument")
+                .setMessage("Pronađen je automatski spremljen radni nacrt. Pokretanjem novog dokumenta prethodni radni nacrt bit će odbačen. Već spremljeni računi i ponude ostaju netaknuti.")
+                .setPositiveButton("Nastavi prethodni",(d,w)->loadWorkingDraft())
+                .setNeutralButton("Započni novi",(d,w)->startEmptyDocument(type))
+                .setNegativeButton("Odustani",null).show();
+        }else startEmptyDocument(type);
+    }
+    private void startEmptyDocument(String type){
+        editType=type;editingDraftId=-1;draftItems.clear();draftIssue=later(0);
+        draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
+        saveWorkingDraft();editDocumentScreen();
     }
     private void resumeSavedDraft(long id){
         try{
@@ -370,7 +453,7 @@ public final class MainActivity extends Activity {
             editingDraftId=d.id;editType=d.type;editClientId=d.clientId;
             draftIssue=d.issueDate;draftDue=d.dueDate;draftNote=d.notes;
             draftItems.clear();draftItems.addAll(d.items);
-            editDocumentScreen();
+            saveWorkingDraft();editDocumentScreen();
         }catch(Exception e){error(e);}
     }
     private void editDocumentScreen(){
@@ -387,14 +470,23 @@ public final class MainActivity extends Activity {
         c.addView(label("Klijent",12,ink(),true));Spinner selector=new Spinner(this);
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names);selector.setAdapter(adapter);
         selector.setSelection(current);place(c,selector);
+        selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
+            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+                editClientId=clients.get(pos).id;saveWorkingDraft();
+            }
+        });
         EditText issued=field("Datum izdavanja",draftIssue);dateInput(issued);fieldLabel(c,"Datum izdavanja",issued);
         EditText due=field("Datum dospijeća / valjanosti",draftDue);dateInput(due);fieldLabel(c,"Dospijeće / vrijedi do",due);
         EditText notes=field("Neobavezna napomena",draftNote);fieldLabel(c,"Napomena",notes);
+        watchDraft(issued,()->draftIssue=issued.getText().toString());
+        watchDraft(due,()->draftDue=due.getText().toString());
+        watchDraft(notes,()->draftNote=notes.getText().toString());
         place(body,c);gap(body,16);
         button(body,"Nastavi na stavke  ›",()->{
             editClientId=clients.get(selector.getSelectedItemPosition()).id;
             draftIssue=issued.getText().toString();draftDue=due.getText().toString();
-            draftNote=notes.getText().toString();editItemsScreen();
+            draftNote=notes.getText().toString();saveWorkingDraft();editItemsScreen();
         });
     }
     private void editItemsScreen(){
@@ -407,7 +499,7 @@ public final class MainActivity extends Activity {
             c.addView(label(Money.decimalQuantity(i.qtyMilli)+" × "+Money.euros(i.unitCents)+" · PDV "+i.taxRate+"%",11,sub(),false));
             gap(c,8);c.addView(label(Money.euros(i.net()+i.tax()),17,BLUE,true));
             gap(c,7);
-            TextView remove=label("Ukloni stavku",12,RED,true);place(c,remove);remove.setOnClickListener(v->{draftItems.remove(delete);editItemsScreen();});
+            TextView remove=label("Ukloni stavku",12,RED,true);place(c,remove);remove.setOnClickListener(v->{draftItems.remove(delete);saveWorkingDraft();editItemsScreen();});
             place(body,c);gap(body,10);
         }
         secondary(body,"＋ Dodaj artikl ili uslugu",this::addLine);
@@ -458,11 +550,12 @@ public final class MainActivity extends Activity {
                     i.unitCents=Money.cents(price.getText().toString());
                     i.taxRate=Integer.parseInt(rates[tax.getSelectedItemPosition()].replace("%",""));
                     if(i.name.isEmpty()||i.unitCents<0)throw new IllegalArgumentException("Provjerite naziv i cijenu");
-                    draftItems.add(i);editItemsScreen();
+                    draftItems.add(i);saveWorkingDraft();editItemsScreen();
                 }catch(Exception e){error(e);}
             }).show();
     }
     private void reviewDraft(){
+        saveWorkingDraft();
         setup("review",true);toolbar("Pregled dokumenta","Korak 3 od 3 · Potvrda",true);
         LinearLayout summary=card();
         summary.addView(label(editType.equals(Store.INVOICE)?"Račun · nacrt":"Ponuda · nacrt",19,BLUE,true));gap(summary,13);
@@ -486,8 +579,12 @@ public final class MainActivity extends Activity {
             if(editingDraftId>0){
                 id=editingDraftId;
                 db.updateDraft(id,editClientId,draftIssue,draftDue,draftNote,draftItems);
-            }else id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
+            }else {
+                id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
+                editingDraftId=id;saveWorkingDraft();
+            }
             if(confirm)db.confirm(id);
+            RecoveryVault.clearWorkingDraft(this);
             editingDraftId=-1;draftItems.clear();showDocument(id);
         }catch(Exception e){error(e);}
     }
