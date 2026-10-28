@@ -65,7 +65,7 @@ public final class MainActivity extends Activity {
                 if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
                     throw new IllegalStateException("Neuspjela provjera baze");
             }
-            if(!prefs.getBoolean("welcomed",false)) welcome();
+            if(!prefs.getBoolean("welcomed",false)) splash(true);
             else { navigate("home");offerWorkingDraftRecovery(); }
         }catch(Exception openError){damagedDatabase(openError);}
     }
@@ -124,6 +124,7 @@ public final class MainActivity extends Activity {
     private void secondary(LinearLayout parent,String text,Runnable act){place(parent,action(text,BLUE,false,act));}
     private void setup(String active,boolean nav){
         screen=active;
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(panel());
         getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         root=vertical();root.setBackgroundColor(bg());setContentView(root);
@@ -209,6 +210,57 @@ public final class MainActivity extends Activity {
             case "company":company();break;
             case "eracun":eracun();break;
             default:home();
+        }
+    }
+
+    /** Native branded entry view, designed to match the dark Fakturiva splash reference. */
+    private void splash(boolean animate){
+        screen="splash";
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setNavigationBarColor(0xff0a1c33);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_FULLSCREEN);
+        FrameLayout frame=new FrameLayout(this);
+        GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            new int[]{0xff173a64,0xff102b4b,0xff09192d});
+        frame.setBackground(bg);
+        setContentView(frame);
+        View rings=new View(this){
+            final android.graphics.Paint brush=new android.graphics.Paint(3);
+            @Override protected void onDraw(android.graphics.Canvas canvas){
+                brush.setColor(0x1affffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
+                brush.setStrokeWidth(dp(0.7f));
+                float unit=getWidth();
+                canvas.drawCircle(unit*1.20f,getHeight()*.32f,unit*.65f,brush);
+                canvas.drawCircle(-unit*.45f,getHeight()*.64f,unit*.88f,brush);
+                brush.setStyle(android.graphics.Paint.Style.FILL);
+            }
+        };
+        frame.addView(rings,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout center=vertical();center.setGravity(Gravity.CENTER);
+        ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.brand_mark);
+        LinearLayout.LayoutParams logo=lp(104,104);logo.gravity=Gravity.CENTER_HORIZONTAL;
+        center.addView(mark,logo);gap(center,28);
+        TextView name=label("Fakturiva",42,WHITE,true);name.setGravity(Gravity.CENTER);
+        place(center,name);gap(center,13);
+        TextView subtitle=label("Računi i ponude, jednostavno.",14,0xffbdcde1,false);
+        subtitle.setGravity(Gravity.CENTER);place(center,subtitle);
+        FrameLayout.LayoutParams middle=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
+        middle.leftMargin=dp(18);middle.rightMargin=dp(18);frame.addView(center,middle);
+        LinearLayout bottom=vertical();bottom.setGravity(Gravity.CENTER);
+        FrameLayout progress=new FrameLayout(this);background(progress,0xff36516c,4);
+        View completed=new View(this);background(completed,0xff2fd2c5,4);
+        FrameLayout.LayoutParams fill=new FrameLayout.LayoutParams(dp(33),dp(4),Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        progress.addView(completed,fill);
+        LinearLayout.LayoutParams progressLp=lp(82,4);progressLp.gravity=Gravity.CENTER;
+        bottom.addView(progress,progressLp);gap(bottom,21);
+        TextView text=label("Vaše poslovanje. Jednostavnije.",12,0xff9fb5ce,false);
+        text.setGravity(Gravity.CENTER);place(bottom,text);
+        FrameLayout.LayoutParams down=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
+        down.bottomMargin=dp(53);frame.addView(bottom,down);
+        if(animate){
+            frame.setOnClickListener(v->welcome());
+            frame.postDelayed(()->{if("splash".equals(screen)&&!isFinishing())welcome();},850);
         }
     }
     private void welcome(){
