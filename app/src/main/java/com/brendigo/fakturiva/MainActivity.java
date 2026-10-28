@@ -709,59 +709,142 @@ public final class MainActivity extends Activity {
             .setNegativeButton("Odustani",null).setPositiveButton("Potvrdi",(d,w)->yes.run()).show();
     }
     private void showDocument(long id){
-        currentDocumentId=id;Store.Document d;
+        currentDocumentId=id;
+        Store.Document d;
         try{d=db.document(id);}catch(Exception e){error(e);navigate("home");return;}
-        setup("detail",true);toolbar(Store.INVOICE.equals(d.type)?"Pregled računa":"Pregled ponude","Detalji dokumenta",true);
+        setup("detail",true);
+        toolbar(Store.INVOICE.equals(d.type)?"Pregled računa":"Pregled ponude","Provjerite podatke dokumenta",true);
         backupAlert();
-        LinearLayout card=card();card.addView(label(d.number==null?"Nacrt #"+d.id:d.number,21,BLUE,true));gap(card,4);
-        card.addView(label("Status: "+status(d.status),12,sub(),false));gap(card,18);
-        card.addView(label(d.issuerName,15,ink(),true));gap(card,4);
-        card.addView(label("Klijent: "+d.clientName,13,ink(),false));
-        card.addView(label("OIB klijenta: "+d.clientOib,11,sub(),false));
-        if(d.clientVatId!=null&&!d.clientVatId.isEmpty())card.addView(label("PDV ID klijenta: "+d.clientVatId,11,sub(),false));
-        card.addView(label("Adresa klijenta: "+d.clientAddress,11,sub(),false));gap(card,11);
-        card.addView(label("Izdano: "+d.issueDate+"  ·  Dospijeće: "+d.dueDate,11,sub(),false));
-        if(d.supplyDate!=null&&!d.supplyDate.isEmpty())card.addView(label("Datum usluge: "+d.supplyDate,11,sub(),false));
-        gap(card,15);
-        for(Store.Item it:d.items){LinearLayout r=horizontal();
-            TextView n=label(it.name+"\n"+Money.decimalQuantity(it.qtyMilli)+" × "+Money.euros(it.unitCents)+" · "+it.taxRate+"%",11,ink(),false);
-            r.addView(n,new LinearLayout.LayoutParams(0,-2,1));r.addView(label(Money.euros(it.net()+it.tax()),12,ink(),true));
-            place(card,r);gap(card,13);
+
+        LinearLayout identity=card();
+        LinearLayout header=horizontal();
+        ImageView glyph=icon(Store.INVOICE.equals(d.type)?R.drawable.ic_invoice:R.drawable.ic_quote,BLUE);
+        glyph.setPadding(dp(12),dp(12),dp(12),dp(12));
+        background(glyph,dark?0xff293c63:0xffe9edff,13);
+        header.addView(glyph,lp(48,48));
+        LinearLayout identityText=vertical();pad(identityText,12,0);
+        identityText.addView(label(d.number==null?"Nacrt #"+d.id:d.number,19,ink(),true));
+        identityText.addView(label(d.clientName,12,sub(),false));
+        header.addView(identityText,new LinearLayout.LayoutParams(0,-2,1));
+        place(identity,header);gap(identity,12);
+        TextView state=label(status(d.status),12,Store.PAID.equals(d.status)?TEAL:
+            Store.DRAFT.equals(d.status)?sub():BLUE,true);
+        place(identity,state);
+        gap(identity,12);
+        LinearLayout amounts=horizontal();
+        LinearLayout value=vertical();
+        value.addView(label("UKUPNO",10,sub(),true));
+        value.addView(label(Money.euros(d.totalCents),25,BLUE,true));
+        amounts.addView(value,new LinearLayout.LayoutParams(0,-2,1));
+        if(Store.INVOICE.equals(d.type)){
+            LinearLayout due=vertical();due.setGravity(Gravity.RIGHT);
+            due.addView(label("PREOSTALO",10,sub(),true));
+            due.addView(label(Money.euros(d.outstanding()),16,ink(),true));
+            amounts.addView(due);
         }
-        card.addView(label("Osnovica: "+Money.euros(d.netCents),12,sub(),false));
-        card.addView(label("PDV: "+Money.euros(d.taxCents),12,sub(),false));gap(card,9);
-        card.addView(label("UKUPNO: "+Money.euros(d.totalCents),23,BLUE,true));
-        if(Store.INVOICE.equals(d.type))card.addView(label("Preostalo: "+Money.euros(d.outstanding()),12,sub(),false));
-        place(body,card);gap(body,15);
-        button(body,"Preuzmi PDF",()->savePdf(id));gap(body,9);
-        secondary(body,"Podijeli PDF",()->sharePdf(id));gap(body,9);
+        place(identity,amounts);place(body,identity);
+        gap(body,14);
+
+        // Rendered from the same native PDF used by Save/Share.
+        LinearLayout previewCard=card();
+        LinearLayout previewHeader=horizontal();
+        previewHeader.addView(label("Pregled PDF dokumenta",14,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        previewHeader.addView(label("A4",11,sub(),true));
+        place(previewCard,previewHeader);gap(previewCard,12);
+        try{
+            View preview=DocumentPreview.firstPage(this,db,d);
+            previewCard.addView(preview);
+            gap(previewCard,7);
+            previewCard.addView(label("Prikazana je prva stranica; puni dokument otvara se izvozom PDF-a.",10,sub(),false));
+        }catch(Exception e){
+            previewCard.addView(label("Pregled nije dostupan. Podaci dokumenta su i dalje sačuvani.",12,sub(),false));
+        }
+        place(body,previewCard);gap(body,13);
+        button(body,"Spremi PDF",()->savePdf(id));gap(body,9);
+        secondary(body,"Podijeli PDF",()->sharePdf(id));
+
+        section("Podaci dokumenta");
+        LinearLayout details=card();
+        details.addView(label("Izdavatelj: "+d.issuerName,12,ink(),true));gap(details,6);
+        details.addView(label("Klijent: "+d.clientName,12,ink(),false));
+        if(d.clientOib!=null&&!d.clientOib.isEmpty())details.addView(label("OIB: "+d.clientOib,11,sub(),false));
+        if(d.clientVatId!=null&&!d.clientVatId.isEmpty())details.addView(label("PDV ID: "+d.clientVatId,11,sub(),false));
+        if(d.clientAddress!=null&&!d.clientAddress.isEmpty())details.addView(label("Adresa: "+d.clientAddress,11,sub(),false));
+        gap(details,8);
+        details.addView(label("Datum izdavanja: "+d.issueDate,12,ink(),false));
+        details.addView(label("Rok dospijeća: "+d.dueDate,12,ink(),false));
+        if(d.supplyDate!=null&&!d.supplyDate.isEmpty())
+            details.addView(label("Datum usluge: "+d.supplyDate,12,ink(),false));
+        place(body,details);
+
+        section("Stavke i obračun");
+        LinearLayout list=card();
+        for(Store.Item item:d.items){
+            LinearLayout line=horizontal();
+            LinearLayout desc=vertical();
+            desc.addView(label(item.name,13,ink(),true));
+            desc.addView(label(Money.decimalQuantity(item.qtyMilli)+" × "+Money.euros(item.unitCents)+
+                " · PDV "+item.taxRate+"%",11,sub(),false));
+            line.addView(desc,new LinearLayout.LayoutParams(0,-2,1));
+            line.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),12,ink(),true));
+            place(list,line);gap(list,11);
+        }
+        list.addView(label("Osnovica: "+Money.euros(d.netCents),12,sub(),false));
+        list.addView(label("PDV: "+Money.euros(d.taxCents),12,sub(),false));
+        gap(list,8);list.addView(label("Ukupno: "+Money.euros(d.totalCents),19,BLUE,true));
+        place(body,list);gap(body,14);
+
         if(Store.DRAFT.equals(d.status)){
-            secondary(body,"✎ Uredi nacrt",()->resumeSavedDraft(id));
-            gap(body,9);
+            secondary(body,"Uredi nacrt",()->resumeSavedDraft(id));gap(body,9);
             secondary(body,"Potvrdi dokument",()->confirmWarning(()->{
-            try{db.confirm(id);showDocument(id);}catch(Exception e){error(e);}
-        }));
+                try{db.confirm(id);showDocument(id);}catch(Exception e){error(e);}
+            }));
         }
         if(Store.INVOICE.equals(d.type)&&Store.ISSUED.equals(d.status)&&d.outstanding()>0){
-            gap(body,9);secondary(body,"＋ Evidentiraj uplatu",()->payDialog(id));
+            gap(body,9);secondary(body,"Evidentiraj uplatu",()->payDialog(id));
         }
         if(Store.QUOTE.equals(d.type)&&Store.SENT.equals(d.status)){
             gap(body,9);secondary(body,"Pretvori u račun",()->{
-                try{long invoice=db.quoteToInvoice(id);showDocument(invoice);toast("Stvoren je nacrt računa");}catch(Exception e){error(e);}
+                try{long invoice=db.quoteToInvoice(id);showDocument(invoice);
+                    toast("Stvoren je nacrt računa");}catch(Exception e){error(e);}
             });
         }
-        gap(body,12);caption(body,"PDF je lokalno generiran; nije strukturirani eRačun niti potvrda fiskalizacije.");
+        gap(body,18);
+        caption(body,"PDF nije strukturirani eRačun niti potvrda fiskalizacije.");
     }
     private void payDialog(long id){
-        Store.Document d=db.document(id);
-        EditText amount=field("Iznos uplate",String.format(Locale.forLanguageTag("hr-HR"),"%.2f",d.outstanding()/100.0));
+        Store.Document d;
+        try{d=db.document(id);}catch(Exception e){error(e);return;}
+        if(!Store.INVOICE.equals(d.type)||!Store.ISSUED.equals(d.status)||d.outstanding()<=0){
+            toast("Za ovaj račun nije moguće unijeti uplatu");return;
+        }
+        LinearLayout form=vertical();pad(form,17,7);
+        form.addView(label("Preostalo za naplatu: "+Money.euros(d.outstanding()),14,ink(),true));
+        EditText amount=field("Iznos uplate",
+            String.format(Locale.forLanguageTag("hr-HR"),"%.2f",d.outstanding()/100.0));
         amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        LinearLayout v=vertical();pad(v,18,12);fieldLabel(v,"Iznos u EUR",amount);
-        new AlertDialog.Builder(this).setTitle("Evidentiraj uplatu").setView(v).setNegativeButton("Odustani",null)
-            .setPositiveButton("Spremi",(dlg,which)->{
-                try{db.pay(id,Money.cents(amount.getText().toString()),later(0));showDocument(id);}
-                catch(Exception e){error(e);}
-            }).show();
+        fieldLabel(form,"Iznos u EUR",amount);
+        EditText paidOn=field("Datum uplate",later(0));
+        dateInput(paidOn);fieldLabel(form,"Datum uplate",paidOn);
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle("Evidentiraj uplatu").setView(form)
+            .setNegativeButton("Odustani",null)
+            .setPositiveButton("Spremi",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            .setOnClickListener(button->{
+                try {
+                    long paid=Money.cents(amount.getText().toString());
+                    if(paid<=0||paid>d.outstanding())
+                        throw new IllegalArgumentException("Uplata mora biti veća od 0 i ne veća od preostalog iznosa");
+                    if(!IsoDates.valid(paidOn.getText().toString()))
+                        throw new IllegalArgumentException("Datum uplate nije valjan");
+                    db.pay(id,paid,paidOn.getText().toString());
+                    dialog.dismiss();
+                    showDocument(id);
+                }catch(Exception e){error(e);amount.requestFocus();}
+            }));
+        dialog.show();
     }
     private void clients(){
         setup("clients",true);toolbar("Klijenti","Kupci i poslovni partneri",false);
