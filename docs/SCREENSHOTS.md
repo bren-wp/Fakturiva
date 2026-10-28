@@ -1,7 +1,14 @@
-# Stvarni Android prikazi
+# Autentični Android zasloni i pixel audit
 
-Snimke se izrađuju na Android emulatoru na rezoluciji 1179 × 2556 px (393 × 852 dp, 480 dpi), koristeći stvarnu implementaciju Java/Android aplikacije i isključivo demonstracijske podatke na izoliranom emulatoru. Nisu grafičke makete ili generirane ilustracije.
+Fakturiva ima **20 vizualnih referenci** od vlasnika, svaku u rezoluciji **1179 × 2556 px**.
 
-Početni zaslon, dobrodošlica i stranica prijave iz referentnog paketa nisu tri zasebna zaslona aplikacije: offline-first Fakturiva ne zahtijeva registraciju ili prijavu. Zato se te reference prikazuju kao isti uvodni ekran, a korisnika se ne navodi na nepostojeću funkciju.
+Stvarne snimke preuzimaju se iz izoliranog Android emulatora na istom profilu i razlučivosti, bez grafički generiranih ilustracija. Testni podaci su jasno odvojeni od korisničkih podataka.
 
-Snimke u `docs/screenshots` obnavljaju se kroz GitHub Actions workflow; sadržaj ostaje vjeran stvarnom stanju aplikacije i treba ga usporediti s vlasnikovih 20 referentnih PNG-ova prije tvrdnje o pixel-perfect podudarnosti.
+**Prvi komplet od 20 autentičnih Android snimki:**
+[Preuzmi galeriju iz GitHub Actions](https://github.com/bren-wp/Fakturiva/actions/runs/40782723051/artifacts/12857668423).
+
+U repozitoriju `docs/PIXEL_AUDIT.md` dokumentirana su izmjerena odstupanja za svih 20 ekrana, a `quality/pixel_audit.py` proizvodi ponovljivu RGB provjeru.
+
+Nova provjera uključuje instrumentacijske testove na emulatoru prije snimanja. Ako GitHub Action nema pravo zapisivati u repozitorij, fotografije **ostaju sačuvane kao Actions artefakt**, bez lažnih prikaza u glavnom README-u.
+
+Autentične snimke u `docs/screenshots` i u marketing README automatski se dodaju nakon što je GitHub Actions workflow tokenu omogućena write dozvola.
