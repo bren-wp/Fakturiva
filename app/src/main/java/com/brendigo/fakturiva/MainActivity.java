@@ -650,7 +650,9 @@ public final class MainActivity extends Activity {
         card.addView(label("Status: "+status(d.status),12,sub(),false));gap(card,18);
         card.addView(label(d.issuerName,15,ink(),true));gap(card,4);
         card.addView(label("Klijent: "+d.clientName,13,ink(),false));
-        card.addView(label("OIB: "+d.clientOib,11,sub(),false));gap(card,11);
+        card.addView(label("OIB klijenta: "+d.clientOib,11,sub(),false));
+        if(d.clientVatId!=null&&!d.clientVatId.isEmpty())card.addView(label("PDV ID klijenta: "+d.clientVatId,11,sub(),false));
+        card.addView(label("Adresa klijenta: "+d.clientAddress,11,sub(),false));gap(card,11);
         card.addView(label("Izdano: "+d.issueDate+"  ·  Dospijeće: "+d.dueDate,11,sub(),false));
         gap(card,15);
         for(Store.Item it:d.items){LinearLayout r=horizontal();
@@ -713,27 +715,45 @@ public final class MainActivity extends Activity {
         setup("client_detail",true);toolbar("Detalji klijenta","Profil poslovnog partnera",true);
         LinearLayout card=card();title(card,c.name);gap(card,18);
         caption(card,"OIB: "+c.oib);gap(card,10);caption(card,"Adresa: "+c.address);
-        gap(card,10);caption(card,"E-mail: "+c.email);place(body,card);
+        gap(card,10);caption(card,"E-mail: "+c.email);gap(card,10);
+        caption(card,"Telefon: "+(c.phone==null?"":c.phone));gap(card,10);
+        caption(card,"PDV ID: "+(c.vatId==null?"":c.vatId));place(body,card);
+        gap(body,11);secondary(body,"✎ Uredi podatke klijenta",()->showClientEditor(c));
         section("Dokumenti klijenta");
         int n=0;for(String t:new String[]{Store.INVOICE,Store.QUOTE})
             for(Store.Document d:db.documents(t))if(d.clientId==c.id){documentRow(d);n++;}
         if(n==0)caption(body,"Još nema dokumenata za ovog klijenta.");
         gap(body,13);button(body,"＋ Novi račun za klijenta",()->{newDocument(Store.INVOICE);editClientId=c.id;editDocumentScreen();});
     }
-    private void addClient(){
+    private void addClient(){showClientEditor(null);}
+    private void showClientEditor(Store.Client saved){
+        boolean editing=saved!=null;
         LinearLayout form=vertical();pad(form,18,6);
-        EditText name=field("Naziv tvrtke / ime","");
-        EditText oib=field("OIB (11 znamenaka)","");
-        EditText address=field("Adresa","");
-        EditText email=field("E-mail","");
+        EditText name=field("Naziv tvrtke ili ime i prezime",editing?saved.name:"");
+        EditText oib=field("OIB",editing?saved.oib:"");
+        EditText vat=field("PDV ID (neobavezno)",editing?saved.vatId:"");
+        EditText address=field("Adresa i mjesto",editing?saved.address:"");
+        EditText email=field("E-mail",editing?saved.email:"");
+        EditText phone=field("Telefon",editing?saved.phone:"");
         email.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        fieldLabel(form,"Naziv",name);fieldLabel(form,"OIB",oib);
-        fieldLabel(form,"Adresa",address);fieldLabel(form,"E-mail",email);
-        new AlertDialog.Builder(this).setTitle("Novi klijent").setView(form).setNegativeButton("Odustani",null)
+        fieldLabel(form,"Naziv klijenta",name);
+        fieldLabel(form,"OIB (11 znamenaka)",oib);
+        fieldLabel(form,"PDV identifikacijski broj",vat);
+        fieldLabel(form,"Adresa / mjesto / poštanski broj",address);
+        fieldLabel(form,"E-mail",email);
+        fieldLabel(form,"Telefon",phone);
+        ScrollView content=new ScrollView(this);
+        content.setFillViewport(false);content.addView(form);
+        new AlertDialog.Builder(this).setTitle(editing?"Uredi klijenta":"Novi klijent").setView(content)
+            .setNegativeButton("Odustani",null)
             .setPositiveButton("Spremi",(dlg,w)->{
-                try{String id=oib.getText().toString().trim();
-                    if(!id.isEmpty()&&!Oib.valid(id))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
-                    db.saveClient(name.getText().toString(),id,address.getText().toString(),email.getText().toString());
+                try{
+                    String id=oib.getText().toString().trim();
+                    if(!id.isEmpty()&&!Oib.valid(id))throw new IllegalArgumentException("OIB nije valjan");
+                    if(editing)db.updateClient(saved.id,name.getText().toString(),id,address.getText().toString(),
+                        email.getText().toString(),phone.getText().toString(),vat.getText().toString());
+                    else db.saveClientDetailed(name.getText().toString(),id,address.getText().toString(),
+                        email.getText().toString(),phone.getText().toString(),vat.getText().toString());
                     clients();
                 }catch(Exception e){error(e);}
             }).show();
@@ -810,22 +830,39 @@ public final class MainActivity extends Activity {
         place(c,row);place(body,c);gap(body,9);c.setOnClickListener(v->action.run());
     }
     private void company(){
-        setup("company",true);toolbar("Profil tvrtke","Podaci na dokumentima",true);
-        LinearLayout form=card();title(form,"Podaci o tvrtki");
-        String[] keys={"name","oib","address","email","phone","iban","tax_note"};
-        String[] labels={"Naziv tvrtke / obrta","OIB","Adresa","E-mail","Telefon","IBAN","Napomena o poreznom statusu"};
+        setup("company",true);toolbar("Profil tvrtke","Podaci koji se prikazuju na računima i ponudama",true);
+        caption(body,"Jednom unesite svoje podatke. Novi potvrđeni dokumenti čuvaju vlastitu kopiju podataka izdavatelja.");
+        gap(body,12);
+        LinearLayout form=card();
+        title(form,"Osnovni podaci");
+        String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note"};
+        String[] labels={"Naziv tvrtke / obrta ili ime i prezime","OIB (11 znamenaka)","PDV identifikacijski broj (ako se primjenjuje)","Ulica i kućni broj / adresa","Poštanski broj","Grad / mjesto","Država","E-mail","Telefon","Web stranica","IBAN","Naziv banke","BIC / SWIFT","Registarski podatak (npr. MBS)","Oznaka poslovnog prostora","Oznaka operatera","Način plaćanja","Poziv na broj / model plaćanja","Porezni status ili zakonska napomena"};
         EditText[] fields=new EditText[keys.length];
-        for(int i=0;i<keys.length;i++){fields[i]=field(labels[i],db.setting(keys[i]));fieldLabel(form,labels[i],fields[i]);}
+        for(int i=0;i<keys.length;i++){
+            if(i==3||i==10||i==13||i==18){gap(form,14);}
+            if(i==3)title(form,"Sjedište i kontakt");
+            if(i==10)title(form,"Plaćanje i banka");
+            if(i==13)title(form,"Poslovni i porezni podaci");
+            fields[i]=field(labels[i],db.setting(keys[i]));
+            fieldLabel(form,labels[i],fields[i]);
+            if(i==7)fields[i].setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        }
         place(body,form);gap(body,16);
-        button(body,"Spremi promjene",()->{
-            try{String id=fields[1].getText().toString().trim();
-                if(!id.isEmpty()&&!Oib.valid(id))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
+        button(body,"Spremi sve podatke",()->{
+            try{
+                String name=fields[0].getText().toString().trim();
+                String oib=fields[1].getText().toString().trim();
+                String iban=fields[10].getText().toString().trim();
+                if(name.isEmpty())throw new IllegalArgumentException("Unesite naziv tvrtke ili obrta");
+                if(!oib.isEmpty()&&!Oib.valid(oib))throw new IllegalArgumentException("OIB nije valjan");
+                if(!iban.isEmpty()&&!Iban.valid(iban))throw new IllegalArgumentException("IBAN nije valjan");
                 String[] vals=new String[keys.length];
-                for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString();
+                for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString().trim();
                 db.companySettings(keys,vals);
-                toast("Podaci tvrtke spremljeni");settings();
+                toast("Podaci tvrtke uspješno spremljeni");settings();
             }catch(Exception e){error(e);}
         });
+        gap(body,12);caption(body,"Fiskalizacija nije podržana u ovoj verziji. Podaci o poslovnom prostoru i operateru služe samo za pripremu profila.");
     }
     private void eracun(){
         setup("eracun",true);toolbar("eRačuni i fiskalizacija","Trenutačni status integracije",true);
