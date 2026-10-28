@@ -19,7 +19,22 @@ public final class Store extends SQLiteOpenHelper {
     public static final int VERSION = 2;
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
-    public Store(Context c) { super(c, DB_NAME, null, VERSION); }
+    private final Context appContext;
+    private volatile String lastBackupWarning="";
+    public Store(Context c) { super(c, DB_NAME, null, VERSION);appContext=c.getApplicationContext(); }
+    private void snapshotAfterWrite(){
+        try{RecoveryVault.snapshot(appContext,this);lastBackupWarning="";}
+        catch(Exception e){
+            lastBackupWarning="Lokalna kopija nije ažurirana. Odmah izvezite sigurnosnu kopiju.";
+            android.util.Log.e("FakturivaRecovery","Cannot write local recovery snapshot",e);
+        }
+    }
+    public String backupWarning(){return lastBackupWarning;}
+    public String backupSummary(){return RecoveryVault.summary(appContext);}
+    public void restoreLocal(int index) throws Exception{
+        JSONObject restored=RecoveryVault.read(appContext,index);
+        restore(restored);
+    }
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE company (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
@@ -73,13 +88,30 @@ public final class Store extends SQLiteOpenHelper {
     public void setting(String key,String value) {
         ContentValues v = new ContentValues(); v.put("key",key); v.put("value",value.trim());
         getWritableDatabase().insertWithOnConflict("company",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+        snapshotAfterWrite();
+    }
+    /** Update the company profile atomically instead of saving each field separately. */
+    public void companySettings(String[] keys,String[] values){
+        if(keys.length!=values.length)throw new IllegalArgumentException("Neispravna polja");
+        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        try{
+            for(int i=0;i<keys.length;i++){
+                if(!java.util.Arrays.asList("name","oib","address","email","iban","phone","tax_note").contains(keys[i]))
+                    throw new IllegalArgumentException("Nepoznata postavka");
+                ContentValues v=new ContentValues();v.put("key",keys[i]);v.put("value",values[i].trim());
+                db.insertWithOnConflict("company",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
+        snapshotAfterWrite();
     }
     public long saveClient(String name,String oib,String address,String email) {
         if (name.trim().isEmpty()) throw new IllegalArgumentException("Unesite naziv klijenta");
         ContentValues v = new ContentValues();
         v.put("name",name.trim()); v.put("oib",oib.trim());
         v.put("address",address.trim()); v.put("email",email.trim());
-        return getWritableDatabase().insertOrThrow("clients",null,v);
+        long id=getWritableDatabase().insertOrThrow("clients",null,v);
+        snapshotAfterWrite();return id;
     }
     public List<Client> clients() {
         ArrayList<Client> out=new ArrayList<>();
@@ -95,7 +127,8 @@ public final class Store extends SQLiteOpenHelper {
         Money.tax(0,taxRate);
         ContentValues v=new ContentValues();
         v.put("name",name.trim());v.put("price_cents",priceCents);v.put("tax_rate",taxRate);
-        return getWritableDatabase().insertOrThrow("catalog",null,v);
+        long id=getWritableDatabase().insertOrThrow("catalog",null,v);
+        snapshotAfterWrite();return id;
     }
     public List<Item> products() {
         ArrayList<Item> out=new ArrayList<>();
@@ -109,6 +142,7 @@ public final class Store extends SQLiteOpenHelper {
         if(items.isEmpty()) throw new IllegalArgumentException("Dodajte barem jednu stavku");
         if(issueDate.isEmpty() || dueDate.isEmpty()) throw new IllegalArgumentException("Unesite datume");
         SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+        boolean saved=false;
         try {
             long net=0,tax=0;
             for(Item i:items) {
@@ -134,8 +168,11 @@ public final class Store extends SQLiteOpenHelper {
                 v.put("net_cents",i.net());v.put("tax_cents",i.tax());
                 db.insertOrThrow("lines",null,v);
             }
-            db.setTransactionSuccessful(); return id;
-        } finally { db.endTransaction(); }
+            db.setTransactionSuccessful(); saved=true; return id;
+        } finally {
+            db.endTransaction();
+            if(saved)snapshotAfterWrite();
+        }
     }
     public Document document(long id) {
         try(Cursor c=getReadableDatabase().rawQuery(
@@ -163,6 +200,7 @@ public final class Store extends SQLiteOpenHelper {
     }
     public String confirm(long id) {
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        boolean saved=false;
         try {
             String type, issueDate,status;
             try(Cursor c=db.rawQuery("SELECT type,issue_date,status FROM documents WHERE id=?",new String[]{String.valueOf(id)})){
@@ -182,12 +220,13 @@ public final class Store extends SQLiteOpenHelper {
             ContentValues v=new ContentValues();v.put("number",code);v.put("status",INVOICE.equals(type)?ISSUED:SENT);
             if(db.update("documents",v,"id=? AND status=?",new String[]{String.valueOf(id),DRAFT})!=1)
                 throw new IllegalStateException("Dokument se promijenio");
-            db.setTransactionSuccessful();
+            db.setTransactionSuccessful();saved=true;
             return code;
-        } finally {db.endTransaction();}
+        } finally {db.endTransaction();if(saved)snapshotAfterWrite();}
     }
     public void pay(long id,long amount,String date) {
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        boolean saved=false;
         try {
             Document d=document(id);
             if(!INVOICE.equals(d.type)||DRAFT.equals(d.status)||VOID.equals(d.status))
@@ -196,8 +235,8 @@ public final class Store extends SQLiteOpenHelper {
             ContentValues v=new ContentValues();v.put("document_id",id);v.put("amount_cents",amount);v.put("paid_on",date);
             db.insertOrThrow("payments",null,v);
             if(amount==d.outstanding()){ContentValues p=new ContentValues();p.put("status",PAID);db.update("documents",p,"id=?",new String[]{String.valueOf(id)});}
-            db.setTransactionSuccessful();
-        } finally{db.endTransaction();}
+            db.setTransactionSuccessful();saved=true;
+        } finally{db.endTransaction();if(saved)snapshotAfterWrite();}
     }
     public long quoteToInvoice(long quoteId) {
         Document d=document(quoteId);
@@ -253,7 +292,12 @@ public final class Store extends SQLiteOpenHelper {
     public void restore(JSONObject root) throws JSONException {
         if(!"fakturiva-backup-v1".equals(root.optString("format")) || root.optInt("schema")<1 || root.optInt("schema")>VERSION)
             throw new IllegalArgumentException("Nepodržana sigurnosna kopija");
-        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        for(String table:new String[]{"company","clients","catalog","documents","lines","payments","sequences"})
+            if(root.optJSONArray(table)==null)throw new IllegalArgumentException("Nedostaje tablica u kopiji: "+table);
+        SQLiteDatabase db=getWritableDatabase();
+        // Preserve a snapshot of the CURRENT database before replacing any records.
+        snapshotAfterWrite();
+        db.beginTransaction();boolean saved=false;
         try {
             for(String table:new String[]{"payments","lines","documents","sequences","catalog","clients","company"}) db.delete(table,null,null);
             for(String table:new String[]{"company","clients","catalog","documents","lines","payments","sequences"}){
@@ -278,7 +322,7 @@ public final class Store extends SQLiteOpenHelper {
             try(Cursor c=db.rawQuery("PRAGMA foreign_key_check",null)){
                 if(c.moveToFirst()) throw new IllegalArgumentException("Neispravne veze u sigurnosnoj kopiji");
             }
-            db.setTransactionSuccessful();
-        } finally{db.endTransaction();}
+            db.setTransactionSuccessful();saved=true;
+        } finally{db.endTransaction();if(saved)snapshotAfterWrite();}
     }
 }
