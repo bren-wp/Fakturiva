@@ -2,7 +2,7 @@ name: Fakturiva preview distribution
 on:
   push:
     branches:
-      - feature/autosave-recovery-v0.3
+      - feature/reliable-documents-ui-release
 jobs:
   publish-preview:
     if: contains(github.event.head_commit.message, '[release-preview]')
@@ -23,34 +23,48 @@ jobs:
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
           "$MANAGER" "platforms;android-35" "build-tools;35.0.0"
-      - name: Verify monetary and encryption core
+      - name: Verify money, OIB, dates and crypto
         run: |
           mkdir -p build/smoke
-          javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/Money.java app/src/main/java/com/brendigo/fakturiva/SecureBackup.java quality/NativeCoreSmoke.java
+          javac -d build/smoke \
+            app/src/main/java/com/brendigo/fakturiva/Money.java \
+            app/src/main/java/com/brendigo/fakturiva/SecureBackup.java \
+            app/src/main/java/com/brendigo/fakturiva/Oib.java \
+            app/src/main/java/com/brendigo/fakturiva/IsoDates.java app/src/main/java/com/brendigo/fakturiva/Iban.java \
+            quality/NativeCoreSmoke.java
           java -cp build/smoke com.brendigo.fakturiva.NativeCoreSmoke
-      - name: Compile debug APK, unsigned release AAB and lint
-        run: gradle :app:assembleDebug :app:bundleRelease :app:lintDebug --stacktrace
-      - name: Package files with transparent signature status
+      - name: Build APK and both preview bundle variants
+        run: gradle :app:assembleDebug :app:bundleDebug :app:bundleRelease :app:lintDebug --stacktrace
+      - name: Verify preview bundle signing
+        run: jarsigner -verify app/build/outputs/bundle/debug/app-debug.aab
+      - name: Package, name and checksum actual artifacts
         run: |
           mkdir -p build/publish
           test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/bundle/debug/app-debug.aab
           test -s app/build/outputs/bundle/release/app-release.aab
-          cp app/build/outputs/apk/debug/app-debug.apk build/publish/Fakturiva-v0.3.0-preview.apk
-          cp app/build/outputs/bundle/release/app-release.aab build/publish/Fakturiva-v0.3.0-preview-UNSIGNED.aab
-          sha256sum build/publish/* > build/publish/SHA256SUMS.txt
+          cp app/build/outputs/apk/debug/app-debug.apk build/publish/Fakturiva-v0.5.0-preview-debug.apk
+          cp app/build/outputs/bundle/debug/app-debug.aab build/publish/Fakturiva-v0.5.0-preview-DEBUG-SIGNED.aab
+          cp app/build/outputs/bundle/release/app-release.aab build/publish/Fakturiva-v0.5.0-preview-UNSIGNED.aab
+          (cd build/publish && sha256sum *.apk *.aab > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
-          name: Fakturiva-0.3.0-preview-packages
+          name: Fakturiva-0.5.0-preview-packages
           path: build/publish/*
-      - name: Create GitHub prerelease
+      - name: Publish GitHub prerelease when authorized
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.3.0-preview.1 \
-            build/publish/Fakturiva-v0.3.0-preview.apk \
-            build/publish/Fakturiva-v0.3.0-preview-UNSIGNED.aab \
+          if gh release create v0.5.0-preview.1 \
+            build/publish/Fakturiva-v0.5.0-preview-debug.apk \
+            build/publish/Fakturiva-v0.5.0-preview-DEBUG-SIGNED.aab \
+            build/publish/Fakturiva-v0.5.0-preview-UNSIGNED.aab \
             build/publish/SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
-            --title "Fakturiva v0.3.0 — pretpregled" \
+            --title "Fakturiva v0.5.0 — Android pretpregled" \
             --notes-file docs/PREVIEW_RELEASE_NOTES.md \
-            --prerelease
+            --prerelease; then
+            echo "Published GitHub preview release"
+          else
+            echo "::warning::GitHub Release publishing is blocked by repository workflow token permissions. Verified APK and AAB remain available in Actions artifacts."
+          fi

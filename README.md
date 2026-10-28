@@ -1,52 +1,75 @@
 <div align="center">
-  <img src="docs/assets/fakturiva-logo.svg" width="440" alt="Fakturiva — Računi i ponude, jednostavno." />
-  <h3>Računi i ponude, jednostavno.</h3>
-  <p>Sve za vaše poslovanje. Bez viška koraka.</p>
+
+<img src="docs/assets/fakturiva-logo.svg" alt="Fakturiva — računi i ponude" width="430">
+
+### Računi i ponude, jednostavno.
+
+**Više vremena za posao. Manje administracije.**
+
+Sve što vam treba za pripremu ponuda i računa, evidenciju klijenata i pregled naplate — jednostavno i pregledno na Android uređaju.
+
+[**Preuzmite Fakturivu**](https://github.com/bren-wp/Fakturiva/releases) · [**Upoznajte mogućnosti**](#sve-za-uredno-poslovanje)
+
 </div>
 
-![Fakturiva — jednostavnije poslovanje](docs/assets/fakturiva-banner.svg)
+![Fakturiva, hrvatska aplikacija za račune i ponude](docs/assets/fakturiva-banner.svg)
 
-## Poslovanje pod kontrolom
-
-**Fakturiva** pomaže malim poduzećima, obrtnicima i samostalnim profesionalcima pripremiti račune i ponude, uredno pratiti dokumente te organizirati poslovanje — iz pregledne Android aplikacije.
+## Sve za uredno poslovanje
 
 | 🧾 **Računi** | 📑 **Ponude** | 👥 **Klijenti** |
-|:--|:--|:--|
-| Kreirajte dokumente i pratite naplatu | Pošaljite ponudu i pretvorite je u nacrt računa | Svi poslovni kontakti na jednom mjestu |
+| :-- | :-- | :-- |
+| Sastavite račun, uredite nacrt i evidentirajte naplatu. | Izradite ponudu, pregledajte je i pretvorite u račun. | Sačuvajte kontakte, adrese i identifikacijske podatke partnera. |
 
-| 🛍️ **Artikli i usluge** | 📊 **Pregled poslovanja** | 📄 **PDF dokumenti** |
-|:--|:--|:--|
-| Cijene i stavke spremne za uporabu | Vidite što je izdano i naplaćeno | Spremanje i dijeljenje izravno s uređaja |
+| 🛍️ **Artikli i usluge** | 📊 **Izvještaji** | 📄 **PDF** |
+| :-- | :-- | :-- |
+| Pripremite katalog proizvoda, usluga i cijena. | Pratite dokumente, uplate i nenaplaćene iznose. | Spremite i podijelite čitljive dokumente izravno s uređaja. |
 
-## Vaši dokumenti zaslužuju sigurnost
+## Profesionalni dokumenti s vašim identitetom
 
-- **Automatsko čuvanje promjena.** Nedovršeni računi i ponude obnavljaju se nakon neočekivanog prekida rada.
-- **Lokalni šifrirani oporavak.** Više generacija kopija štiti od pojedinih kvarova datoteka.
-- **Prijenosna sigurnosna kopija.** Spremite šifriranu kopiju na mjesto koje sami odaberete.
-- **Bez obaveznog računa.** Fakturiva radi lokalno i bez internetske veze.
-- **Poznato Android iskustvo.** Hrvatsko sučelje, euro, svijetla i tamna tema.
+**Fakturiva prilagođava dokumente vašem poslovanju.** Unesite naziv tvrtke ili obrta, OIB, PDV ID, adresu, grad, poštanski broj, državu, kontakt, IBAN, banku, SWIFT, podatke o registru i porezne napomene. Na računima i ponudama prikazuju se izdavatelj, klijent, datum izdavanja i datum usluge, stavke, porezne stope i iznosi te podaci za plaćanje.
 
-> Važno: za zaštitu od krađe, kvara ili gubitka uređaja **redovito izvozite sigurnosnu kopiju izvan telefona**. Nijedna aplikacija koja čuva podatke samo na jednom uređaju ne može jamčiti njihovo očuvanje u svim okolnostima.
+Kad potvrdite dokument, podaci izdavatelja i klijenta ostaju zabilježeni u dokumentu. Naknadne promjene profila ne mijenjaju povijesne račune.
 
-## Profesionalan izgled od prve minute
+## Čuvanje dokumenata i vaša privatnost
+
+- 🔒 **Bez obvezne prijave i oblaka** — aplikacija radi lokalno, bez dozvole za internet.
+- 💾 **Automatsko čuvanje nacrta** — nastavite rad nakon prekida.
+- 🛡️ **Više lokalnih šifriranih kopija** — dodatan sloj oporavka ako je jedna datoteka oštećena.
+- 📤 **Šifrirani prijenosni izvoz** — napravite kopiju na mjesto koje sami odaberete.
+- 🌙 **Svijetla i tamna tema** — ugodan pregled na telefonu.
+
+> Za zaštitu od krađe, kvara, brisanja aplikacije ili gubitka uređaja redovito izvezite šifriranu sigurnosnu kopiju **izvan telefona**. Samo lokalna pohrana ne može jamčiti očuvanje svakog podatka u svim okolnostima.
+
+## Izgled Fakturive
 
 <div align="center">
-  <img src="docs/assets/fakturiva-icon.svg" width="92" alt="Fakturiva ikona aplikacije" />
-  <p><strong>Fakturiva by Brendigo</strong></p>
-  <p>Od prve ponude do evidentirane uplate, svaki je korak oblikovan da bude jasan i jednostavan.</p>
+<img src="docs/assets/fakturiva-icon.svg" width="100" alt="Izvorna Fakturiva Android ikona">
+
+**Fakturiva by Brendigo**
+
+Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — poznato Android iskustvo na hrvatskom jeziku.
 </div>
 
-## Preuzmite Fakturivu
+### Stvarni prikazi svih 20 zaslona
 
-**[Pregled izdanja za Android](https://github.com/bren-wp/Fakturiva/releases)**
+[**Pogledajte galeriju od 20 stvarnih Android snimki**](https://github.com/bren-wp/Fakturiva/actions/runs/40784278650) · [**Preuzmite originalne PNG snimke**](https://github.com/bren-wp/Fakturiva/actions/runs/40782723051/artifacts/12857668423)
 
-Podržan je Android 7.0 i noviji. Uz svako izdanje navedena je njegova namjena i status potpisivanja. Prije uporabe za službene poslovne dokumente potrebno je potvrditi primjenjive zakonske obveze.
+Snimke su iz stvarnog Android emulatora, a ne dizajnerske makete. Izvorni vizualni identitet služi kao referenca za detaljno usklađivanje ekrana. Ugradnja galerije izravno u README čeka odobrenje GitHub Actions pisanja u repozitorij; slike se do tada nude kao zaseban arhiv.
 
-**Napomena za hrvatsko tržište:** PDF dokument nije strukturirani eRačun niti dokaz provedene fiskalizacije. Povezivanje sa sustavima za zakonski obveznu razmjenu eRačuna i fiskalizaciju nije dostupno u ovoj verziji.
+## Preuzimanje
+
+[**GitHub izdanja za Android (APK i AAB)**](https://github.com/bren-wp/Fakturiva/releases)
+
+Android 7.0 ili noviji. Uz svako izdanje navedeno je je li APK debug-potpisan i je li AAB potpisan za produkcijsko izdavanje. Izravni Play Store upload zahtijeva odgovarajući postojeći ključ i dodatne produkcijske provjere.
+
+**Važno za hrvatsko tržište:** Fakturiva trenutačno ne provodi fiskalizaciju ni razmjenu strukturiranih eRačuna. Izvezeni PDF nije fiskaliziran račun niti strukturirani eRačun. Prije korištenja u zakonski obveznim poslovnim procesima treba implementirati i provjeriti primjenjive zakonske zahtjeve.
 
 ---
 
 <div align="center">
-  <strong>Fakturiva</strong> · Brendigo<br />
-  <em>Računi i ponude, jednostavno.</em>
+
+**Fakturiva** · Brendigo
+
+*Računi i ponude, jednostavno.*
+
 </div>

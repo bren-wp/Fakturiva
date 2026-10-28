@@ -24,6 +24,15 @@ public final class NativeCoreSmoke {
         require(invalid,"Zero quantity rejected");
         invalid=false;try{Money.tax(100,99);}catch(IllegalArgumentException expected){invalid=true;}
         require(invalid,"Unknown VAT rate rejected");
+        require(Oib.valid("12345678903"),"Valid Croatian OIB");
+        require(!Oib.valid("12345678904"),"Invalid OIB checksum rejected");
+        require(IsoDates.valid("2028-02-29"),"Leap day accepted");
+        require(!IsoDates.valid("2027-02-29"),"Non-leap day rejected");
+        boolean wrongOrder=false;
+        try{IsoDates.validate("2026-10-28","2026-10-27");}catch(IllegalArgumentException expected){wrongOrder=true;}
+        require(wrongOrder,"Due date must not precede issue date");
+        require(Iban.valid("HR1210010051863000160"),"Valid Croatian IBAN");
+        require(!Iban.valid("HR1210010051863000161"),"IBAN check digits validated");
         byte[] original="Fakturiva šifrirana kopija".getBytes(StandardCharsets.UTF_8);
         char[] password="test-backup-password-2026".toCharArray();
         byte[] encrypted=SecureBackup.encrypt(original,password);
