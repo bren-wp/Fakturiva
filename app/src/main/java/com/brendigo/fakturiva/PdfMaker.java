@@ -50,10 +50,25 @@ public final class PdfMaker {
         txt(cut(d.issuerName,34),M,y,13,NAVY,true);txt(cut(d.clientName,29),312,y,13,NAVY,true);y+=18;
         txt(cut(d.issuerAddress,40),M,y,10,NAVY,false);txt(cut(d.clientAddress,35),312,y,10,NAVY,false);y+=17;
         txt("OIB: "+cut(d.issuerOib,25),M,y,10,NAVY,false);txt("OIB: "+cut(d.clientOib,24),312,y,10,NAVY,false);y+=17;
-        txt(cut(d.issuerEmail,42),M,y,10,NAVY,false);y+=25;
+        if(notEmpty(d.issuerVatId)||notEmpty(d.clientVatId)){
+            txt("PDV ID: "+cut(d.issuerVatId,24),M,y,9,NAVY,false);
+            txt("PDV ID: "+cut(d.clientVatId,23),312,y,9,NAVY,false);y+=16;
+        }
+        if(notEmpty(d.issuerPostalCode)||notEmpty(d.issuerCity)||notEmpty(d.issuerCountry)){
+            txt(cut(join(d.issuerPostalCode,d.issuerCity,d.issuerCountry),39),M,y,9,NAVY,false);y+=15;
+        }
+        txt(cut(d.issuerEmail,38),M,y,10,NAVY,false);
+        txt(cut(d.clientEmail,36),312,y,10,NAVY,false);y+=16;
+        if(notEmpty(d.issuerPhone)||notEmpty(d.clientPhone)){
+            txt(cut(d.issuerPhone,40),M,y,9,NAVY,false);
+            txt(cut(d.clientPhone,36),312,y,9,NAVY,false);y+=16;
+        }
+        y+=10;
         line(y);y+=21;
         txt("Datum dokumenta: "+d.issueDate,M,y,11,NAVY,false);
-        txt("Dospijeće / vrijedi do: "+d.dueDate,312,y,11,NAVY,false);y+=30;
+        txt("Dospijeće / vrijedi do: "+d.dueDate,312,y,11,NAVY,false);y+=18;
+        if(notEmpty(d.supplyDate)) {txt("Datum isporuke / usluge: "+d.supplyDate,M,y,10,NAVY,false);y+=15;}
+        y+=15;
         txt("OPIS STAVKE",M,y,10,BLUE,true);
         right("KOL.",342,y,10,BLUE,true);
         right("CIJENA",422,y,10,BLUE,true);
@@ -67,16 +82,39 @@ public final class PdfMaker {
             right(item.taxRate+"%",468,y,10,NAVY,false);
             right(Money.euros(item.net()+item.tax()),W-M,y,10,NAVY,true);y+=26;line(y);y+=17;
         }
-        room(160);
+        room(205);
+        java.util.Map<Integer,long[]> grouped=new java.util.TreeMap<>();
+        for(Store.Item i:d.items){
+            long[] group=grouped.get(i.taxRate);
+            if(group==null){group=new long[2];grouped.put(i.taxRate,group);}
+            group[0]=Math.addExact(group[0],i.net());group[1]=Math.addExact(group[1],i.tax());
+        }
+        for(java.util.Map.Entry<Integer,long[]> entry:grouped.entrySet()){
+            txt("PDV "+entry.getKey()+"%: osnovica "+Money.euros(entry.getValue()[0])+
+                ", porez "+Money.euros(entry.getValue()[1]),M,y,9,NAVY,false);
+            y+=16;
+        }
+        y+=9;
         right("Osnovica:",448,y,11,NAVY,false);right(Money.euros(d.netCents),W-M,y,11,NAVY,false);y+=22;
         right("PDV:",448,y,11,NAVY,false);right(Money.euros(d.taxCents),W-M,y,11,NAVY,false);y+=25;
         right("UKUPNO:",448,y,13,NAVY,true);right(Money.euros(d.totalCents),W-M,y,13,BLUE,true);y+=26;
         if(Store.INVOICE.equals(d.type)){
             right("Uplaćeno:",448,y,10,NAVY,false);right(Money.euros(d.paidCents),W-M,y,10,NAVY,false);y+=20;
         }
-        room(100);y+=16;
-        txt("IBAN: "+cut(d.issuerIban,45),M,y,10,NAVY,false);y+=19;
-        if(!d.notes.trim().isEmpty()){txt("Napomena: "+cut(d.notes,76),M,y,10,NAVY,false);y+=23;}
+        room(150);y+=14;
+        if(notEmpty(d.issuerIban)){txt("IBAN: "+cut(d.issuerIban,60),M,y,10,NAVY,false);y+=15;}
+        if(notEmpty(d.issuerBankName)||notEmpty(d.issuerSwift)){
+            txt("Banka: "+cut(d.issuerBankName,39)+"  BIC/SWIFT: "+cut(d.issuerSwift,19),M,y,9,NAVY,false);y+=15;
+        }
+        if(notEmpty(d.issuerPaymentMethod)||notEmpty(d.issuerPaymentReference)){
+            txt("Način plaćanja: "+cut(d.issuerPaymentMethod,20)+"    Poziv na broj: "+cut(d.issuerPaymentReference,27),M,y,9,NAVY,false);y+=16;
+        }
+        if(notEmpty(d.issuerRegistry)){txt("Registar: "+cut(d.issuerRegistry,66),M,y,9,NAVY,false);y+=15;}
+        if(notEmpty(d.issuerBusinessUnit)||notEmpty(d.issuerOperator)){
+            txt("Poslovni prostor: "+cut(d.issuerBusinessUnit,18)+"   Operater: "+cut(d.issuerOperator,18),M,y,9,NAVY,false);y+=16;
+        }
+        if(notEmpty(d.issuerTaxNote)){room(26);txt("Porezna napomena: "+cut(d.issuerTaxNote,68),M,y,9,NAVY,false);y+=18;}
+        if(notEmpty(d.notes)){room(26);txt("Napomena: "+cut(d.notes,76),M,y,10,NAVY,false);y+=18;}
         room(88);
         line(y);y+=17;
         txt("Izrađeno lokalno aplikacijom Fakturiva.",M,y,10,Color.DKGRAY,false);y+=16;
@@ -86,5 +124,11 @@ public final class PdfMaker {
         pdf.finishPage(active);active=null;
     }
     private static String status(String s){switch(s){case Store.PAID:return "Plaćeno";case Store.ISSUED:return "Potvrđeno";case Store.SENT:return "Potvrđena ponuda";default:return s;}}
+    private static boolean notEmpty(String s){return s!=null&&!s.trim().isEmpty();}
+    private static String join(String... values){
+        StringBuilder out=new StringBuilder();
+        for(String v:values)if(notEmpty(v)){if(out.length()>0)out.append(" ");out.append(v);}
+        return out.toString();
+    }
     private static String cut(String s,int max){return s==null?"":s.length()>max?s.substring(0,max-1)+"…":s;}
 }
