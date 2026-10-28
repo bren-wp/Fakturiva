@@ -367,7 +367,7 @@ public final class MainActivity extends Activity {
     }
     private String status(String s){switch(s){
         case Store.DRAFT:return "Nacrt";case Store.ISSUED:return "Potvrđeno";
-        case Store.SENT:return "Poslano";case Store.PAID:return "Plaćeno";
+        case Store.SENT:return "Potvrđena";case Store.PAID:return "Plaćeno";
         case Store.VOID:return "Stornirano";default:return s;
     }}
     private EditText field(String hint,String value){
@@ -715,7 +715,7 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Novi klijent").setView(form).setNegativeButton("Odustani",null)
             .setPositiveButton("Spremi",(dlg,w)->{
                 try{String id=oib.getText().toString().trim();
-                    if(!id.isEmpty()&&!id.matches("[0-9]{11}"))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
+                    if(!id.isEmpty()&&!Oib.valid(id))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
                     db.saveClient(name.getText().toString(),id,address.getText().toString(),email.getText().toString());
                     clients();
                 }catch(Exception e){error(e);}
@@ -766,6 +766,10 @@ public final class MainActivity extends Activity {
         for(Store.Document d:db.documents(Store.INVOICE))
             if(!Store.DRAFT.equals(d.status)){documentRow(d);}
     }
+    private String getPackageVersion(){
+        try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}
+        catch(Exception ignored){return "Android";}
+    }
     private void settings(){
         setup("settings",true);toolbar("Postavke","Upravljajte svojom aplikacijom",false);
         LinearLayout brand=card();brand.setBackground(shape(NAVY,17));
@@ -780,7 +784,7 @@ public final class MainActivity extends Activity {
         settingRow("◐  Tamna tema","Prebaci prikaz aplikacije",()->{
             dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
         });
-        gap(body,16);caption(body,"Fakturiva 0.1.0 · Brendigo · Podaci ostaju na uređaju");
+        gap(body,16);caption(body,"Fakturiva "+getPackageVersion()+" · Brendigo · Podaci ostaju na uređaju");
     }
     private void settingRow(String title,String subtitle,Runnable action){
         LinearLayout c=card();LinearLayout row=horizontal();LinearLayout text=vertical();
@@ -798,7 +802,7 @@ public final class MainActivity extends Activity {
         place(body,form);gap(body,16);
         button(body,"Spremi promjene",()->{
             try{String id=fields[1].getText().toString().trim();
-                if(!id.isEmpty()&&!id.matches("[0-9]{11}"))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
+                if(!id.isEmpty()&&!Oib.valid(id))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
                 String[] vals=new String[keys.length];
                 for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString();
                 db.companySettings(keys,vals);
