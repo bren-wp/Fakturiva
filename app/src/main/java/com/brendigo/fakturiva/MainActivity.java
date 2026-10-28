@@ -372,7 +372,8 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
     }
     private void quick(LinearLayout row,String glyph,String label,Runnable action){
-        LinearLayout c=card();c.setGravity(Gravity.CENTER);
+        // Compact quick-action cards must leave enough room for the full caption.
+        LinearLayout c=card();pad(c,11,8);c.setGravity(Gravity.CENTER);
         boolean quote="▣".equals(glyph),client="♧".equals(glyph);
         int tint=quote?TEAL:client?0xffeb963c:BLUE;
         ImageView image=icon(figureIcon(glyph),tint);
