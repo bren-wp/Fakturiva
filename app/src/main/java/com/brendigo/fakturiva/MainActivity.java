@@ -92,11 +92,11 @@ public final class MainActivity extends Activity {
         }
     }
     @Override protected void onDestroy(){if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');db.close();super.onDestroy();}
-    private int bg(){return dark?0xff101c30:BG;}
-    private int panel(){return dark?0xff192a46:WHITE;}
+    private int bg(){return dark?0xff0d1728:BG;}
+    private int panel(){return dark?0xff14233b:WHITE;}
     private int ink(){return dark?WHITE:TEXT;}
-    private int sub(){return dark?0xffb2bed4:MUTED;}
-    private int border(){return dark?0xff293d59:LINE;}
+    private int sub(){return dark?0xff9aaac2:MUTED;}
+    private int border(){return dark?0xff283b56:LINE;}
     private int dp(float value){return Math.round(getResources().getDisplayMetrics().density*value);}
     private GradientDrawable shape(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
     private GradientDrawable outlined(int color){GradientDrawable d=shape(color,17);d.setStroke(dp(1),border());return d;}
@@ -853,7 +853,7 @@ public final class MainActivity extends Activity {
         caption(body,"Ukupno klijenata: "+list.size());gap(body,13);
         for(Store.Client c:list){LinearLayout card=card();
             LinearLayout r=horizontal();TextView initials=label(c.name.substring(0,Math.min(1,c.name.length())).toUpperCase(),20,BLUE,true);
-            initials.setGravity(Gravity.CENTER);background(initials,0xffeaf0ff,11);r.addView(initials,lp(42,42));
+            initials.setGravity(Gravity.CENTER);background(initials,dark?0xff293b63:0xffeaf0ff,11);r.addView(initials,lp(42,42));
             LinearLayout text=vertical();pad(text,12,0);text.addView(label(c.name,14,ink(),true));
             text.addView(label(c.oib.isEmpty()?c.email:"OIB: "+c.oib,11,sub(),false));
             r.addView(text,new LinearLayout.LayoutParams(0,-2,1));
