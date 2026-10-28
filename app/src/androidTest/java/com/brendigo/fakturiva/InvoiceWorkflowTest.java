@@ -108,4 +108,103 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
             assertEquals(1,db.documents(Store.QUOTE).size());
         }finally{if(db!=null)db.close();context.clean();}
     }
+    public void testInvalidBackupRollsBackWithoutLosingInvoices()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());Store db=null;
+        try{
+            db=new Store(context);
+            db.setting("name","Testni izdavatelj");
+            long customer=db.saveClient("Kupac","","Rijeka","");
+            Store.Item item=new Store.Item();
+            item.name="Izrada dokumentacije";item.qtyMilli=1000;item.unitCents=10000;item.taxRate=25;
+            long id=db.createDraft(Store.QUOTE,customer,"2026-10-28","2026-11-28","",Arrays.asList(item));
+            assertEquals("P-2026-0001",db.confirm(id));
+            JSONObject corrupted=new JSONObject(db.backup().toString());
+            corrupted.getJSONArray("documents").getJSONObject(0).put("total_cents",999999L);
+            try{
+                db.restore(corrupted);
+                fail("Corrupt invoice totals must not replace existing records");
+            }catch(IllegalArgumentException expected){
+                assertEquals(12500L,db.document(id).totalCents);
+                assertEquals("P-2026-0001",db.document(id).number);
+                assertEquals(1,db.documents(Store.QUOTE).size());
+            }
+            // A later valid restoration still remains possible.
+            JSONObject valid=db.backup();
+            db.restore(valid);
+            assertEquals(12500L,db.document(id).totalCents);
+        }finally{if(db!=null)db.close();context.clean();}
+    }
+
+    public void testInterruptedAtomicRecoveryAndDatabaseReopen()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());Store db=null;
+        try{
+            db=new Store(context);
+            db.setting("name","Izdavatelj");
+            long customer=db.saveClient("Kupac","","Rijeka","");
+            Store.Item item=new Store.Item();item.name="Usluga";item.unitCents=4200;item.qtyMilli=1000;item.taxRate=25;
+            long id=db.createDraft(Store.QUOTE,customer,"2026-10-28","2026-11-28","",Arrays.asList(item));
+            assertEquals("P-2026-0001",db.confirm(id));
+            db.close();db=null;
+            db=new Store(context);
+            assertEquals("P-2026-0001",db.document(id).number);
+            File primary=new File(context.getFilesDir(),"recovery/recovery-0.fv");
+            File fallback=new File(primary.getPath()+".bak");
+            if(fallback.exists()&&!fallback.delete())fail("Cannot reset test backup");
+            assertTrue("Local recovery snapshot present",primary.isFile());
+            assertTrue("Backup renamed for interrupted-write test",primary.renameTo(fallback));
+            JSONObject recovered=RecoveryVault.read(context,0);
+            assertEquals(1,recovered.getJSONArray("documents").length());
+            assertTrue("Backup must be restored to primary name",primary.isFile());
+        }finally{if(db!=null)db.close();context.clean();}
+    }
+
+    public void testNumberingOverpaymentAndDuplicateConfirmation()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());Store db=null;
+        try{
+            db=new Store(context);
+            db.setting("name","Izdavatelj");db.setting("oib","12345678903");
+            db.setting("address","Rijeka");
+            long client=db.saveClient("Kupac","","Rijeka","");
+            Store.Item item=new Store.Item();item.name="Usluga";item.qtyMilli=1000;item.unitCents=10000;item.taxRate=25;
+            long first=db.createDraft(Store.INVOICE,client,"2026-10-28","2026-11-28","",Arrays.asList(item));
+            assertEquals("R-2026-0001",db.confirm(first));
+            try{db.confirm(first);fail("Double confirmation");}catch(IllegalStateException expected){}
+            long second=db.createDraft(Store.INVOICE,client,"2026-10-28","2026-11-28","",Arrays.asList(item));
+            assertEquals("R-2026-0002",db.confirm(second));
+            db.pay(first,5000,"2026-10-29");
+            try{db.pay(first,10000,"2026-10-30");fail("Overpayment");}
+            catch(IllegalArgumentException expected){}
+            assertEquals(7500L,db.document(first).outstanding());
+            assertEquals(1,db.payments().size());
+            db.pay(first,7500,"2026-10-31");
+            assertEquals(0L,db.document(first).outstanding());
+            assertEquals(Store.PAID,db.document(first).status);
+        }finally{if(db!=null)db.close();context.clean();}
+    }
+
+    public void testLongPdfHasMultiplePages()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());Store db=null;
+        try{
+            db=new Store(context);
+            db.setting("name","Izdavatelj");
+            long client=db.saveClient("Klijent s vrlo vrlo dugim poslovnim nazivom","","Primjer adrese i grada","");
+            java.util.ArrayList<Store.Item> items=new java.util.ArrayList<>();
+            for(int i=0;i<65;i++){
+                Store.Item item=new Store.Item();
+                item.name="Detaljan opis poslovne usluge broj "+i+" i dodatnih parametara dokumenta";
+                item.qtyMilli=1000;item.unitCents=100;item.taxRate=25;items.add(item);
+            }
+            long id=db.createDraft(Store.QUOTE,client,"2026-10-28","2026-11-28","",items);
+            File file=new File(context.dir,"multi-page.pdf");
+            try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)){
+                PdfMaker.write(db,db.document(id),out);
+            }
+            try(android.os.ParcelFileDescriptor parcel=android.os.ParcelFileDescriptor.open(file,
+                android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+                android.graphics.pdf.PdfRenderer renderer=new android.graphics.pdf.PdfRenderer(parcel)){
+                assertTrue("Line items must continue to another A4 page",renderer.getPageCount()>=2);
+            }
+        }finally{if(db!=null)db.close();context.clean();}
+    }
+
 }

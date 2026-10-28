@@ -335,6 +335,7 @@ public final class Store extends SQLiteOpenHelper {
         } finally {db.endTransaction();if(saved)snapshotAfterWrite();}
     }
     public void pay(long id,long amount,String date) {
+        if(!IsoDates.valid(date))throw new IllegalArgumentException("Datum uplate nije valjan");
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
         boolean saved=false;
         try {
@@ -352,7 +353,7 @@ public final class Store extends SQLiteOpenHelper {
         Document d=document(quoteId);
         if(!QUOTE.equals(d.type) || DRAFT.equals(d.status) || VOID.equals(d.status))
             throw new IllegalStateException("Potvrdite ponudu prije pretvaranja");
-        return createDraft(INVOICE,d.clientId,d.issueDate,d.dueDate,"Prema ponudi "+d.number,d.items);
+        return createDraft(INVOICE,d.clientId,d.issueDate,d.dueDate,d.supplyDate,"Prema ponudi "+d.number,d.items);
     }
     public long countMonth(String type,String yearMonth){
         if(!INVOICE.equals(type)&&!QUOTE.equals(type))throw new IllegalArgumentException("Nepoznati dokument");
@@ -434,6 +435,23 @@ public final class Store extends SQLiteOpenHelper {
         return root;
         }finally{source.endTransaction();}
     }
+    /** Reject logically corrupt backups before the SQLite transaction can commit. */
+    private void verifyRestoredAmounts(SQLiteDatabase db){
+        final String sql="SELECT d.id FROM documents d WHERE "+
+            "d.type NOT IN ('INVOICE','QUOTE') OR d.status NOT IN ('DRAFT','ISSUED','SENT','PAID','VOID') OR "+
+            "d.net_cents<0 OR d.tax_cents<0 OR d.total_cents<0 OR "+
+            "d.total_cents!=d.net_cents+d.tax_cents OR "+
+            "NOT EXISTS(SELECT 1 FROM lines l WHERE l.document_id=d.id) OR "+
+            "d.net_cents!=COALESCE((SELECT SUM(l.net_cents) FROM lines l WHERE l.document_id=d.id),0) OR "+
+            "d.tax_cents!=COALESCE((SELECT SUM(l.tax_cents) FROM lines l WHERE l.document_id=d.id),0) OR "+
+            "COALESCE((SELECT SUM(p.amount_cents) FROM payments p WHERE p.document_id=d.id),0)>d.total_cents OR "+
+            "(d.status='PAID' AND d.total_cents!=COALESCE((SELECT SUM(p.amount_cents) FROM payments p WHERE p.document_id=d.id),0)) OR "+
+            "(d.type='QUOTE' AND EXISTS(SELECT 1 FROM payments p WHERE p.document_id=d.id)) "+
+            "LIMIT 1";
+        try(Cursor c=db.rawQuery(sql,null)){
+            if(c.moveToFirst())throw new IllegalArgumentException("Sigurnosna kopija sadrži nepodudarne iznose dokumenta ili uplate");
+        }
+    }
     public void restore(JSONObject root) throws JSONException {
         if(!"fakturiva-backup-v1".equals(root.optString("format")) || root.optInt("schema")<1 || root.optInt("schema")>VERSION)
             throw new IllegalArgumentException("Nepodržana sigurnosna kopija");
@@ -479,6 +497,7 @@ public final class Store extends SQLiteOpenHelper {
             try(Cursor c=db.rawQuery("PRAGMA foreign_key_check",null)){
                 if(c.moveToFirst()) throw new IllegalArgumentException("Neispravne veze u sigurnosnoj kopiji");
             }
+            verifyRestoredAmounts(db);
             db.setTransactionSuccessful();saved=true;
         } finally{db.endTransaction();if(saved)snapshotAfterWrite();}
     }
