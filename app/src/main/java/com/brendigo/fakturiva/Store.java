@@ -174,6 +174,44 @@ public final class Store extends SQLiteOpenHelper {
             if(saved)snapshotAfterWrite();
         }
     }
+    /** Edit only a draft. Confirmed invoices and quotes stay immutable. */
+    public void updateDraft(long id,long clientId,String issueDate,String dueDate,String notes,List<Item> items){
+        if(items.isEmpty())throw new IllegalArgumentException("Dodajte barem jednu stavku");
+        if(!issueDate.matches("\\d{4}-\\d{2}-\\d{2}")||!dueDate.matches("\\d{4}-\\d{2}-\\d{2}"))
+            throw new IllegalArgumentException("Datum mora biti u formatu YYYY-MM-DD");
+        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        boolean saved=false;
+        try{
+            try(Cursor c=db.rawQuery("SELECT status FROM documents WHERE id=?",new String[]{String.valueOf(id)})){
+                if(!c.moveToFirst()||!DRAFT.equals(c.getString(0)))
+                    throw new IllegalStateException("Moguće je uređivati samo nacrt");
+            }
+            long net=0,tax=0;
+            for(Item i:items){
+                if(i.name.trim().isEmpty())throw new IllegalArgumentException("Naziv stavke je obavezan");
+                net=Math.addExact(net,i.net());tax=Math.addExact(tax,i.tax());
+            }
+            ContentValues changes=new ContentValues();
+            changes.put("client_id",clientId);
+            changes.put("issue_date",issueDate);changes.put("due_date",dueDate);changes.put("notes",notes);
+            changes.put("net_cents",net);changes.put("tax_cents",tax);changes.put("total_cents",Math.addExact(net,tax));
+            try(Cursor c=db.rawQuery("SELECT name,address,oib FROM clients WHERE id=?",new String[]{String.valueOf(clientId)})){
+                if(!c.moveToFirst())throw new IllegalArgumentException("Odabrani klijent ne postoji");
+                changes.put("client_name",c.getString(0));changes.put("client_address",c.getString(1));changes.put("client_oib",c.getString(2));
+            }
+            if(db.update("documents",changes,"id=? AND status='DRAFT'",new String[]{String.valueOf(id)})!=1)
+                throw new IllegalStateException("Neuspjelo spremanje nacrta");
+            db.delete("lines","document_id=?",new String[]{String.valueOf(id)});
+            for(Item i:items){
+                ContentValues line=new ContentValues();
+                line.put("document_id",id);line.put("name",i.name.trim());line.put("qty_milli",i.qtyMilli);
+                line.put("unit_cents",i.unitCents);line.put("tax_rate",i.taxRate);
+                line.put("net_cents",i.net());line.put("tax_cents",i.tax());
+                db.insertOrThrow("lines",null,line);
+            }
+            db.setTransactionSuccessful();saved=true;
+        }finally{db.endTransaction();if(saved)snapshotAfterWrite();}
+    }
     public Document document(long id) {
         try(Cursor c=getReadableDatabase().rawQuery(
             "SELECT d.id,d.type,d.number,d.client_id,d.client_name,d.client_address,d.client_oib,d.issue_date,d.due_date,d.notes,d.status,d.net_cents,d.tax_cents,d.total_cents,(SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE document_id=d.id),d.issuer_name,d.issuer_address,d.issuer_oib,d.issuer_email,d.issuer_iban,d.issuer_tax_note FROM documents d WHERE d.id=?",
