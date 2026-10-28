@@ -112,7 +112,7 @@ public final class MainActivity extends Activity {
     private void place(LinearLayout parent,View view){parent.addView(view,new LinearLayout.LayoutParams(-1,-2));}
     private void title(LinearLayout parent,String s){TextView v=label(s,19,ink(),true);place(parent,v);}
     private void caption(LinearLayout parent,String s){TextView v=label(s,12,sub(),false);place(parent,v);}
-    private void section(String s){gap(body,20);title(body,s);gap(body,12);}
+    private void section(String s){gap(body,16);title(body,s);gap(body,11);}
     private LinearLayout card(){LinearLayout v=vertical();pad(v,16,16);v.setBackground(outlined(panel()));return v;}
     private TextView action(String text,int color,boolean solid,Runnable click){
         TextView b=label(text,14,solid?WHITE:color,true);b.setGravity(Gravity.CENTER);
@@ -320,7 +320,7 @@ public final class MainActivity extends Activity {
         hero.addView(label("Naplaćeno ovaj mjesec",12,0xffcedbf2,false));gap(hero,12);
         hero.addView(label(Money.euros(monthly[11]),30,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffa5d7e2,false));
-        gap(hero,13);hero.addView(new RevenueLine(this),lp(-1,53));place(body,hero);
+        gap(hero,10);hero.addView(new RevenueLine(this),lp(-1,47));place(body,hero);
         gap(body,12);
         LinearLayout stats=horizontal();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
@@ -361,13 +361,13 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();
+        LinearLayout c=card();pad(c,14,13);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
         image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
-        c.addView(image,lp(42,42));gap(c,11);
+        c.addView(image,lp(38,38));gap(c,7);
         c.addView(label(label,12,sub(),false));gap(c,3);
-        c.addView(label(value,25,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
+        c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
     }
     private void quick(LinearLayout row,String glyph,String label,Runnable action){
@@ -379,7 +379,7 @@ public final class MainActivity extends Activity {
         image.setBackground(shape(quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(103),1);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
         p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);c.setOnClickListener(v->action.run());
     }
     private void documents(String type){
