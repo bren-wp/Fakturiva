@@ -60,7 +60,8 @@ public final class ScreenshotHarness {
         RecoveryVault.clearWorkingDraft(a);
         String page=screen==null?"04":screen;
         switch(page){
-            case "01":case "02":case "03":call(a,"welcome");break;
+            case "01":call(a,"splash",new Class<?>[]{boolean.class},false);break;
+            case "02":case "03":call(a,"welcome");break;
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
             case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
