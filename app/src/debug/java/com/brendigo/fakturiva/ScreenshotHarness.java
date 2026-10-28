@@ -21,10 +21,10 @@ public final class ScreenshotHarness {
     private static void set(MainActivity a,String name,Object value)throws Exception{
         Field f=MainActivity.class.getDeclaredField(name);f.setAccessible(true);f.set(a,value);
     }
-    private static void show(MainActivity a,String name,Class<?>[] types,Object... params)throws Exception{
+    private static void call(MainActivity a,String name,Class<?>[] types,Object... params)throws Exception{
         Method m=MainActivity.class.getDeclaredMethod(name,types);m.setAccessible(true);m.invoke(a,params);
     }
-    private static void show(MainActivity a,String name)throws Exception{show(a,name,new Class<?>[0]);}
+    private static void call(MainActivity a,String name)throws Exception{call(a,name,new Class<?>[0]);}
     private static void seed(Store store){
         if(store.clients().isEmpty()){
             store.setting("name","Fakturiva Demo d.o.o.");
@@ -60,29 +60,29 @@ public final class ScreenshotHarness {
         RecoveryVault.clearWorkingDraft(a);
         String page=screen==null?"04":screen;
         switch(page){
-            case "01":case "02":case "03":show(a,"welcome");break;
-            case "04":show(a,"home");break;
-            case "05":show(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
-            case "06":show(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
+            case "01":case "02":case "03":call(a,"welcome");break;
+            case "04":call(a,"home");break;
+            case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
+            case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
             case "07":
-                show(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
+                call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
                 ArrayList<Store.Item> lines=(ArrayList<Store.Item>)get(a,"draftItems");
                 Store.Item item=new Store.Item();item.name="Dizajn web stranice";item.qtyMilli=1000;item.unitCents=100000;item.taxRate=25;
                 lines.add(item);
-                show(a,"editItemsScreen");break;
-            case "08":show(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.INVOICE).get(0).id);break;
-            case "09":show(a,"documents",new Class<?>[]{String.class},Store.QUOTE);break;
-            case "10":show(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);break;
-            case "11":show(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.QUOTE).get(0).id);break;
-            case "12":show(a,"clients");break;
-            case "13":show(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
-            case "14":show(a,"catalog");break;
-            case "15":show(a,"reports");break;
-            case "16":show(a,"payments");break;
-            case "17":show(a,"eracun");break;
-            case "18":show(a,"settings");break;
-            case "19":show(a,"company");break;
-            case "20":set(a,"dark",true);show(a,"home");break;
+                call(a,"editItemsScreen");break;
+            case "08":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.INVOICE).get(0).id);break;
+            case "09":call(a,"documents",new Class<?>[]{String.class},Store.QUOTE);break;
+            case "10":call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);break;
+            case "11":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.QUOTE).get(0).id);break;
+            case "12":call(a,"clients");break;
+            case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
+            case "14":call(a,"catalog");break;
+            case "15":call(a,"reports");break;
+            case "16":call(a,"payments");break;
+            case "17":call(a,"eracun");break;
+            case "18":call(a,"settings");break;
+            case "19":call(a,"company");break;
+            case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }
     }
