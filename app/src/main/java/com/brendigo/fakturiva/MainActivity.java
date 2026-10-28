@@ -410,7 +410,7 @@ public final class MainActivity extends Activity {
         setup("detail",true);toolbar(Store.INVOICE.equals(d.type)?"Pregled računa":"Pregled ponude","Detalji dokumenta",true);
         LinearLayout card=card();card.addView(label(d.number==null?"Nacrt #"+d.id:d.number,21,BLUE,true));gap(card,4);
         card.addView(label("Status: "+status(d.status),12,sub(),false));gap(card,18);
-        card.addView(label(db.setting("name"),15,ink(),true));gap(card,4);
+        card.addView(label(d.issuerName,15,ink(),true));gap(card,4);
         card.addView(label("Klijent: "+d.clientName,13,ink(),false));
         card.addView(label("OIB: "+d.clientOib,11,sub(),false));gap(card,11);
         card.addView(label("Izdano: "+d.issueDate+"  ·  Dospijeće: "+d.dueDate,11,sub(),false));
