@@ -21,7 +21,7 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Build Android application
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Enable emulator hardware acceleration
         run: |
           if [ -e /dev/kvm ]; then
@@ -38,15 +38,21 @@ jobs:
           ram-size: 3072M
           disk-size: 4096M
           disable-animations: false
-          script: bash ci/capture_screenshots.sh
+          script: |
+            gradle :app:connectedDebugAndroidTest --stacktrace
+            bash ci/capture_screenshots.sh
       - uses: actions/upload-artifact@v4
         with:
           name: Fakturiva-native-screen-captures
           path: docs/screenshots/*.png
       - name: Commit verified screenshots to pull request
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/screenshots/
           git diff --cached --quiet || git commit -m "docs: add genuine Android emulator screenshots"
-          git push origin HEAD:feature/reliable-documents-ui-release
+          if ! git push origin HEAD:feature/reliable-documents-ui-release; then
+            echo "::warning::Screenshots captured and uploaded to Actions artifacts. Commit needs GitHub Actions write permission."
+            exit 1
+          fi
