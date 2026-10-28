@@ -219,7 +219,14 @@ public final class MainActivity extends Activity {
         search.setOnClickListener(v->documents(Store.INVOICE));
         ImageView alerts=icon(R.drawable.ic_bell,ink());alerts.setBackground(shape(panel(),12));
         bar.addView(alerts,lp(38,38));alerts.setOnClickListener(v->showNotifications());
-        place(body,bar);gap(body,26);
+        place(body,bar);gap(body,16);
+        if(RecoveryVault.hasWorkingDraft(this)){
+            LinearLayout resume=card();
+            resume.addView(label("Nedovršen račun ili ponuda",14,ink(),true));
+            gap(resume,4);resume.addView(label("Automatski sačuvano · dodirnite za nastavak",11,sub(),false));
+            resume.setOnClickListener(v->loadWorkingDraft());
+            place(body,resume);gap(body,14);
+        }
         java.text.SimpleDateFormat fullDate=new java.text.SimpleDateFormat("EEEE, d. MMMM",Locale.forLanguageTag("hr-HR"));
         TextView date=label(fullDate.format(new java.util.Date()).toUpperCase(Locale.forLanguageTag("hr-HR")),11,0xff6A81A5,true);
         place(body,date);gap(body,7);
@@ -267,16 +274,31 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Nepodmireni računi").setItems(items,(dialog,position)->
             showDocument(open.get(position).id)).setNegativeButton("Zatvori",null).show();
     }
+    private int figureIcon(String symbol){
+        if("▤".equals(symbol))return R.drawable.ic_invoice;
+        if("▣".equals(symbol))return R.drawable.ic_quote;
+        if("♧".equals(symbol))return R.drawable.ic_clients;
+        return R.drawable.ic_add;
+    }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();c.addView(label(glyph,20,accent,true));gap(c,12);
+        LinearLayout c=card();
+        ImageView image=icon(figureIcon(glyph),accent);
+        image.setPadding(dp(8),dp(8),dp(8),dp(8));
+        image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
+        c.addView(image,lp(42,42));gap(c,11);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,25,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
     }
     private void quick(LinearLayout row,String glyph,String label,Runnable action){
         LinearLayout c=card();c.setGravity(Gravity.CENTER);
-        TextView icon=label(glyph,25,BLUE,true);icon.setGravity(Gravity.CENTER);place(c,icon);
-        gap(c,10);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
+        boolean quote="▣".equals(glyph),client="♧".equals(glyph);
+        int tint=quote?TEAL:client?0xffeb963c:BLUE;
+        ImageView image=icon(figureIcon(glyph),tint);
+        image.setPadding(dp(10),dp(10),dp(10),dp(10));
+        image.setBackground(shape(quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
+        LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
+        gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(103),1);
         p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);c.setOnClickListener(v->action.run());
     }
@@ -447,6 +469,16 @@ public final class MainActivity extends Activity {
         saveWorkingDraft();editDocumentScreen();
     }
     private void resumeSavedDraft(long id){
+        if(RecoveryVault.hasWorkingDraft(this) && editingDraftId!=id){
+            new AlertDialog.Builder(this).setTitle("Postoji nedovršeni radni dokument")
+                .setMessage("Prije otvaranja spremljenog nacrta nastavite prethodno uređivanje ili potvrdite da ga želite odbaciti.")
+                .setPositiveButton("Nastavi radni dokument",(d,w)->loadWorkingDraft())
+                .setNeutralButton("Otvori odabrani nacrt",(d,w)->{
+                    RecoveryVault.clearWorkingDraft(this);resumeSavedDraft(id);
+                })
+                .setNegativeButton("Odustani",null).show();
+            return;
+        }
         try{
             Store.Document d=db.document(id);
             if(!Store.DRAFT.equals(d.status))throw new IllegalStateException("Možete uređivati samo nacrt");
