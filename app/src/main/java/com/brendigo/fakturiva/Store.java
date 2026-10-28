@@ -143,8 +143,13 @@ public final class Store extends SQLiteOpenHelper {
         snapshotAfterWrite();
     }
     public long saveClientDetailed(String name,String oib,String address,String email,String phone,String vatId){
-        long id=saveClient(name,oib,address,email);
-        updateClient(id,name,oib,address,email,phone,vatId);
+        if(name.trim().isEmpty())throw new IllegalArgumentException("Unesite naziv klijenta");
+        if(!oib.trim().isEmpty()&&!Oib.valid(oib.trim()))throw new IllegalArgumentException("Neispravan OIB");
+        ContentValues v=new ContentValues();
+        v.put("name",name.trim());v.put("oib",oib.trim());v.put("address",address.trim());
+        v.put("email",email.trim());v.put("phone",phone.trim());v.put("vat_id",vatId.trim());
+        long id=getWritableDatabase().insertOrThrow("clients",null,v);
+        snapshotAfterWrite();
         return id;
     }
     public List<Client> clients() {
@@ -307,7 +312,11 @@ public final class Store extends SQLiteOpenHelper {
             }
             if(!DRAFT.equals(status)) throw new IllegalStateException("Dokument je već potvrđen");
             String issuerName=setting("name").trim();
-            if(issuerName.isEmpty()) throw new IllegalStateException("Unesite podatke svoje tvrtke u Postavkama");
+            if(issuerName.isEmpty())throw new IllegalStateException("Unesite naziv tvrtke ili obrta u Postavkama");
+            if(INVOICE.equals(type)){
+                if(!Oib.valid(setting("oib").trim()))throw new IllegalStateException("Unesite valjan OIB izdavatelja u Postavkama");
+                if(setting("address").trim().isEmpty())throw new IllegalStateException("Unesite adresu izdavatelja u Postavkama");
+            }
             int year=Integer.parseInt(issueDate.substring(0,4));
             int num=1;
             try(Cursor c=db.rawQuery("SELECT last_num FROM sequences WHERE type=? AND year=?",new String[]{type,String.valueOf(year)})){
