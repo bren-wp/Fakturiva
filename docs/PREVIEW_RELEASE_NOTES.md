@@ -5,6 +5,8 @@
 Fakturiva čuva evidenciju vaših poslovnih dokumenata lokalno na Android uređaju — uz pregledno sučelje na hrvatskom jeziku, klijente, ponude, račune, katalog usluga, naplatu i PDF izvoz.
 
 ## Poboljšanja verzije 0.5
+- **Siguran uvoz:** zamjena podataka automatski se otkazuje ako prethodna zaštitna kopija postojeće baze nije uspješno zapisana, kako se ne bi izgubili stari računi ili ponude.
+- **Stvarni prikazi:** 20 autentičnih emulatorskih snimki dostupno je putem poveznice u README-u; pixel-perfect revizija i dalje traje.
 - **Ujednačeniji dizajn:** novi tamni Fakturiva splash zaslon, preglednije kartice i razmaci početne stranice, profil izdavatelja s brendiranom karticom i trajno vidljivim gumbom za spremanje.
 - **Potpuni podaci na dokumentima:** naziv i identitet tvrtke/obrta, OIB, PDV ID, puna adresa, banka, IBAN, SWIFT, klijent, kontakt, datumi, stavke i iznosi.
 - **Višestranični PDF:** dugi nazivi i adrese više se ne odsijecaju; tekst prelazi na novu stranicu i zadržava unose.
