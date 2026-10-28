@@ -50,11 +50,61 @@ Kad potvrdite dokument, podaci izdavatelja i klijenta ostaju zabilježeni u doku
 Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — poznato Android iskustvo na hrvatskom jeziku.
 </div>
 
-### Stvarni prikazi svih 20 zaslona
+### Fakturiva u svakodnevnom poslovanju
 
-[**Pogledajte galeriju od 20 stvarnih Android snimki**](https://github.com/bren-wp/Fakturiva/actions/runs/40784278650) · [**Preuzmite originalne PNG snimke**](https://github.com/bren-wp/Fakturiva/actions/runs/40782723051/artifacts/12857668423)
+<p align="center">
+  <img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — Početna" width="180">
+  <img src="docs/screenshots/05_racuni.png" alt="Fakturiva — Računi" width="180">
+  <img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — Pregled računa" width="180">
+</p>
 
-Snimke su iz stvarnog Android emulatora, a ne dizajnerske makete. Izvorni vizualni identitet služi kao referenca za detaljno usklađivanje ekrana. Ugradnja galerije izravno u README čeka odobrenje GitHub Actions pisanja u repozitorij; slike se do tada nude kao zaseban arhiv.
+<p align="center">
+  <img src="docs/screenshots/09_ponude.png" alt="Fakturiva — Ponude" width="180">
+  <img src="docs/screenshots/16_naplata.png" alt="Fakturiva — Naplata" width="180">
+  <img src="docs/screenshots/20_tamna_tema.png" alt="Fakturiva — Tamna tema" width="180">
+</p>
+
+<details>
+<summary><b>Pogledajte svih 20 zaslona aplikacije</b></summary>
+
+<p align="center">
+  <img src="docs/screenshots/01_pocetni_zaslon.png" alt="Fakturiva — 01 pocetni zaslon" width="180">
+  <img src="docs/screenshots/02_dobrodosli.png" alt="Fakturiva — 02 dobrodosli" width="180">
+  <img src="docs/screenshots/03_prijava.png" alt="Fakturiva — 03 prijava" width="180">
+  <img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — 04 pocetna" width="180">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/05_racuni.png" alt="Fakturiva — 05 racuni" width="180">
+  <img src="docs/screenshots/06_novi_racun.png" alt="Fakturiva — 06 novi racun" width="180">
+  <img src="docs/screenshots/07_stavke_racuna.png" alt="Fakturiva — 07 stavke racuna" width="180">
+  <img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — 08 pregled racuna" width="180">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/09_ponude.png" alt="Fakturiva — 09 ponude" width="180">
+  <img src="docs/screenshots/10_nova_ponuda.png" alt="Fakturiva — 10 nova ponuda" width="180">
+  <img src="docs/screenshots/11_pregled_ponude.png" alt="Fakturiva — 11 pregled ponude" width="180">
+  <img src="docs/screenshots/12_klijenti.png" alt="Fakturiva — 12 klijenti" width="180">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/13_detalji_klijenta.png" alt="Fakturiva — 13 detalji klijenta" width="180">
+  <img src="docs/screenshots/14_artikli_usluge.png" alt="Fakturiva — 14 artikli usluge" width="180">
+  <img src="docs/screenshots/15_izvjestaji.png" alt="Fakturiva — 15 izvjestaji" width="180">
+  <img src="docs/screenshots/16_naplata.png" alt="Fakturiva — 16 naplata" width="180">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/17_eracun_integracija.png" alt="Fakturiva — 17 eracun integracija" width="180">
+  <img src="docs/screenshots/18_postavke.png" alt="Fakturiva — 18 postavke" width="180">
+  <img src="docs/screenshots/19_profil_tvrtke.png" alt="Fakturiva — 19 profil tvrtke" width="180">
+  <img src="docs/screenshots/20_tamna_tema.png" alt="Fakturiva — 20 tamna tema" width="180">
+</p>
+
+</details>
+
+Svi prikazi su **stvarne snimke nativne Android aplikacije na emulatoru**, bez generiranih marketinških maketa. Aplikacija se kontinuirano usklađuje s referentnim dizajnom.
 
 ## Preuzimanje
 
