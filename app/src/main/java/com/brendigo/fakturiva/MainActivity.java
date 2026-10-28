@@ -58,7 +58,13 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){super.onCreate(b);
         db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
         dark=prefs.getBoolean("dark",false);
-        if(!prefs.getBoolean("welcomed",false)) welcome(); else navigate("home");
+        try{
+            try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
+                if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
+                    throw new IllegalStateException("Neuspjela provjera baze");
+            }
+            if(!prefs.getBoolean("welcomed",false)) welcome(); else navigate("home");
+        }catch(Exception openError){damagedDatabase(openError);}
     }
     @Override protected void onDestroy(){if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');db.close();super.onDestroy();}
     private int bg(){return dark?0xff101c30:BG;}
@@ -127,6 +133,36 @@ public final class MainActivity extends Activity {
         }
         place(root,bar);
     }
+    /** Never silently delete or overwrite a damaged database. */
+    private void damagedDatabase(Exception cause){
+        setup("damaged",false);
+        gap(body,40);title(body,"Potreban je oporavak podataka");gap(body,16);
+        caption(body,"Baza se nije mogla sigurno otvoriti. Izvorna datoteka neće biti obrisana. Ako postoji lokalna kopija, možete je pokušati vratiti.");
+        gap(body,25);
+        button(body,"Pokušaj oporavak iz lokalne kopije",()->{
+            new AlertDialog.Builder(this).setTitle("Oporavak aplikacije")
+                .setMessage("Prije vraćanja sačuvat ćemo postojeću bazu u zasebnu datoteku. Lokalna kopija može biti starija od posljednjih izmjena.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Pokušaj",(dlg,w)->recoverDamagedDatabase()).show();
+        });
+    }
+    private void recoverDamagedDatabase(){
+        try{
+            JSONObject snapshot=RecoveryVault.read(this,0);
+            db.close();
+            File old=getDatabasePath("fakturiva.db");
+            File location=new File(getFilesDir(),"damaged-db-"+System.currentTimeMillis());
+            if(!location.mkdirs())throw new IllegalStateException("Nema mjesta za spremanje oštećene baze");
+            for(String suffix:new String[]{"","-wal","-shm","-journal"}){
+                File original=new File(old.getAbsolutePath()+suffix);
+                if(original.exists()&&!original.renameTo(new File(location,"fakturiva.db"+suffix)))
+                    throw new IllegalStateException("Nije moguće sigurno arhivirati bazu");
+            }
+            db=new Store(this);db.restore(snapshot);
+            toast("Oporavak je dovršen. Pregledajte dokumente i izvezite novu kopiju.");
+            navigate("home");
+        }catch(Exception e){error(e);damagedDatabase(e);}
+    }
     private void navigate(String dest){
         filter="Svi";
         switch(dest){
@@ -192,6 +228,9 @@ public final class MainActivity extends Activity {
         for(Store.Document d:db.documents(Store.INVOICE)){if(count++>=3)break;documentRow(d);}
         if(count==0)caption(body,"Još nema računa. Dodajte prvi dokument.");
         gap(body,18);secondary(body,"Svi računi",()->documents(Store.INVOICE));
+        if(!db.backupWarning().isEmpty()){
+            gap(body,15);TextView warning=label(db.backupWarning(),12,RED,true);place(body,warning);
+        }
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
         LinearLayout c=card();c.addView(label(glyph,20,accent,true));gap(c,12);
@@ -551,7 +590,7 @@ public final class MainActivity extends Activity {
         settingRow("♧  Artikli i usluge","Katalog poslovanja",this::catalog);
         settingRow("▣  Izvještaji","Statistika prihoda i naplate",this::reports);
         settingRow("◈  eRačuni i fiskalizacija","Objašnjenje ograničenja",this::eracun);
-        settingRow("⇩  Sigurnosna kopija","Šifrirani izvoz i uvoz",this::backupScreen);
+        settingRow("⇩  Sigurnosna kopija","Zaštita i oporavak podataka",this::backupScreen);
         settingRow("◐  Tamna tema","Prebaci prikaz aplikacije",()->{
             dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
         });
@@ -574,7 +613,9 @@ public final class MainActivity extends Activity {
         button(body,"Spremi promjene",()->{
             try{String id=fields[1].getText().toString().trim();
                 if(!id.isEmpty()&&!id.matches("[0-9]{11}"))throw new IllegalArgumentException("OIB mora imati 11 znamenaka");
-                for(int i=0;i<keys.length;i++)db.setting(keys[i],fields[i].getText().toString());
+                String[] vals=new String[keys.length];
+                for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString();
+                db.companySettings(keys,vals);
                 toast("Podaci tvrtke spremljeni");settings();
             }catch(Exception e){error(e);}
         });
@@ -592,9 +633,36 @@ public final class MainActivity extends Activity {
         LinearLayout info=card();title(info,"Sačuvajte svoje poslovne podatke");
         gap(info,11);caption(info,"Sigurnosna kopija šifrira se AES-256-GCM algoritmom. Lozinka mora imati barem 10 znakova. Ne postoji mogućnost oporavka ako je izgubite.");
         gap(info,11);caption(info,"Uvoz u potpunosti zamjenjuje postojeće podatke. Prije uvoza izvezite aktualnu kopiju.");
-        place(body,info);gap(body,18);
+        place(body,info);gap(body,15);
+        LinearLayout local=card();
+        title(local,"Automatska zaštita");gap(local,9);
+        local.addView(label(db.backupSummary(),12,ink(),false));gap(local,7);
+        caption(local,"Posljednje tri lokalne kopije šifrirane su ključem uređaja. One ne preživljavaju brisanje aplikacije ili gubitak telefona.");
+        if(!db.backupWarning().isEmpty()){gap(local,8);local.addView(label(db.backupWarning(),12,RED,true));}
+        gap(local,12);
+        secondary(local,"Vrati prethodno lokalno stanje",this::showLocalRecovery);
+        place(body,local);gap(body,18);
         button(body,"Izvezi šifriranu kopiju",()->passwordPrompt(false));
         gap(body,10);secondary(body,"Uvezi sigurnosnu kopiju",()->passwordPrompt(true));
+        gap(body,15);
+        caption(body,"Za zaštitu od krađe, kvara ili gubitka telefona kopirajte izvezenu datoteku na sigurno mjesto izvan uređaja. Bez te kopije ne možemo zajamčiti povrat dokumenata.");
+    }
+    private void showLocalRecovery(){
+        try{
+            int count=RecoveryVault.count(this);
+            if(count==0){toast("Nema dostupnih lokalnih kopija");return;}
+            String[] labels=new String[count];
+            for(int i=0;i<count;i++)labels[i]="Lokalna kopija "+(i+1)+(i==0?" (najnovija)":"");
+            new AlertDialog.Builder(this).setTitle("Odaberite kopiju za oporavak")
+                .setItems(labels,(dialog,index)->new AlertDialog.Builder(this)
+                    .setTitle("Potvrdite zamjenu podataka")
+                    .setMessage("Oporavak mijenja trenutačno stanje. Postojeće stanje se prije promjene dodatno pohranjuje. Provjerite datume i izvezite lozinkom zaštićenu kopiju na drugi uređaj.")
+                    .setNegativeButton("Odustani",null)
+                    .setPositiveButton("Vrati",(d,w)->{
+                        try{db.restoreLocal(index);toast("Podaci su vraćeni");navigate("home");}
+                        catch(Exception e){error(e);}
+                    }).show()).show();
+        }catch(Exception e){error(e);}
     }
     private void passwordPrompt(boolean importing){
         EditText pass=field("Lozinka (barem 10 znakova)","");
