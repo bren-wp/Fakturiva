@@ -49,7 +49,7 @@ public final class MainActivity extends Activity {
     private LinearLayout root,body; private ScrollView scroller;
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private boolean dark=false;
-    private long currentDocumentId=-1,editClientId=-1;
+    private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
     private String draftIssue="",draftDue="",draftNote="";
     private final ArrayList<Store.Item> draftItems=new ArrayList<>();
     private long pendingPdfId=-1;private char[] pendingPassword;
@@ -323,8 +323,18 @@ public final class MainActivity extends Activity {
     }
     private String later(int days){Calendar c=Calendar.getInstance();c.add(Calendar.DAY_OF_MONTH,days);return dateFormat.format(c.getTime());}
     private void newDocument(String type){
-        editType=type;draftItems.clear();draftIssue=later(0);draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
+        editType=type;editingDraftId=-1;draftItems.clear();draftIssue=later(0);draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
         editDocumentScreen();
+    }
+    private void resumeSavedDraft(long id){
+        try{
+            Store.Document d=db.document(id);
+            if(!Store.DRAFT.equals(d.status))throw new IllegalStateException("Možete uređivati samo nacrt");
+            editingDraftId=d.id;editType=d.type;editClientId=d.clientId;
+            draftIssue=d.issueDate;draftDue=d.dueDate;draftNote=d.notes;
+            draftItems.clear();draftItems.addAll(d.items);
+            editDocumentScreen();
+        }catch(Exception e){error(e);}
     }
     private void editDocumentScreen(){
         setup("new_doc",true);toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda","Korak 1 od 3 · Osnovni podaci",true);
@@ -434,8 +444,14 @@ public final class MainActivity extends Activity {
         gap(body,15);caption(body,"Potvrda dodjeljuje broj dokumenta. Fiskalizacija i slanje strukturiranih eRačuna nisu podržani.");
     }
     private void saveNew(boolean confirm){
-        try{long id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
-            if(confirm)db.confirm(id);draftItems.clear();showDocument(id);
+        try{
+            long id;
+            if(editingDraftId>0){
+                id=editingDraftId;
+                db.updateDraft(id,editClientId,draftIssue,draftDue,draftNote,draftItems);
+            }else id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
+            if(confirm)db.confirm(id);
+            editingDraftId=-1;draftItems.clear();showDocument(id);
         }catch(Exception e){error(e);}
     }
     private void confirmWarning(Runnable yes){
@@ -466,9 +482,13 @@ public final class MainActivity extends Activity {
         place(body,card);gap(body,15);
         button(body,"Preuzmi PDF",()->savePdf(id));gap(body,9);
         secondary(body,"Podijeli PDF",()->sharePdf(id));gap(body,9);
-        if(Store.DRAFT.equals(d.status))secondary(body,"Potvrdi dokument",()->confirmWarning(()->{
+        if(Store.DRAFT.equals(d.status)){
+            secondary(body,"✎ Uredi nacrt",()->resumeSavedDraft(id));
+            gap(body,9);
+            secondary(body,"Potvrdi dokument",()->confirmWarning(()->{
             try{db.confirm(id);showDocument(id);}catch(Exception e){error(e);}
         }));
+        }
         if(Store.INVOICE.equals(d.type)&&Store.ISSUED.equals(d.status)&&d.outstanding()>0){
             gap(body,9);secondary(body,"＋ Evidentiraj uplatu",()->payDialog(id));
         }
