@@ -440,8 +440,15 @@ public final class Store extends SQLiteOpenHelper {
         for(String table:new String[]{"company","clients","catalog","documents","lines","payments","sequences"})
             if(root.optJSONArray(table)==null)throw new IllegalArgumentException("Nedostaje tablica u kopiji: "+table);
         SQLiteDatabase db=getWritableDatabase();
-        // Preserve a snapshot of the CURRENT database before replacing any records.
-        snapshotAfterWrite();
+        // Restore is destructive. Do not proceed unless the current database has
+        // been durably preserved; the ordinary best-effort snapshot is not enough.
+        try {
+            RecoveryVault.snapshot(appContext,this);
+            lastBackupWarning="";
+        }catch(Exception e){
+            lastBackupWarning="Nije moguće spremiti trenutne podatke. Uvoz je otkazan.";
+            throw new IllegalStateException("Prije uvoza nije uspjela zaštita postojećih računa i ponuda",e);
+        }
         db.beginTransaction();boolean saved=false;
         try {
             for(String table:new String[]{"payments","lines","documents","sequences","catalog","clients","company"}) db.delete(table,null,null);
