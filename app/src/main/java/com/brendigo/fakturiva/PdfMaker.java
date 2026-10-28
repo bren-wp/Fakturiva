@@ -47,10 +47,10 @@ public final class PdfMaker {
         right(d.number==null?"NACRT #"+d.id:d.number,W-M,y,13,BLUE,true);y+=23;
         txt(d.status.equals(Store.DRAFT)?"NACRT — nije potvrđen dokument":"Status: "+status(d.status),M,y,10,Color.DKGRAY,false);y+=27;
         txt("IZDAVATELJ",M,y,10,BLUE,true);txt("KLIJENT",312,y,10,BLUE,true);y+=20;
-        txt(cut(db.setting("name"),34),M,y,13,NAVY,true);txt(cut(d.clientName,29),312,y,13,NAVY,true);y+=18;
-        txt(cut(db.setting("address"),40),M,y,10,NAVY,false);txt(cut(d.clientAddress,35),312,y,10,NAVY,false);y+=17;
-        txt("OIB: "+cut(db.setting("oib"),25),M,y,10,NAVY,false);txt("OIB: "+cut(d.clientOib,24),312,y,10,NAVY,false);y+=17;
-        txt(cut(db.setting("email"),42),M,y,10,NAVY,false);y+=25;
+        txt(cut(d.issuerName,34),M,y,13,NAVY,true);txt(cut(d.clientName,29),312,y,13,NAVY,true);y+=18;
+        txt(cut(d.issuerAddress,40),M,y,10,NAVY,false);txt(cut(d.clientAddress,35),312,y,10,NAVY,false);y+=17;
+        txt("OIB: "+cut(d.issuerOib,25),M,y,10,NAVY,false);txt("OIB: "+cut(d.clientOib,24),312,y,10,NAVY,false);y+=17;
+        txt(cut(d.issuerEmail,42),M,y,10,NAVY,false);y+=25;
         line(y);y+=21;
         txt("Datum dokumenta: "+d.issueDate,M,y,11,NAVY,false);
         txt("Dospijeće / vrijedi do: "+d.dueDate,312,y,11,NAVY,false);y+=30;
@@ -75,7 +75,7 @@ public final class PdfMaker {
             right("Uplaćeno:",448,y,10,NAVY,false);right(Money.euros(d.paidCents),W-M,y,10,NAVY,false);y+=20;
         }
         room(100);y+=16;
-        txt("IBAN: "+cut(db.setting("iban"),45),M,y,10,NAVY,false);y+=19;
+        txt("IBAN: "+cut(d.issuerIban,45),M,y,10,NAVY,false);y+=19;
         if(!d.notes.trim().isEmpty()){txt("Napomena: "+cut(d.notes,76),M,y,10,NAVY,false);y+=23;}
         room(88);
         line(y);y+=17;
