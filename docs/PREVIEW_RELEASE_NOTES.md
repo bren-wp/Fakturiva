@@ -1,22 +1,27 @@
-# Fakturiva v0.3.0-preview.1 — Android pretpregled
+# Fakturiva v0.4.0 — pretpregled za Android
 
-Nastavak izrade Fakturive: pouzdanije čuvanje računa i ponuda, uglađeni vizualni elementi brenda i automatski oporavak radnih dokumenata.
+**Računi i ponude, jednostavno.**
 
-## Novo u izdanju
+Fakturiva je lokalna Android aplikacija za pripremu računa i ponuda, klijente, katalog artikala/usluga, evidenciju uplata i PDF dokumente. Prepoznatljiv vizualni identitet: tamnoplava, električno plava, tirkizna, bijela te svijetla i tamna tema.
 
-- Automatsko šifrirano spremanje nedovršenog računa ili ponude tijekom unosa.
-- Oporavak unesenih podataka nakon prekida rada ili ponovnog pokretanja uređaja.
-- Upozorenje prije odbacivanja nedovršenog dokumenta.
-- Sigurnija rotacija lokalnih šifriranih kopija uz atomsko prepisivanje.
-- Usklađenije nativne ikone i početna ploča.
-- Postojeće funkcije: klijenti, ponude, računi, naplate, PDF i šifrirani izvoz.
+### Novo u 0.4
+- Preciznija provjera hrvatskog OIB-a i kalendarskih datuma dokumenta; dospijeće ne može prethoditi datumu izdavanja.
+- SQLite s WAL zapisivanjem i trajnim (FULL) sinkroniziranjem za otpornije zapisivanje.
+- Dosljedna snimka cijele baze prilikom šifriranog izvoza i automatskog oporavka.
+- Provjera obračuna u centima, validacije podataka i šifrirane sigurnosne kopije u CI-u.
+- Dodatno usklađeni nazivi i statusi računa/ponuda.
+- Poseban postupak za snimanje stvarnih prikaza Android emulatora radi vizualne usporedbe s 20 referenci.
 
-## Datoteke
+### Sadržaj izdanja
+- **Fakturiva-v0.4.0-preview-debug.apk** — debug-potpisan Android instalacijski paket, samo za testiranje.
+- **Fakturiva-v0.4.0-preview-DEBUG-SIGNED.aab** — AAB potpisan privremenim Android debug ključem, **nije Play Store production upload**.
+- **Fakturiva-v0.4.0-preview-UNSIGNED.aab** — nepotpisani release AAB za daljnje sigurno produkcijsko potpisivanje; **nije spreman za Play Store bez vašeg ključa**.
+- **SHA256SUMS.txt** — SHA-256 sažeci navedenih datoteka.
 
-- `Fakturiva-v0.3.0-preview.apk` — debug-potpisani instalacijski paket za isprobavanje.
-- `Fakturiva-v0.3.0-preview-UNSIGNED.aab` — **nepotpisani** Android App Bundle, nije spreman za prijenos na Google Play bez trajnog upload ključa.
-- `SHA256SUMS.txt` — kontrolni zbrojevi za provjeru preuzimanja.
+### Očuvanje poslovnih podataka
+Aplikacija čuva dokumente u lokalnoj bazi, omogućuje nastavak prekinutih nacrta te rotirajuće lokalne šifrirane kopije. **Ni jedan sustav s podacima samo na telefonu ne može jamčiti da račun nikada neće biti izgubljen** pri gubitku uređaja, kvaru memorije ili brisanju aplikacije. Redovito izvođenje i provjera šifrirane sigurnosne kopije izvan uređaja ostaje obvezna preporuka.
 
-Ovo je **razvojni pretpregled**, ne produkcijsko porezno rješenje. Prolazna kompilacija, lint i unit smoke testovi nisu zamjena za mjerenje 1:1 podudarnosti na uređajima ili za opsežne funkcionalne testove.
+### Važna ograničenja
+Ovo je razvojni pretpregled, ne računovodstveno certificirana aplikacija. **PDF nije strukturirani eRačun niti potvrda fiskalizacije.** Zakonski obvezna fiskalizacija, razmjena eRačuna, certifikati i odgovarajuća mrežna komunikacija nisu implementirani. Vizualna 1:1 podudarnost sa svim referencama nije potvrđena dok se ne obavi usporedba emulatorskih snimki i ispravci.
 
-**Obvezna napomena:** PDF nije eRačun; fiskalizacija ni razmjena eRačuna nisu implementirane. Podaci su lokalni — obvezno čuvajte izvezenu šifriranu kopiju izvan uređaja.
+**Fakturiva by Brendigo**.
