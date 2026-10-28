@@ -51,7 +51,7 @@ public final class MainActivity extends Activity {
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private boolean dark=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
-    private String draftIssue="",draftDue="",draftNote="";
+    private String draftIssue="",draftDue="",draftSupply="",draftNote="";
     private final ArrayList<Store.Item> draftItems=new ArrayList<>();
     private long pendingPdfId=-1;private char[] pendingPassword;
     private final SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT);
@@ -411,7 +411,7 @@ public final class MainActivity extends Activity {
             JSONObject j=new JSONObject();
             j.put("version",1);j.put("type",editType);j.put("savedId",editingDraftId);
             j.put("clientId",editClientId);j.put("issue",draftIssue);
-            j.put("due",draftDue);j.put("notes",draftNote);
+            j.put("due",draftDue);j.put("supply",draftSupply);j.put("notes",draftNote);
             JSONArray lines=new JSONArray();
             for(Store.Item i:draftItems){
                 JSONObject row=new JSONObject();
@@ -445,7 +445,7 @@ public final class MainActivity extends Activity {
             }
             editType=type;editingDraftId=j.getLong("savedId");
             editClientId=j.getLong("clientId");
-            draftIssue=j.getString("issue");draftDue=j.getString("due");
+            draftIssue=j.getString("issue");draftDue=j.getString("due");draftSupply=j.optString("supply",draftIssue);
             draftNote=j.optString("notes");draftItems.clear();draftItems.addAll(loaded);
             if(editingDraftId>0){
                 Store.Document existing=db.document(editingDraftId);
@@ -482,7 +482,7 @@ public final class MainActivity extends Activity {
     }
     private void startEmptyDocument(String type){
         editType=type;editingDraftId=-1;draftItems.clear();draftIssue=later(0);
-        draftDue=later(type.equals(Store.INVOICE)?15:30);draftNote="";editClientId=-1;
+        draftDue=later(type.equals(Store.INVOICE)?15:30);draftSupply=draftIssue;draftNote="";editClientId=-1;
         saveWorkingDraft();editDocumentScreen();
     }
     private void resumeSavedDraft(long id){
@@ -500,7 +500,7 @@ public final class MainActivity extends Activity {
             Store.Document d=db.document(id);
             if(!Store.DRAFT.equals(d.status))throw new IllegalStateException("Možete uređivati samo nacrt");
             editingDraftId=d.id;editType=d.type;editClientId=d.clientId;
-            draftIssue=d.issueDate;draftDue=d.dueDate;draftNote=d.notes;
+            draftIssue=d.issueDate;draftDue=d.dueDate;draftSupply=d.supplyDate==null||d.supplyDate.isEmpty()?d.issueDate:d.supplyDate;draftNote=d.notes;
             draftItems.clear();draftItems.addAll(d.items);
             saveWorkingDraft();editDocumentScreen();
         }catch(Exception e){error(e);}
@@ -527,14 +527,16 @@ public final class MainActivity extends Activity {
         });
         EditText issued=field("Datum izdavanja",draftIssue);dateInput(issued);fieldLabel(c,"Datum izdavanja",issued);
         EditText due=field("Datum dospijeća / valjanosti",draftDue);dateInput(due);fieldLabel(c,"Dospijeće / vrijedi do",due);
+        EditText supply=field("Datum isporuke ili obavljene usluge",draftSupply);dateInput(supply);fieldLabel(c,"Datum isporuke / usluge",supply);
         EditText notes=field("Neobavezna napomena",draftNote);fieldLabel(c,"Napomena",notes);
         watchDraft(issued,()->draftIssue=issued.getText().toString());
         watchDraft(due,()->draftDue=due.getText().toString());
+        watchDraft(supply,()->draftSupply=supply.getText().toString());
         watchDraft(notes,()->draftNote=notes.getText().toString());
         place(body,c);gap(body,16);
         button(body,"Nastavi na stavke  ›",()->{
             editClientId=clients.get(selector.getSelectedItemPosition()).id;
-            draftIssue=issued.getText().toString();draftDue=due.getText().toString();
+            draftIssue=issued.getText().toString();draftDue=due.getText().toString();draftSupply=supply.getText().toString();
             draftNote=notes.getText().toString();saveWorkingDraft();editItemsScreen();
         });
     }
@@ -611,7 +613,8 @@ public final class MainActivity extends Activity {
         String client="";
         for(Store.Client c:db.clients())if(c.id==editClientId)client=c.name;
         summary.addView(label("Klijent: "+client,13,ink(),true));gap(summary,6);
-        summary.addView(label("Datum: "+draftIssue+"  •  Do: "+draftDue,11,sub(),false));gap(summary,16);
+        summary.addView(label("Datum: "+draftIssue+"  •  Do: "+draftDue,11,sub(),false));
+        summary.addView(label("Isporuka / usluga: "+draftSupply,11,sub(),false));gap(summary,16);
         for(Store.Item i:draftItems){summary.addView(label(i.name+"  ·  "+Money.euros(i.net()+i.tax()),12,ink(),false));gap(summary,8);}
         long net=0,tax=0;for(Store.Item i:draftItems){net+=i.net();tax+=i.tax();}
         gap(summary,15);summary.addView(label("Osnovica: "+Money.euros(net),12,sub(),false));
@@ -627,9 +630,9 @@ public final class MainActivity extends Activity {
             long id;
             if(editingDraftId>0){
                 id=editingDraftId;
-                db.updateDraft(id,editClientId,draftIssue,draftDue,draftNote,draftItems);
+                db.updateDraft(id,editClientId,draftIssue,draftDue,draftSupply,draftNote,draftItems);
             }else {
-                id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftNote,draftItems);
+                id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftSupply,draftNote,draftItems);
                 editingDraftId=id;saveWorkingDraft();
             }
             if(confirm)db.confirm(id);
@@ -654,6 +657,7 @@ public final class MainActivity extends Activity {
         if(d.clientVatId!=null&&!d.clientVatId.isEmpty())card.addView(label("PDV ID klijenta: "+d.clientVatId,11,sub(),false));
         card.addView(label("Adresa klijenta: "+d.clientAddress,11,sub(),false));gap(card,11);
         card.addView(label("Izdano: "+d.issueDate+"  ·  Dospijeće: "+d.dueDate,11,sub(),false));
+        if(d.supplyDate!=null&&!d.supplyDate.isEmpty())card.addView(label("Datum usluge: "+d.supplyDate,11,sub(),false));
         gap(card,15);
         for(Store.Item it:d.items){LinearLayout r=horizontal();
             TextView n=label(it.name+"\n"+Money.decimalQuantity(it.qtyMilli)+" × "+Money.euros(it.unitCents)+" · "+it.taxRate+"%",11,ink(),false);
