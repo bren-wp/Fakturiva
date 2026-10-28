@@ -1,27 +1,26 @@
-# Fakturiva v0.4.0 — pretpregled za Android
+# Fakturiva v0.4.0 — Android pretpregled
 
 **Računi i ponude, jednostavno.**
 
-Fakturiva je lokalna Android aplikacija za pripremu računa i ponuda, klijente, katalog artikala/usluga, evidenciju uplata i PDF dokumente. Prepoznatljiv vizualni identitet: tamnoplava, električno plava, tirkizna, bijela te svijetla i tamna tema.
+Fakturiva donosi nativno, pregledno Android sučelje za pripremu ponuda i računa, kupce i poslovne partnere, evidenciju uplata, katalog usluga i lokalni PDF izvoz.
 
-### Novo u 0.4
-- Preciznija provjera hrvatskog OIB-a i kalendarskih datuma dokumenta; dospijeće ne može prethoditi datumu izdavanja.
-- SQLite s WAL zapisivanjem i trajnim (FULL) sinkroniziranjem za otpornije zapisivanje.
-- Dosljedna snimka cijele baze prilikom šifriranog izvoza i automatskog oporavka.
-- Provjera obračuna u centima, validacije podataka i šifrirane sigurnosne kopije u CI-u.
-- Dodatno usklađeni nazivi i statusi računa/ponuda.
-- Poseban postupak za snimanje stvarnih prikaza Android emulatora radi vizualne usporedbe s 20 referenci.
+### Što je novo
+- **Detaljan profil tvrtke ili obrta:** naziv, OIB, PDV identifikacijski broj, adresa, grad, država, poštanski broj, e-mail, telefon, web, IBAN, banka, SWIFT, registar, poslovna jedinica, operater, porezna napomena i podaci o plaćanju.
+- **Klijenti:** uređivanje, OIB/PDV ID, adresa, telefon i e-mail, uz povijest računa.
+- **Profesionalniji PDF:** izdavatelj i klijent, datumi izdavanja i isporuke, dospijeće, stavke, porez po stopama, plaćanja i napomene.
+- **Veća pouzdanost podataka:** nedestruktivna SQLite v2→v3 migracija, WAL zapisivanje, stroži datum/OIB/IBAN, konzistentna sigurnosna kopija i oporavak nacrta.
+- **Dosljedan identitet Fakturiva:** prepoznatljiva ikona, svijetla/tamna tema i izvorni Android elementi.
 
-### Sadržaj izdanja
-- **Fakturiva-v0.4.0-preview-debug.apk** — debug-potpisan Android instalacijski paket, samo za testiranje.
-- **Fakturiva-v0.4.0-preview-DEBUG-SIGNED.aab** — AAB potpisan privremenim Android debug ključem, **nije Play Store production upload**.
-- **Fakturiva-v0.4.0-preview-UNSIGNED.aab** — nepotpisani release AAB za daljnje sigurno produkcijsko potpisivanje; **nije spreman za Play Store bez vašeg ključa**.
-- **SHA256SUMS.txt** — SHA-256 sažeci navedenih datoteka.
+### Paketi izdanja
+- `Fakturiva-v0.4.0-preview-debug.apk` — Android debug-potpisan APK za isprobavanje.
+- `Fakturiva-v0.4.0-preview-DEBUG-SIGNED.aab` — AAB s privremenim debug potpisom, **nije produkcijski Google Play upload**.
+- `Fakturiva-v0.4.0-preview-UNSIGNED.aab` — nepotpisani AAB, potrebno produkcijsko potpisivanje vlastitim ključem.
+- `SHA256SUMS.txt` — provjera integriteta datoteka.
 
-### Očuvanje poslovnih podataka
-Aplikacija čuva dokumente u lokalnoj bazi, omogućuje nastavak prekinutih nacrta te rotirajuće lokalne šifrirane kopije. **Ni jedan sustav s podacima samo na telefonu ne može jamčiti da račun nikada neće biti izgubljen** pri gubitku uređaja, kvaru memorije ili brisanju aplikacije. Redovito izvođenje i provjera šifrirane sigurnosne kopije izvan uređaja ostaje obvezna preporuka.
+### Očuvanje podataka
+Fakturiva radi bez mrežnog računa i čuva zapise lokalno uz automatske šifrirane kopije i lozinkom zaštićen izvoz. **Ni jedna aplikacija ne može jamčiti nulti rizik od gubitka dokumenata ako su sve kopije na istom uređaju.** Zaštitite svoje podatke redovitim izvozom šifrirane kopije na neovisan medij ili pohranu te povremenom provjerom obnove.
 
-### Važna ograničenja
-Ovo je razvojni pretpregled, ne računovodstveno certificirana aplikacija. **PDF nije strukturirani eRačun niti potvrda fiskalizacije.** Zakonski obvezna fiskalizacija, razmjena eRačuna, certifikati i odgovarajuća mrežna komunikacija nisu implementirani. Vizualna 1:1 podudarnost sa svim referencama nije potvrđena dok se ne obavi usporedba emulatorskih snimki i ispravci.
+### Važne informacije
+Ovo je **razvojni pretpregled**, a ne verificirani računovodstveni proizvod. PDF nije strukturirani eRačun i ne predstavlja dokaz fiskalizacije. Elektronička fiskalizacija i zakonski obvezna eRačun razmjena nisu implementirane. Pixel-perfect 1:1 provjera svih 20 referentnih ekrana ostaje otvorena dok se ne dovrše testovi stvarnih emulatorskih snimki i vizualna usporedba.
 
-**Fakturiva by Brendigo**.
+**Fakturiva by Brendigo** · Android 7.0+.
