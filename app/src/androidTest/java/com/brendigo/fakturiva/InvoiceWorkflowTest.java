@@ -112,6 +112,7 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{
             db=new Store(context);
+            db.setting("name","Testni izdavatelj");
             long customer=db.saveClient("Kupac","","Rijeka","");
             Store.Item item=new Store.Item();
             item.name="Izrada dokumentacije";item.qtyMilli=1000;item.unitCents=10000;item.taxRate=25;
