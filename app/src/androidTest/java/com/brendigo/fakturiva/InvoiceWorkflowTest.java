@@ -34,7 +34,7 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
             return SQLiteDatabase.openOrCreateDatabase(getDatabasePath(name),factory);
         }
         @Override public SQLiteDatabase openOrCreateDatabase(String name,int mode,SQLiteDatabase.CursorFactory factory,DatabaseErrorHandler errorHandler) {
-            return SQLiteDatabase.openOrCreateDatabase(getDatabasePath(name),factory,errorHandler);
+            return SQLiteDatabase.openOrCreateDatabase(getDatabasePath(name).getAbsolutePath(),factory,errorHandler);
         }
         void clean(){
             if(dir.exists())erase(dir);
