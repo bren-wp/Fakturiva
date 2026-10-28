@@ -59,6 +59,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){super.onCreate(b);
         db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
         dark=prefs.getBoolean("dark",false);
+        if(runScreenshotHarness())return;
         try{
             try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
                 if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
@@ -72,6 +73,22 @@ public final class MainActivity extends Activity {
         if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen))
             saveWorkingDraft();
         super.onStop();
+    }
+    /** Allows debug-only emulator screenshots without introducing preview screens in release builds. */
+    private boolean runScreenshotHarness(){
+        if(!"com.brendigo.fakturiva.SCREENSHOT".equals(getIntent().getAction()))return false;
+        if((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0)return false;
+        String fingerprint=android.os.Build.FINGERPRINT.toLowerCase(java.util.Locale.ROOT);
+        if(!fingerprint.contains("generic")&&!fingerprint.contains("ranchu"))return false;
+        try{
+            Class<?> harness=Class.forName("com.brendigo.fakturiva.ScreenshotHarness");
+            harness.getMethod("show",MainActivity.class,String.class)
+                .invoke(null,this,getIntent().getStringExtra("screen"));
+            return true;
+        }catch(Exception e){
+            android.util.Log.e("Fakturiva","Emulator screenshot harness failed",e);
+            return false;
+        }
     }
     @Override protected void onDestroy(){if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');db.close();super.onDestroy();}
     private int bg(){return dark?0xff101c30:BG;}
