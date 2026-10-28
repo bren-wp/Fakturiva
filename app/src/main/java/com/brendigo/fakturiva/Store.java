@@ -79,6 +79,7 @@ public final class Store extends SQLiteOpenHelper {
             for(String key:new String[]{"vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference"})
                 db.execSQL("INSERT OR IGNORE INTO company(key,value) VALUES('"+key+"','')");
             db.execSQL("UPDATE documents SET issuer_phone=(SELECT value FROM company WHERE key='phone')");
+            db.execSQL("UPDATE documents SET supply_date=issue_date");
         }
     }
     public static final class Client {
@@ -171,6 +172,10 @@ public final class Store extends SQLiteOpenHelper {
         return out;
     }
     public long createDraft(String type,long clientId,String issueDate,String dueDate,String notes,List<Item> items) {
+        return createDraft(type,clientId,issueDate,dueDate,issueDate,notes,items);
+    }
+    public long createDraft(String type,long clientId,String issueDate,String dueDate,String supplyDate,String notes,List<Item> items) {
+        if(!IsoDates.valid(supplyDate))throw new IllegalArgumentException("Datum isporuke nije valjan");
         if(!type.equals(INVOICE)&&!type.equals(QUOTE)) throw new IllegalArgumentException("Neispravna vrsta dokumenta");
         if(items.isEmpty()) throw new IllegalArgumentException("Dodajte barem jednu stavku");
         IsoDates.validate(issueDate,dueDate);
@@ -184,7 +189,7 @@ public final class Store extends SQLiteOpenHelper {
             }
             ContentValues doc=new ContentValues();
             doc.put("type",type);doc.put("client_id",clientId);
-            doc.put("issue_date",issueDate);doc.put("due_date",dueDate);
+            doc.put("issue_date",issueDate);doc.put("due_date",dueDate);doc.put("supply_date",supplyDate);
             doc.put("notes",notes);doc.put("status",DRAFT);
             doc.put("net_cents",net);doc.put("tax_cents",tax);doc.put("total_cents",Math.addExact(net,tax));
             doc.put("created_at",System.currentTimeMillis());
@@ -210,6 +215,10 @@ public final class Store extends SQLiteOpenHelper {
     }
     /** Edit only a draft. Confirmed invoices and quotes stay immutable. */
     public void updateDraft(long id,long clientId,String issueDate,String dueDate,String notes,List<Item> items){
+        updateDraft(id,clientId,issueDate,dueDate,issueDate,notes,items);
+    }
+    public void updateDraft(long id,long clientId,String issueDate,String dueDate,String supplyDate,String notes,List<Item> items){
+        if(!IsoDates.valid(supplyDate))throw new IllegalArgumentException("Datum isporuke nije valjan");
         if(items.isEmpty())throw new IllegalArgumentException("Dodajte barem jednu stavku");
         IsoDates.validate(issueDate,dueDate);
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
@@ -226,7 +235,7 @@ public final class Store extends SQLiteOpenHelper {
             }
             ContentValues changes=new ContentValues();
             changes.put("client_id",clientId);
-            changes.put("issue_date",issueDate);changes.put("due_date",dueDate);changes.put("notes",notes);
+            changes.put("issue_date",issueDate);changes.put("due_date",dueDate);changes.put("supply_date",supplyDate);changes.put("notes",notes);
             changes.put("net_cents",net);changes.put("tax_cents",tax);changes.put("total_cents",Math.addExact(net,tax));
             try(Cursor c=db.rawQuery("SELECT name,address,oib,email,phone,vat_id FROM clients WHERE id=?",new String[]{String.valueOf(clientId)})){
                 if(!c.moveToFirst())throw new IllegalArgumentException("Odabrani klijent ne postoji");
@@ -426,6 +435,7 @@ public final class Store extends SQLiteOpenHelper {
             if(root.optInt("schema")<3){
                 db.execSQL("UPDATE documents SET client_email=(SELECT email FROM clients WHERE id=documents.client_id),client_phone=(SELECT phone FROM clients WHERE id=documents.client_id),client_vat_id=(SELECT vat_id FROM clients WHERE id=documents.client_id)");
                 db.execSQL("UPDATE documents SET issuer_phone=(SELECT value FROM company WHERE key='phone')");
+                db.execSQL("UPDATE documents SET supply_date=issue_date");
             }
             try(Cursor c=db.rawQuery("PRAGMA foreign_key_check",null)){
                 if(c.moveToFirst()) throw new IllegalArgumentException("Neispravne veze u sigurnosnoj kopiji");
