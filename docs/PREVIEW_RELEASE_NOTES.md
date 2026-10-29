@@ -30,3 +30,13 @@ Ovo je **razvojno izdanje**. Potpuna pixel-perfect 1:1 podudarnost svih 20 ekran
 **Sačuvajte podatke:** debug APK-ovi između izdanja mogu biti potpisani različitim ključevima. Nemojte deinstalirati postojeću aplikaciju radi nadogradnje dok ne izvezete i provjerite šifriranu kopiju izvan uređaja. Lozinku sigurnosne kopije čuvajte odvojeno. Za produkciju je potreban stabilan potpis, fizički testovi i provjera pravnih obveza.
 
 **Fakturiva by Brendigo.**
+
+
+## Dokazane provjere izdanja
+
+- Android build i lint: **uspješno**.
+- Android emulator instrumentacijski testovi, uključujući status uplata i stvarne datume dospijeća: **uspješno**.
+- Stvarne Android snimke svih 20 referentnih zaslona na rezoluciji 1179×2556: **snimljene i spremljene u README galeriji**.
+- Vizualni audit: prosječna RGB MAE razlika **14,658 → 14,534/255** u odnosu na v0.8. Računi **11,182 → 9,994**, ponude **11,719 → 10,441**.
+- Vizualno potvrđena čitljivost iznosa i statusnih oznaka; Androidov fullscreen pomoćni dijalog uklonjen s početnog zaslona.
+- **Nije dokazano** 1:1, niti stabilnost na svim fizičkim uređajima. Debug AAB nije produkcijski potpisan.
