@@ -1130,14 +1130,26 @@ public final class MainActivity extends Activity {
                     if(!id.isEmpty()&&!Oib.valid(id)){
                         oib.setError("OIB nije valjan");oib.requestFocus();return;
                     }
-                    if(editing)db.updateClient(saved.id,company,id,address.getText().toString(),
-                        email.getText().toString(),phone.getText().toString(),vat.getText().toString());
-                    else db.saveClientDetailed(company,id,address.getText().toString(),
-                        email.getText().toString(),phone.getText().toString(),vat.getText().toString());
+                    long customerId;
+                    if(editing){
+                        db.updateClient(saved.id,company,id,address.getText().toString(),
+                            email.getText().toString(),phone.getText().toString(),vat.getText().toString());
+                        customerId=saved.id;
+                    }else{
+                        customerId=db.saveClientDetailed(company,id,address.getText().toString(),
+                            email.getText().toString(),phone.getText().toString(),vat.getText().toString());
+                    }
                     dialog.dismiss();
-                    if(editing)clientDetails(db.clients().stream()
-                        .filter(client->client.id==saved.id).findFirst().orElse(saved));
-                    else clients();
+                    if("new_doc".equals(screen)||"edit_items".equals(screen)){
+                        editClientId=customerId;
+                        saveWorkingDraft();
+                        editDocumentScreen();
+                    }else if(editing){
+                        Store.Client updated=saved;
+                        for(Store.Client client:db.clients())
+                            if(client.id==customerId){updated=client;break;}
+                        clientDetails(updated);
+                    }else clients();
                 }catch(Exception error){error(error);}
             }));
         dialog.show();
