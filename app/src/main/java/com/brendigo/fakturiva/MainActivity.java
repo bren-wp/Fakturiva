@@ -1013,19 +1013,54 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
     private void clients(){
-        setup("clients",true);toolbar("Klijenti","Kupci i poslovni partneri",false);
-        List<Store.Client> list=db.clients();
-        caption(body,"Ukupno klijenata: "+list.size());gap(body,13);
-        for(Store.Client c:list){LinearLayout card=card();
-            LinearLayout r=horizontal();TextView initials=label(c.name.substring(0,Math.min(1,c.name.length())).toUpperCase(),20,BLUE,true);
-            initials.setGravity(Gravity.CENTER);background(initials,dark?0xff293b63:0xffeaf0ff,11);r.addView(initials,lp(42,42));
-            LinearLayout text=vertical();pad(text,12,0);text.addView(label(c.name,14,ink(),true));
-            text.addView(label(c.oib.isEmpty()?c.email:"OIB: "+c.oib,11,sub(),false));
-            r.addView(text,new LinearLayout.LayoutParams(0,-2,1));
-            r.addView(label("›",25,sub(),false));place(card,r);
-            place(body,card);gap(body,9);card.setOnClickListener(v->clientDetails(c));
+        setup("clients",true);
+        toolbar("Klijenti","Kupci i poslovni partneri",false);
+        EditText search=field("Pretraži klijente…","");
+        place(body,search);gap(body,14);
+        List<Store.Client> clients=db.clients();
+        place(body,label("Ukupno klijenata: "+clients.size(),12,sub(),false));
+        gap(body,11);
+        LinearLayout results=vertical();place(body,results);
+        for(Store.Client client:clients){
+            LinearLayout card=card();
+            LinearLayout line=horizontal();
+            String initial=client.name.substring(0,Math.min(1,client.name.length()))
+                .toUpperCase(Locale.forLanguageTag("hr-HR"));
+            TextView icon=label(initial,19,BLUE,true);
+            icon.setGravity(Gravity.CENTER);
+            background(icon,dark?0xff293b63:0xffeaf0ff,11);
+            line.addView(icon,lp(43,43));
+            LinearLayout details=vertical();pad(details,12,0);
+            details.addView(label(client.name,13,ink(),true));gap(details,3);
+            String secondary=!client.oib.isEmpty()?"OIB: "+client.oib:
+                (!client.address.isEmpty()?client.address:client.email);
+            details.addView(label(secondary,11,sub(),false));
+            line.addView(details,new LinearLayout.LayoutParams(0,-2,1));
+            line.addView(label("›",25,sub(),false));
+            place(card,line);place(results,card);gap(results,9);
+            card.setTag((client.name+" "+client.oib+" "+client.address+" "+
+                client.email+" "+client.phone).toLowerCase(Locale.forLanguageTag("hr-HR")));
+            card.setOnClickListener(v->clientDetails(client));
         }
-        if(list.isEmpty())caption(body,"Nema klijenata.");gap(body,12);
+        TextView empty=label(clients.isEmpty()?"Još nemate klijenata.":"Nema podudarnih klijenata.",
+            12,sub(),false);
+        place(results,empty);empty.setVisibility(clients.isEmpty()?View.VISIBLE:View.GONE);
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence value,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence value,int start,int before,int count){
+                String query=value.toString().trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
+                int visible=0;
+                for(int i=0;i<results.getChildCount();i++){
+                    View row=results.getChildAt(i);
+                    if(!(row.getTag() instanceof String))continue;
+                    boolean match=((String)row.getTag()).contains(query);
+                    row.setVisibility(match?View.VISIBLE:View.GONE);
+                    if(match)visible++;
+                }
+                empty.setVisibility(visible==0?View.VISIBLE:View.GONE);
+            }
+            @Override public void afterTextChanged(android.text.Editable edit){}
+        });
         floatingAction("Dodaj klijenta",this::addClient);
     }
     private void clientDetails(Store.Client c){
