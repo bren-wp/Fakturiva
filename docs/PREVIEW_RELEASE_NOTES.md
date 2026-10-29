@@ -1,48 +1,28 @@
-# Fakturiva v0.7.0-preview.2 — native Android UI refresh
+# Fakturiva v0.8.0-preview.1 — Native Android UI i stvarna poslovna funkcionalnost
 
-**Računi i ponude, jednostavno.** Offline-first Android aplikacija za klijente, račune, ponude, katalog, naplatu, izvještaje i PDF dokumente.
+**Računi i ponude, jednostavno.**
 
-### Novo
-- Potpuno preuređen ekran klijenta: avatar, broj računa i stvarno naplaćen iznos, poslovni podaci, povijest dokumenata.
-- Preuređen ekran izvještaja: točno fakturirani i naplaćeni iznosi te šestomjesečni graf na temelju stvarnih SQLite evidencija.
-- Katalog artikala i usluga: funkcionalna pretraga te uređivanje naziva, cijene i PDV stope bez promjene povijesnih računa i ponuda.
-- Grupirane postavke s funkcionalnim redovima i prebacivanjem teme.
-- Native pozdravni ekran s originalnim Fakturiva brendom i ilustracijom dokumenta izrađenom Android Canvasom.
-- Ujednačen prikaz koraka izrade računa i ponuda.
-- Ispravljena navigacija na prethodni ekran i sigurnost prilikom otvaranja novog računa s nedovršenim nacrtom.
-- eRačuni i fiskalizacija: točni pokazatelji profila i jasne upute; ne prikazuje se nepostojeće slanje.
-- Dodani instrumentacijski testovi koji potvrđuju da uređivanje kataloga ne mijenja izdane račune.
+### Novo u v0.8
+- Usklađivanje prema 20 originalnih korisničkih referenci (1179 × 2556 px): položaji, boje, ikone, forme i tamna tema.
+- Nova prava SVG-vector Android ikona za postavke umjesto ikone trotočja u navigaciji.
+- Preglednija početna stranica: profil tvrtke, iznos tekućih uplata, stvarna usporedba s prethodnim mjesecom kada postoje podaci, stvarni kumulativni graf uplata prema datumu, pregled posljednjih računa.
+- Računi i ponude: koraci izrade imaju zajedničku strukturu, realan status numeriranja dokumenta, odabir klijenta i način plaćanja koji vodi na profil izdavatelja, zasebne dodatne informacije i dostupnu fiksnu tipku za nastavak.
+- Stavke dokumenta: sada se stvarno uređuju, brisanje traži potvrdu, porezni iznosi izračunavaju se iz stvarnih stavki; nema prikazivanja izmišljenih iznosa.
+- Kontrast pozadina ikona u tamnoj temi, pristupačniji opisi navigacijskih kontrola.
+- Android instrumentacijski testovi: graf stvarnih uplata, odvajanje mjeseci i odbijanje neispravnih zapisa.
+- Dokumentiran audit svih 20 izvornih zaslona.
 
-### Stabilnost i vizualna dorada u preview.2
-- Ispravljeno čuvanje unesenih podataka u obrascima klijenata, računa i ponuda nakon pogreške validacije.
-- Zaštita šifriranih radnih nacrta: promjene stavki se poništavaju ako trajni zapis ne uspije.
-- Novi korisnički tok za dodavanje klijenta tijekom uređivanja dokumenta.
-- Ispravan CSV izvoz prema filtriranom mjesecu i zaštita od formula čak i uz početne razmake.
-- Nativni plutajući gumbi na popisima računa, ponuda, klijenata i kataloga.
-- Pretraživanje klijenata i uklanjanje praznih razmaka iza filtriranih kartica.
-- Novi Android regresijski testovi šifriranja nacrta i mjesečnog CSV izvoza.
-- Poboljšana izmjerena vizualna podudarnost svih 20 zaslona (RGB MAE prosjek 16,30 za pretposljednju emulatorsku snimku; završna korekcija filtriranih razmaka unesena je nakon nje).
+### Dostupni razvojni paketi
+- `Fakturiva-v0.8.0-preview.1-debug.apk` — Android testni APK potpisan debug ključem.
+- `Fakturiva-v0.8.0-preview.1-DEBUG-SIGNED.aab` — debug-potpisani testni bundle.
+- `Fakturiva-v0.8.0-preview.1-UNSIGNED.aab` — nepotpisani release bundle.
+- `SHA256SUMS.txt` — provjera integriteta.
 
-### Android paketi
-- `Fakturiva-v0.7.0-preview.2-debug.apk` — debug-potpisan APK za testiranje.
-- `Fakturiva-v0.7.0-preview.2-DEBUG-SIGNED.aab` — AAB s debug ključem, NIJE produkcijski Play Store upload.
-- `Fakturiva-v0.7.0-preview.2-UNSIGNED.aab` — nepotpisani release bundle.
-- `SHA256SUMS.txt`.
+### Ograničenja i zaštita dokumenata
+Ovo **nije potvrđena produkcijska verzija** i nije dokazana potpuna pixel-perfect 1:1 podudarnost svih 20 referenci. Dio razlika nastaje iz stvarnog datuma, zapisa testne baze i sistemske statusne/navigacijske trake Androida. Konceptni ekran vanjske prijave nije implementiran: Fakturiva je lokalna aplikacija bez servisa za korisničke račune. PDF nije strukturirani eRačun niti potvrda fiskalizacije. Ne koristiti kao zamjenu za zakonski obvezne integracije dok se one ne izvedu i provjere.
 
-### Nadogradnja bez gubitka podataka
-Razvojni APK i AAB koriste Android debug potpis. **Debug ključ između izdanja nije zajamčeno isti**: novu razvojnu verziju zato možda nećete moći instalirati preko stare bez pogreške potpisa. **Ne brišite postojeću aplikaciju s jedinim primjerkom računa ili ponuda.** Najprije izvezite šifriranu prijenosnu kopiju na sigurno mjesto izvan telefona, sačuvajte lozinku i provjerite oporavak na odvojenoj testnoj instalaciji. Produkcijske nadogradnje moraju koristiti stabilan, ispravno zaštićen potpisni ključ.
+**Ne deinstalirajte prethodnu razvojnu verziju koja sadrži jedine primjerke računa.** Debug potpisi se mogu razlikovati između izdanja. Najprije izvezite šifriranu sigurnosnu kopiju izvan uređaja, sačuvajte njezinu lozinku i provjerite oporavak na odvojenoj testnoj instalaciji. Za pouzdane Play produkcijske nadogradnje potrebno je stabilno produkcijsko potpisivanje.
 
-### Ograničenja
-Ovo je razvojna verzija. Nije dokazano pixel-perfect 1:1 svih 20 originalnih PNG ekrana niti odsutnost svih grešaka. Za produkciju nedostaju provjere na fizičkim Android uređajima, pravilno produkcijsko potpisivanje i, ovisno o poslovanju, fiskalizacija te strukturirani eRačun. PDF nije fiskalizirani račun niti eRačun.
-
-Redovito izvozite verificiranu šifriranu kopiju izvan telefona. Nulti rizik od gubitka podataka na jednom uređaju nije moguć.
+Fizički Android uređaji, recovery testovi na više verzija OS-a i završna revizija zakonskih zahtjeva ostaju uvjet produkcijskog odobrenja.
 
 **Fakturiva by Brendigo.**
-
-### Provjera izdanja
-
-APK i AAB objavljuju se kao *razvojni pretpregled* uz SHA-256 sažetke. Za korištenje u proizvodnji potrebni su dodatni testovi na fizičkim Android uređajima i produkcijski upload ključ. Glavni README sadrži stvarne zaslone aplikacije.
-
-
-### Završne provjere preview.2
-Gradle izgradnja, osnovni testovi i Android emulator instrumentacijski testovi uspješno su izvršeni. Provjereno je 20 stvarnih emulator PNG-ova uz RGB MAE prosjek 16,31/255 (testni datum, vrijeme i sadržaj utječu na rezultat). Android fizički uređaji ostaju izvan dosega ovih automatiziranih provjera, a ovaj paket nije odobren za produkciju.
