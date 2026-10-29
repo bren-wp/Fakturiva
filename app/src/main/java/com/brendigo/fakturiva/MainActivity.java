@@ -707,17 +707,25 @@ public final class MainActivity extends Activity {
         client.setEllipsize(android.text.TextUtils.TruncateAt.END);
         place(description,client);gap(description,3);
         place(description,label(readableDate(document.issueDate),10,sub(),false));
+        // Explicit width is essential: a weighted client description otherwise
+        // measures at full width and silently clips the amount on Android 10.
         LinearLayout amount=vertical();amount.setGravity(Gravity.RIGHT);
-        amount.addView(label(Money.euros(document.totalCents),12,ink(),true));
+        TextView total=label(Money.euros(document.totalCents),12,ink(),true);
+        total.setGravity(Gravity.RIGHT);
+        total.setSingleLine(true);
+        total.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        amount.addView(total,new LinearLayout.LayoutParams(-1,-2));
         gap(amount,6);
         String status=DocumentStatus.label(document,DocumentStatus.today(),
             DocumentStatus.inSevenDays());
-        TextView badge=label(status,10,badgeForeground(status),true);
+        String shortStatus="Djelomično plaćen".equals(status)?"Dio plaćen":status;
+        TextView badge=label(shortStatus,10,badgeForeground(status),true);
         badge.setGravity(Gravity.CENTER);
-        badge.setPadding(dp(9),dp(5),dp(9),dp(5));
+        badge.setSingleLine(true);
+        badge.setPadding(dp(8),dp(5),dp(8),dp(5));
         badge.setBackground(shape(badgeBackground(status),15));
         amount.addView(badge);
-        row.addView(amount);
+        row.addView(amount,lp(109,-2));
         place(item,row);target.addView(item,new LinearLayout.LayoutParams(-1,-2));
         item.setContentDescription(number+", "+document.clientName+", "+
             Money.euros(document.totalCents)+", "+status);
