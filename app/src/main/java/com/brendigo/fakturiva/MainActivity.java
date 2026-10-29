@@ -64,6 +64,10 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){super.onCreate(b);
         db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
         dark=prefs.getBoolean("dark",false);
+        if(b!=null){
+            pendingPdfId=b.getLong("pendingPdfId",-1);
+            pendingPaymentsCsvMonth=b.getString("pendingPaymentsCsvMonth");
+        }
         if(runScreenshotHarness())return;
         try{
             try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
@@ -73,6 +77,12 @@ public final class MainActivity extends Activity {
             if(!prefs.getBoolean("welcomed",false)) splash(true);
             else { navigate("home");offerWorkingDraftRecovery(); }
         }catch(Exception openError){damagedDatabase(openError);}
+    }
+    @Override protected void onSaveInstanceState(Bundle outState){
+        outState.putLong("pendingPdfId",pendingPdfId);
+        outState.putString("pendingPaymentsCsvMonth",pendingPaymentsCsvMonth);
+        // Never persist the backup password, even in the Android Bundle.
+        super.onSaveInstanceState(outState);
     }
     @Override protected void onStop(){
         if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen))
@@ -2020,18 +2030,34 @@ public final class MainActivity extends Activity {
         EditText pass=field("Lozinka (barem 10 znakova)","");
         pass.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         LinearLayout box=vertical();pad(box,18,10);place(box,pass);
-        new AlertDialog.Builder(this).setTitle(importing?"Vrati sigurnosnu kopiju":"Šifriraj sigurnosnu kopiju")
-            .setView(box).setNegativeButton("Odustani",null).setPositiveButton("Nastavi",(dialog,which)->{
-                char[] pwd=pass.getText().toString().toCharArray();
-                if(pwd.length<10){Arrays.fill(pwd,'\0');toast("Lozinka mora imati barem 10 znakova");return;}
-                if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
-                pendingPassword=pwd;
-                if(importing)new AlertDialog.Builder(this).setTitle("Zamjena podataka")
-                    .setMessage("Uvoz će zamijeniti sve postojeće podatke. Nastaviti?")
-                    .setNegativeButton("Odustani",(dlg,w)->clearPass())
-                    .setPositiveButton("Odaberi datoteku",(dlg,w)->openBackup()).show();
-                else createFile(BACKUP_EXPORT,"application/octet-stream","Fakturiva-backup.fak");
-            }).show();
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle(importing?"Vrati sigurnosnu kopiju":"Šifriraj sigurnosnu kopiju")
+            .setView(box)
+            .setNegativeButton("Odustani",null)
+            .setPositiveButton("Nastavi",null).create();
+        dialog.setOnShowListener(ignored->
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{
+                char[] password=pass.getText().toString().toCharArray();
+                if(password.length<10){
+                    Arrays.fill(password,'\\0');
+                    pass.setError("Lozinka mora imati barem 10 znakova");
+                    pass.requestFocus();
+                    return;
+                }
+                clearPass();
+                pendingPassword=password;
+                dialog.dismiss();
+                if(importing){
+                    new AlertDialog.Builder(this).setTitle("Zamjena podataka")
+                        .setMessage("Uvoz će zamijeniti sve postojeće podatke. Nastaviti?")
+                        .setNegativeButton("Odustani",(confirmation,which)->clearPass())
+                        .setPositiveButton("Odaberi datoteku",(confirmation,which)->openBackup())
+                        .setOnCancelListener(confirmation->clearPass())
+                        .show();
+                }else createFile(BACKUP_EXPORT,"application/octet-stream",
+                    "Fakturiva-backup.fak");
+            }));
+        dialog.show();
     }
     private void openBackup(){
         Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);
@@ -2070,8 +2096,14 @@ public final class MainActivity extends Activity {
             return;
         }
         Uri uri=data.getData();
+        if((code==BACKUP_EXPORT||code==BACKUP_IMPORT)&&pendingPassword==null){
+            toast("Lozinka nije dostupna nakon ponovnog pokretanja. Ponovite izvoz ili uvoz.");
+            return;
+        }
         try{
             if(code==PDF_EXPORT){
+                if(pendingPdfId<=0)
+                    throw new IllegalStateException("Dokument za izvoz nije poznat. Ponovite izvoz.");
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
                     if(out==null)throw new IllegalStateException("Nije moguće otvoriti datoteku");
                     PdfMaker.write(db,db.document(pendingPdfId),out);
