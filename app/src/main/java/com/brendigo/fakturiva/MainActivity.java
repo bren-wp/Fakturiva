@@ -287,8 +287,10 @@ public final class MainActivity extends Activity {
         screen="splash";
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setNavigationBarColor(0xff0a1c33);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_FULLSCREEN);
+        // Non-immersive fullscreen does not trigger Android's first-run
+        // "Viewing full screen" tutorial over the branded launch view.
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_FULLSCREEN);
         FrameLayout frame=new FrameLayout(this);
         GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             new int[]{0xff173a64,0xff102b4b,0xff09192d});
