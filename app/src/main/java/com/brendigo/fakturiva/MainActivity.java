@@ -48,7 +48,7 @@ public final class MainActivity extends Activity {
         TEAL=0xff14b9a4, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103;
     private Store db; private SharedPreferences prefs;
-    private LinearLayout root,body; private ScrollView scroller;
+    private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
     private int paymentFilter=0;
     private String pendingPaymentsCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
@@ -132,8 +132,10 @@ public final class MainActivity extends Activity {
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(panel());
         getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         root=vertical();root.setBackgroundColor(bg());setContentView(root);
+        contentFrame=new FrameLayout(this);
+        root.addView(contentFrame,new LinearLayout.LayoutParams(-1,0,1));
         scroller=new ScrollView(this);scroller.setFillViewport(false);scroller.setClipToPadding(false);
-        root.addView(scroller,new LinearLayout.LayoutParams(-1,0,1));
+        contentFrame.addView(scroller,new FrameLayout.LayoutParams(-1,-1));
         body=vertical();pad(body,17,18);scroller.addView(body,new ScrollView.LayoutParams(-1,-2));
         if(nav)bottomNav();
     }
@@ -172,6 +174,24 @@ public final class MainActivity extends Activity {
         ImageView img=new ImageView(this);img.setImageResource(id);
         img.setColorFilter(tint);img.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         return img;
+    }
+    /** Consistent accessible FAB on list screens, overlayed above the bottom navigation. */
+    private void floatingAction(String label,Runnable onClick){
+        // Reserve scrolling room so the last actual record is never obscured.
+        body.setPadding(body.getPaddingLeft(),body.getPaddingTop(),
+            body.getPaddingRight(),dp(88));
+        ImageView action=icon(R.drawable.ic_add,WHITE);
+        action.setContentDescription(label);
+        action.setFocusable(true);
+        action.setClickable(true);
+        action.setPadding(dp(14),dp(14),dp(14),dp(14));
+        action.setBackground(shape(BLUE,18));
+        action.setElevation(dp(7));
+        FrameLayout.LayoutParams pos=new FrameLayout.LayoutParams(
+            dp(56),dp(56),Gravity.END|Gravity.BOTTOM);
+        pos.setMargins(0,0,dp(18),dp(19));
+        contentFrame.addView(action,pos);
+        action.setOnClickListener(v->onClick.run());
     }
     private void bottomNav(){
         LinearLayout bar=horizontal();bar.setBackgroundColor(panel());pad(bar,6,7);
@@ -497,7 +517,8 @@ public final class MainActivity extends Activity {
         }
         if(shown==0)caption(body,"Nema dokumenata u ovoj kategoriji.");
         gap(body,18);
-        button(body,Store.INVOICE.equals(type)?"＋ Novi račun":"＋ Nova ponuda",()->newDocument(type));
+        floatingAction(Store.INVOICE.equals(type)?"Dodaj novi račun":"Dodaj novu ponudu",
+            ()->newDocument(type));
         search.addTextChangedListener(new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int st,int count,int after){}
             public void onTextChanged(CharSequence s,int st,int before,int count){
@@ -1005,7 +1026,7 @@ public final class MainActivity extends Activity {
             place(body,card);gap(body,9);card.setOnClickListener(v->clientDetails(c));
         }
         if(list.isEmpty())caption(body,"Nema klijenata.");gap(body,12);
-        button(body,"＋ Dodaj klijenta",this::addClient);
+        floatingAction("Dodaj klijenta",this::addClient);
     }
     private void clientDetails(Store.Client c){
         setup("client_detail",true);
@@ -1208,8 +1229,7 @@ public final class MainActivity extends Activity {
             }
             @Override public void afterTextChanged(android.text.Editable edit){}
         });
-        gap(body,12);button(body,"＋ Novi artikl ili usluga",()->editProduct(null));
-        gap(body,18);
+        floatingAction("Dodaj artikl ili uslugu",()->editProduct(null));
     }
     private void addProduct(){editProduct(null);}
     private void editProduct(Store.Item current){
