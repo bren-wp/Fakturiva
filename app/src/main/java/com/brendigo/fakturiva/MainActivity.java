@@ -1438,13 +1438,66 @@ public final class MainActivity extends Activity {
         gap(body,16);
     }
     private void eracun(){
-        setup("eracun",true);toolbar("eRačuni i fiskalizacija","Trenutačni status integracije",true);
-        LinearLayout c=card();c.addView(label("Integracija nije aktivirana",19,BLUE,true));gap(c,15);
-        c.addView(label("PDF iz Fakturive nije strukturirani eRačun. Ova verzija nema fiskalizacijski servis, potpisivanje, certifikate ni slanje preko posrednika.",14,ink(),false));
-        gap(c,18);c.addView(label("Za zakonski obvezne procese potrebna je zasebna provjerena integracija, internet i vjerodajnice.",12,sub(),false));
-        place(body,c);gap(body,15);
-        caption(body,"Aplikacija vas ne smije navesti na pogrešan zaključak da je dokument automatski fiskaliziran.");
+        setup("eracun",true);
+        toolbar("eRačuni","Integracije i status usluge",true);
+        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,22);
+        hero.setBackground(shape(dark?0xff243252:0xffecefff,21));
+        TextView symbol=label("⇄",31,BLUE,true);
+        symbol.setGravity(Gravity.CENTER);symbol.setBackground(shape(panel(),17));
+        LinearLayout.LayoutParams iconLp=lp(68,68);iconLp.gravity=Gravity.CENTER;
+        hero.addView(symbol,iconLp);gap(hero,15);
+        TextView heading=label("eRačuni i fiskalizacija",19,ink(),true);
+        heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,8);
+        TextView intro=label("Elektronička razmjena i fiskalizacija zahtijevaju provjerenu integraciju.",12,sub(),false);
+        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,13);
+        TextView state=label("Povezivanje nije dostupno",11,0xffb77312,true);
+        state.setGravity(Gravity.CENTER);state.setBackground(shape(dark?0xff584125:0xfffff0d3,13));
+        pad(state,12,6);
+        LinearLayout.LayoutParams stateLp=lp(-2,-2);stateLp.gravity=Gravity.CENTER;
+        hero.addView(state,stateLp);
+        place(body,hero);gap(body,15);
+
+        LinearLayout phases=card();title(phases,"Status integracije");gap(phases,12);
+        boolean hasCompany=!db.setting("name").trim().isEmpty()&&
+            Oib.valid(db.setting("oib"))&&!db.setting("address").trim().isEmpty();
+        integrationStep(phases,hasCompany?"✓":"1","Profil tvrtke",
+            hasCompany?"Osnovni podaci uneseni":"Unesite naziv, OIB i adresu",hasCompany,
+            this::company);
+        integrationStep(phases,"2","Informacijski posrednik",
+            "Pružatelj nije povezan",false,()->showIntegrationRequirements());
+        integrationStep(phases,"3","Ovlaštenja i testiranje",
+            "Nisu dostupni u ovoj verziji",false,()->showIntegrationRequirements());
+        place(body,phases);gap(body,15);
+
+        LinearLayout info=card();info.setBackground(shape(dark?0xff24314d:0xffedf1ff,17));
+        info.addView(label("Važno za eRačun",14,ink(),true));gap(info,8);
+        info.addView(label("PDF datoteka nije strukturirani eRačun ni potvrda fiskalizacije. Za razmjenu i slanje potrebna je stvarna autorizirana integracija.",12,sub(),false));
+        place(body,info);gap(body,14);
+        button(body,"Informacije o integraciji",this::showIntegrationRequirements);
+        gap(body,15);
     }
+    private void integrationStep(LinearLayout parent,String number,String heading,
+            String description,boolean ok,Runnable action){
+        LinearLayout row=horizontal();pad(row,1,12);
+        TextView badge=label(number,17,ok?TEAL:sub(),true);
+        badge.setGravity(Gravity.CENTER);badge.setBackground(shape(ok?
+            (dark?0xff20483f:0xffddf8ec):(dark?0xff27354e:0xffeff1f8),14));
+        row.addView(badge,lp(39,39));
+        LinearLayout words=vertical();pad(words,12,0);
+        words.addView(label(heading,13,ink(),true));
+        words.addView(label(description,11,sub(),false));
+        row.addView(words,new LinearLayout.LayoutParams(0,-2,1));
+        row.addView(label("›",23,sub(),false));
+        place(parent,row);
+        row.setOnClickListener(v->action.run());
+        gap(parent,5);
+    }
+    private void showIntegrationRequirements(){
+        new AlertDialog.Builder(this).setTitle("eRačuni i fiskalizacija")
+            .setMessage("Fakturiva trenutačno nema mrežnu vezu, integriranog informacijskog posrednika, certifikate ili fiskalizacijski sustav. Dostupni su samo lokalni dokumenti i PDF izvoz. Ne možete slati eRačune ni fiskalizirati račune iz ove verzije.")
+            .setPositiveButton("U redu",null).show();
+    }
+    
     private void backupScreen(){
         setup("backup",true);toolbar("Sigurnosna kopija","Šifrirana kopija svih podataka",true);
         LinearLayout info=card();title(info,"Sačuvajte svoje poslovne podatke");
