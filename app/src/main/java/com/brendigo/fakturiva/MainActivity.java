@@ -654,8 +654,34 @@ public final class MainActivity extends Activity {
             saveWorkingDraft();editDocumentScreen();
         }catch(Exception e){error(e);}
     }
+    /** One shared, non-interactive progress indicator for both invoices and quotes. */
+    private void wizardSteps(int current){
+        LinearLayout steps=horizontal();steps.setGravity(Gravity.CENTER_VERTICAL);
+        String[] names={"Podaci","Stavke","Pregled"};
+        for(int i=0;i<3;i++){
+            if(i>0){
+                View line=new View(this);line.setBackgroundColor(i<current?TEAL:border());
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(2),0.65f);
+                lp.setMargins(dp(4),0,dp(4),dp(21));steps.addView(line,lp);
+            }
+            LinearLayout cell=vertical();cell.setGravity(Gravity.CENTER);
+            final boolean complete=i+1<current;
+            TextView dot=label(complete?"✓":String.valueOf(i+1),12,
+                complete||i+1==current?WHITE:sub(),true);
+            dot.setGravity(Gravity.CENTER);
+            dot.setBackground(shape(complete?TEAL:(i+1==current?BLUE:
+                (dark?0xff253550:0xffe9edff)),18));
+            LinearLayout.LayoutParams dotLp=lp(32,32);dotLp.gravity=Gravity.CENTER;
+            cell.addView(dot,dotLp);gap(cell,5);
+            TextView label=label(names[i],10,i+1==current?BLUE:sub(),i+1==current);
+            label.setGravity(Gravity.CENTER);place(cell,label);
+            steps.addView(cell,new LinearLayout.LayoutParams(0,-2,1));
+        }
+        place(body,steps);gap(body,17);
+    }
     private void editDocumentScreen(){
-        setup("new_doc",true);toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda","Korak 1 od 3 · Osnovni podaci",true);
+        setup("new_doc",true);toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda","Izrada dokumenta",true);
+        wizardSteps(1);
         LinearLayout c=card();title(c,"Osnovni podaci");gap(c,10);
         List<Store.Client> clients=db.clients();
         if(clients.isEmpty()){
@@ -690,7 +716,8 @@ public final class MainActivity extends Activity {
         });
     }
     private void editItemsScreen(){
-        setup("edit_items",true);toolbar("Stavke dokumenta","Korak 2 od 3 · Stavke i iznosi",true);
+        setup("edit_items",true);toolbar("Stavke dokumenta","Stavke i iznosi",true);
+        wizardSteps(2);
         if(draftItems.isEmpty())caption(body,"Dodajte usluge ili artikle u dokument.");
         int index=0;
         for(Store.Item i:draftItems){
@@ -756,7 +783,8 @@ public final class MainActivity extends Activity {
     }
     private void reviewDraft(){
         saveWorkingDraft();
-        setup("review",true);toolbar("Pregled dokumenta","Korak 3 od 3 · Potvrda",true);
+        setup("review",true);toolbar("Pregled dokumenta","Provjera i potvrda",true);
+        wizardSteps(3);
         LinearLayout summary=card();
         summary.addView(label(editType.equals(Store.INVOICE)?"Račun · nacrt":"Ponuda · nacrt",19,BLUE,true));gap(summary,13);
         String client="";
