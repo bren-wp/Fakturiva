@@ -1026,16 +1026,64 @@ public final class MainActivity extends Activity {
             }).show();
     }
     private void reports(){
-        setup("reports",true);toolbar("Izvještaji","Statistika poslovanja",true);
-        LinearLayout c=card();caption(c,"Izdani računi (bez nacrta)");gap(c,12);
-        c.addView(label(Money.euros(db.invoicedCents()),27,BLUE,true));place(body,c);gap(body,13);
-        LinearLayout cards=horizontal();metric(cards,"Računi",String.valueOf(db.documents(Store.INVOICE).size()),"▤",BLUE);
-        metric(cards,"Ponude",String.valueOf(db.documents(Store.QUOTE).size()),"▣",TEAL);place(body,cards);
-        section("Pregled naplate");
-        LinearLayout totals=card();totals.addView(label("Naplaćeno: "+Money.euros(db.receivedCents()),15,TEAL,true));
-        gap(totals,13);totals.addView(label("Nenaplaćeno: "+Money.euros(Math.max(0,db.invoicedCents()-db.receivedCents())),14,ink(),true));
-        place(body,totals);gap(body,12);
-        secondary(body,"Pregled uplata",this::payments);
+        setup("reports",true);
+        toolbar("Izvještaji","Statistika i analiza poslovanja",true);
+
+        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR")).format(new java.util.Date());
+        LinearLayout period=horizontal();
+        TextView picker=label("▣  "+month,13,ink(),true);
+        pad(picker,13,11);picker.setBackground(outlined(panel()));
+        period.addView(picker,new LinearLayout.LayoutParams(0,-2,1));
+        TextView current=label("Ovaj mjesec",11,BLUE,true);
+        current.setGravity(Gravity.CENTER);current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
+        LinearLayout.LayoutParams selected=lp(115,40);selected.setMargins(dp(12),0,0,0);
+        period.addView(current,selected);
+        place(body,period);gap(body,14);
+
+        LinearLayout revenue=card();pad(revenue,18,18);
+        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,10);
+        revenue.addView(label(Money.euros(db.invoicedCents()),29,ink(),true));gap(revenue,8);
+        revenue.addView(label("Potvrđeni računi · bez nacrta",11,sub(),false));
+        place(body,revenue);gap(body,14);
+
+        int invoiceCount=0,paid=0;
+        for(Store.Document d:db.documents(Store.INVOICE)){
+            if(Store.DRAFT.equals(d.status))continue;
+            invoiceCount++;
+            if(Store.PAID.equals(d.status))paid++;
+        }
+        LinearLayout metrics=horizontal();
+        reportMetric(metrics,"Izdani računi",String.valueOf(invoiceCount),"▤",BLUE,0);
+        reportMetric(metrics,"Plaćeni računi",String.valueOf(paid),"✓",TEAL,1);
+        place(body,metrics);gap(body,14);
+
+        LinearLayout chart=card();pad(chart,18,17);
+        LinearLayout heading=horizontal();
+        heading.addView(label("Kretanje naplate",16,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
+        heading.addView(label("Posljednjih 6 mj.",10,sub(),false));
+        place(chart,heading);gap(chart,12);
+        chart.addView(new RevenueBars(this),lp(-1,194));place(body,chart);gap(body,14);
+
+        LinearLayout payout=card();
+        title(payout,"Pregled naplate");gap(payout,18);
+        clientField(payout,"Naplaćeno",Money.euros(db.receivedCents()));
+        clientField(payout,"Nenaplaćeno",Money.euros(db.outstandingCents()));
+        place(body,payout);gap(body,12);
+        secondary(body,"Pregled svih uplata",this::payments);
+        gap(body,18);
+    }
+    private void reportMetric(LinearLayout row,String caption,String value,String glyph,int accent,int index){
+        LinearLayout c=card();
+        TextView symbol=label(glyph,19,accent,true);
+        symbol.setGravity(Gravity.CENTER);
+        symbol.setBackground(shape(accent==TEAL?(dark?0xff20534b:0xffdcf8f4):
+            (dark?0xff263a65:0xffe8edff),12));
+        c.addView(symbol,lp(39,39));gap(c,9);
+        c.addView(label(caption,11,sub(),false));gap(c,3);
+        c.addView(label(value,25,ink(),true));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(114),1);
+        if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
+        row.addView(c,lp);
     }
     private void payments(){
         setup("payments",true);
@@ -1348,6 +1396,36 @@ public final class MainActivity extends Activity {
         else if("edit_items".equals(screen))editDocumentScreen();
         else if("review".equals(screen))editItemsScreen();
         else navigate("home");
+    }
+    private final class RevenueBars extends View{
+        final android.graphics.Paint p=new android.graphics.Paint(3);
+        RevenueBars(Context ctx){super(ctx);}
+        @Override protected void onDraw(android.graphics.Canvas canvas){
+            super.onDraw(canvas);
+            long[] totals=db.monthlyReceipts();
+            long top=1;
+            for(int i=6;i<12;i++)top=Math.max(top,totals[i]);
+            float w=getWidth(),h=getHeight(),labelH=dp(22),plotH=h-labelH;
+            p.setColor(border());p.setStrokeWidth(dp(1));
+            canvas.drawLine(0,plotH,w,plotH,p);
+            java.util.Calendar now=java.util.Calendar.getInstance();
+            now.add(java.util.Calendar.MONTH,-5);
+            String[] months={"Sij","Velj","Ožu","Tra","Svi","Lip","Srp","Kol","Ruj","Lis","Stu","Pro"};
+            p.setTextSize(dp(10));p.setTextAlign(android.graphics.Paint.Align.CENTER);
+            for(int i=0;i<6;i++){
+                float slot=w/6f;
+                float x=i*slot+slot*.14f,barW=slot*.72f;
+                float fraction=(float)totals[i+6]/top;
+                float barH=Math.max(dp(3),plotH*.86f*fraction);
+                p.setStyle(android.graphics.Paint.Style.FILL);
+                p.setColor(i==5?TEAL:0xff6879ec);
+                canvas.drawRoundRect(x,plotH-barH,x+barW,plotH,dp(7),dp(7),p);
+                p.setColor(sub());
+                canvas.drawText(months[now.get(java.util.Calendar.MONTH)],x+barW/2,h-dp(3),p);
+                now.add(java.util.Calendar.MONTH,1);
+            }
+            p.setTextAlign(android.graphics.Paint.Align.LEFT);
+        }
     }
     private final class RevenueLine extends View{
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
