@@ -234,4 +234,28 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
         }
     }
 
+    public void testReportsAreScopedToActualIssuingMonth() throws Exception {
+        IsolatedContext context=new IsolatedContext(getContext()); Store db=null;
+        try {
+            db=new Store(context);
+            db.setting("name","Izdavatelj");
+            db.setting("oib","12345678903");
+            db.setting("address","Rijeka");
+            long client=db.saveClient("Kupac","","Rijeka","");
+            Store.Item item=new Store.Item();item.name="Usluga";
+            item.qtyMilli=1000;item.unitCents=10000;item.taxRate=25;
+            long october=db.createDraft(Store.INVOICE,client,"2026-10-28","2026-11-28","",Arrays.asList(item));
+            db.confirm(october);
+            long september=db.createDraft(Store.INVOICE,client,"2026-09-28","2026-10-28","",Arrays.asList(item));
+            db.confirm(september);
+            assertEquals(12500L,db.invoicedCentsMonth("2026-10"));
+            assertEquals(12500L,db.invoicedCentsMonth("2026-09"));
+            assertEquals(0L,db.invoicedCentsMonth("2026-08"));
+            assertEquals(25000L,db.invoicedCents());
+        } finally {
+            if(db!=null)db.close();
+            context.clean();
+        }
+    }
+
 }
