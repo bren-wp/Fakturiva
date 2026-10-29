@@ -2039,7 +2039,7 @@ public final class MainActivity extends Activity {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{
                 char[] password=pass.getText().toString().toCharArray();
                 if(password.length<10){
-                    Arrays.fill(password,'\\0');
+                    Arrays.fill(password,'\0');
                     pass.setError("Lozinka mora imati barem 10 znakova");
                     pass.requestFocus();
                     return;
