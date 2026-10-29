@@ -557,7 +557,7 @@ public final class MainActivity extends Activity {
     }
     private String later(int days){Calendar c=Calendar.getInstance();c.add(Calendar.DAY_OF_MONTH,days);return dateFormat.format(c.getTime());}
     /** An unfinished invoice or quote must survive process death and device reboot. */
-    private void saveWorkingDraft(){
+    private boolean saveWorkingDraft(){
         try{
             JSONObject j=new JSONObject();
             j.put("version",1);j.put("type",editType);j.put("savedId",editingDraftId);
@@ -572,9 +572,11 @@ public final class MainActivity extends Activity {
             }
             j.put("items",lines);
             RecoveryVault.saveWorkingDraft(this,j);
+            return true;
         }catch(Exception e){
             android.util.Log.e("FakturivaRecovery","Working draft could not be saved",e);
-            toast("Upozorenje: radni nacrt nije spremljen. Izvezite ili spremite dokument.");
+            toast("Upozorenje: radni nacrt nije spremljen. Provjerite slobodan prostor i zaštitu uređaja.");
+            return false;
         }
     }
     private void loadWorkingDraft(){
@@ -714,7 +716,8 @@ public final class MainActivity extends Activity {
         button(body,"Nastavi na stavke  ›",()->{
             editClientId=clients.get(selector.getSelectedItemPosition()).id;
             draftIssue=issued.getText().toString();draftDue=due.getText().toString();draftSupply=supply.getText().toString();
-            draftNote=notes.getText().toString();saveWorkingDraft();editItemsScreen();
+            draftNote=notes.getText().toString();
+            if(saveWorkingDraft())editItemsScreen();
         });
     }
     private void editItemsScreen(){
@@ -728,7 +731,14 @@ public final class MainActivity extends Activity {
             c.addView(label(Money.decimalQuantity(i.qtyMilli)+" × "+Money.euros(i.unitCents)+" · PDV "+i.taxRate+"%",11,sub(),false));
             gap(c,8);c.addView(label(Money.euros(i.net()+i.tax()),17,BLUE,true));
             gap(c,7);
-            TextView remove=label("Ukloni stavku",12,RED,true);place(c,remove);remove.setOnClickListener(v->{draftItems.remove(delete);saveWorkingDraft();editItemsScreen();});
+            TextView remove=label("Ukloni stavku",12,RED,true);place(c,remove);remove.setOnClickListener(v->{
+                Store.Item removed=draftItems.remove(delete);
+                if(!saveWorkingDraft()){
+                    draftItems.add(delete,removed);
+                    return;
+                }
+                editItemsScreen();
+            });
             place(body,c);gap(body,10);
         }
         secondary(body,"＋ Dodaj artikl ili uslugu",this::addLine);
@@ -792,7 +802,10 @@ public final class MainActivity extends Activity {
                     item.taxRate=Integer.parseInt(rates[tax.getSelectedItemPosition()].replace("%",""));
                     item.net();item.tax(); // Check overflow before touching a draft.
                     draftItems.add(item);
-                    saveWorkingDraft();
+                    if(!saveWorkingDraft()){
+                        draftItems.remove(draftItems.size()-1);
+                        return; // Keep form inputs visible after a failed durable save.
+                    }
                     dialog.dismiss();
                     editItemsScreen();
                 }catch(Exception error){error(error);}
