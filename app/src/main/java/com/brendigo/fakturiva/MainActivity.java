@@ -737,6 +737,14 @@ public final class MainActivity extends Activity {
         }catch(Exception e){error(e);}
     }
     /** One shared, non-interactive progress indicator for both invoices and quotes. */
+    /** Fixed primary action above the bottom navigation: forms stay scrollable. */
+    private void stickyPrimary(String text,Runnable click){
+        LinearLayout container=vertical();
+        container.setBackgroundColor(bg());
+        container.setPadding(dp(17),dp(7),dp(17),dp(8));
+        container.addView(action(text,BLUE,true,click),lp(-1,51));
+        root.addView(container,1,new LinearLayout.LayoutParams(-1,-2));
+    }
     private void wizardSteps(int current){
         LinearLayout steps=horizontal();steps.setGravity(Gravity.CENTER_VERTICAL);
         String[] names={"Podaci","Stavke","Pregled"};
@@ -762,40 +770,89 @@ public final class MainActivity extends Activity {
         place(body,steps);gap(body,17);
     }
     private void editDocumentScreen(){
-        setup("new_doc",true);toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda","Izrada dokumenta",true);
+        setup("new_doc",true);
+        toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda",
+            "Izradite novi dokument",true);
         wizardSteps(1);
-        LinearLayout c=card();title(c,"Osnovni podaci");gap(c,10);
         List<Store.Client> clients=db.clients();
+
+        LinearLayout basics=card();
+        title(basics,"Osnovni podaci");gap(basics,12);
+        String typeName=Store.INVOICE.equals(editType)?"računa":"ponude";
+        basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
+        TextView sequence=label(editingDraftId>0?
+            "Nacrt · broj nakon potvrde":"Dodjeljuje se pri potvrdi",13,ink(),false);
+        pad(sequence,14,13);sequence.setBackground(outlined(panel()));
+        place(basics,sequence);
         if(clients.isEmpty()){
-            caption(c,"Prije dokumenta dodajte barem jednog klijenta.");
-            gap(c,15);button(c,"＋ Dodaj klijenta",this::addClient);
-            place(body,c);return;
+            gap(basics,12);
+            basics.addView(label("Nema klijenata. Dodajte klijenta za nastavak.",12,sub(),false));
+            gap(basics,12);button(basics,"＋ Dodaj klijenta",this::addClient);
+            place(body,basics);return;
         }
         String[] names=new String[clients.size()];int current=0;
-        for(int i=0;i<clients.size();i++){names[i]=clients.get(i).name;if(clients.get(i).id==editClientId)current=i;}
-        c.addView(label("Klijent",12,ink(),true));Spinner selector=new Spinner(this);
-        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names);selector.setAdapter(adapter);
-        selector.setSelection(current);place(c,selector);
+        for(int i=0;i<clients.size();i++){
+            names[i]=clients.get(i).name;
+            if(clients.get(i).id==editClientId)current=i;
+        }
+        gap(basics,13);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
+        LinearLayout choose=horizontal();choose.setGravity(Gravity.CENTER_VERTICAL);
+        choose.setBackground(outlined(panel()));choose.setPadding(dp(12),dp(5),dp(12),dp(5));
+        Spinner selector=new Spinner(this);
+        ArrayAdapter<String> adapter=new ArrayAdapter<>(
+            this,android.R.layout.simple_spinner_dropdown_item,names);
+        selector.setAdapter(adapter);selector.setSelection(current);
+        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(42),1));
+        choose.addView(label("›",23,sub(),false));
+        place(basics,choose);
         selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
-            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int pos,long id){
                 editClientId=clients.get(pos).id;saveWorkingDraft();
             }
         });
-        EditText issued=field("Datum izdavanja",draftIssue);dateInput(issued);fieldLabel(c,"Datum izdavanja",issued);
-        EditText due=field("Datum dospijeća / valjanosti",draftDue);dateInput(due);fieldLabel(c,"Dospijeće / vrijedi do",due);
-        EditText supply=field("Datum isporuke ili obavljene usluge",draftSupply);dateInput(supply);fieldLabel(c,"Datum isporuke / usluge",supply);
-        EditText notes=field("Neobavezna napomena",draftNote);fieldLabel(c,"Napomena",notes);
+        EditText issued=field("Datum izdavanja",draftIssue);
+        dateInput(issued);fieldLabel(basics,"Datum izdavanja",issued);
+        EditText due=field("Datum dospijeća / valjanosti",draftDue);
+        dateInput(due);fieldLabel(basics,"Dospijeće / vrijedi do",due);
+        String method=db.setting("payment_method").trim();
+        gap(basics,13);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
+        LinearLayout paying=horizontal();paying.setGravity(Gravity.CENTER_VERTICAL);
+        paying.setBackground(outlined(panel()));paying.setPadding(dp(13),dp(14),dp(13),dp(14));
+        paying.addView(label(method.isEmpty()?"Odaberite u profilu tvrtke":method,13,ink(),false),
+            new LinearLayout.LayoutParams(0,-2,1));
+        paying.addView(label("›",20,sub(),false));
+        paying.setContentDescription("Uredi način plaćanja u profilu tvrtke");
+        paying.setOnClickListener(v->{
+            saveWorkingDraft();company();
+        });
+        place(basics,paying);
+        place(body,basics);gap(body,13);
+
+        LinearLayout additional=card();
+        title(additional,"Dodatne informacije");
+        EditText supply=field("Datum isporuke ili obavljene usluge",draftSupply);
+        dateInput(supply);
+        fieldLabel(additional,"Datum isporuke / usluge",supply);
+        EditText notes=field("Neobavezna napomena",draftNote);
+        fieldLabel(additional,"Napomena",notes);
+        place(body,additional);gap(body,18);
+
         watchDraft(issued,()->draftIssue=issued.getText().toString());
         watchDraft(due,()->draftDue=due.getText().toString());
         watchDraft(supply,()->draftSupply=supply.getText().toString());
         watchDraft(notes,()->draftNote=notes.getText().toString());
-        place(body,c);gap(body,16);
-        button(body,"Nastavi na stavke  ›",()->{
+        stickyPrimary("Nastavi na stavke  ›",()->{
             editClientId=clients.get(selector.getSelectedItemPosition()).id;
-            draftIssue=issued.getText().toString();draftDue=due.getText().toString();draftSupply=supply.getText().toString();
+            draftIssue=issued.getText().toString();
+            draftDue=due.getText().toString();
+            draftSupply=supply.getText().toString();
             draftNote=notes.getText().toString();
-            if(saveWorkingDraft())editItemsScreen();
+            try{IsoDates.validate(draftIssue,draftDue);
+                if(!IsoDates.valid(draftSupply))throw new IllegalArgumentException(
+                    "Neispravan datum isporuke / usluge");
+                if(saveWorkingDraft())editItemsScreen();
+            }catch(Exception error){error(error);}
         });
     }
     private void editItemsScreen(){
@@ -826,10 +883,10 @@ public final class MainActivity extends Activity {
         summary.addView(label("PDV: "+Money.euros(tax),13,ink(),false));gap(summary,7);
         summary.addView(label("UKUPNO: "+Money.euros(net+tax),20,BLUE,true));
         place(body,summary);gap(body,14);
-        button(body,"Pregled dokumenta  ›",()->{
+        gap(body,9);secondary(body,"‹ Natrag na podatke",this::editDocumentScreen);
+        stickyPrimary("Pregled dokumenta  ›",()->{
             if(draftItems.isEmpty())toast("Dodajte barem jednu stavku");else reviewDraft();
         });
-        gap(body,9);secondary(body,"‹ Natrag na podatke",this::editDocumentScreen);
     }
     private void addLine(){
         LinearLayout form=vertical();pad(form,16,5);
