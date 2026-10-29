@@ -53,6 +53,7 @@ public final class MainActivity extends Activity {
     private String pendingPaymentsCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
+    private String documentSearchQuery="";
     private boolean dark=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
     private String draftIssue="",draftDue="",draftSupply="",draftNote="";
@@ -63,6 +64,10 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){super.onCreate(b);
         db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
         dark=prefs.getBoolean("dark",false);
+        if(b!=null){
+            pendingPdfId=b.getLong("pendingPdfId",-1);
+            pendingPaymentsCsvMonth=b.getString("pendingPaymentsCsvMonth");
+        }
         if(runScreenshotHarness())return;
         try{
             try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
@@ -72,6 +77,12 @@ public final class MainActivity extends Activity {
             if(!prefs.getBoolean("welcomed",false)) splash(true);
             else { navigate("home");offerWorkingDraftRecovery(); }
         }catch(Exception openError){damagedDatabase(openError);}
+    }
+    @Override protected void onSaveInstanceState(Bundle outState){
+        outState.putLong("pendingPdfId",pendingPdfId);
+        outState.putString("pendingPaymentsCsvMonth",pendingPaymentsCsvMonth);
+        // Never persist the backup password, even in the Android Bundle.
+        super.onSaveInstanceState(outState);
     }
     @Override protected void onStop(){
         if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen))
@@ -163,8 +174,8 @@ public final class MainActivity extends Activity {
     private void toolbar(String title,String subtitle,boolean back){
         LinearLayout row=horizontal();
         if(back){
-            TextView b=label("‹",31,ink(),false);
-            b.setGravity(Gravity.CENTER);
+            ImageView b=icon(R.drawable.ic_back,sub());
+            b.setPadding(dp(8),dp(8),dp(8),dp(8));
             b.setContentDescription("Natrag");
             row.addView(b,lp(40,48));
             b.setOnClickListener(v->backFromToolbar());
@@ -255,6 +266,7 @@ public final class MainActivity extends Activity {
     }
     private void navigate(String dest){
         filter="Svi";
+        documentSearchQuery="";
         switch(dest){
             case "home":home();break;
             case "invoices":documents(Store.INVOICE);break;
@@ -275,8 +287,10 @@ public final class MainActivity extends Activity {
         screen="splash";
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setNavigationBarColor(0xff0a1c33);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_FULLSCREEN);
+        // Non-immersive fullscreen does not trigger Android's first-run
+        // "Viewing full screen" tutorial over the branded launch view.
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_FULLSCREEN);
         FrameLayout frame=new FrameLayout(this);
         GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             new int[]{0xff173a64,0xff102b4b,0xff09192d});
@@ -557,71 +571,229 @@ public final class MainActivity extends Activity {
         p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);c.setOnClickListener(v->action.run());
     }
     private void documents(String type){
-        setup(Store.INVOICE.equals(type)?"invoices":"quotes",true);
-        toolbar(Store.INVOICE.equals(type)?"Računi":"Ponude","Pregled i pretraga dokumenata",false);
-        EditText search=field("Pretraži dokumente…","");place(body,search);gap(body,12);
-        LinearLayout filters=horizontal();
-        String[] states=Store.INVOICE.equals(type)?new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:new String[]{"Svi","Poslane","Skice"};
-        for(String s:states){TextView f=label(s,11,filter.equals(s)?WHITE:sub(),true);f.setGravity(Gravity.CENTER);
-            if(filter.equals(s))background(f,BLUE,12);
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(35),1);p.setMargins(dp(2),0,dp(2),0);
-            filters.addView(f,p);f.setOnClickListener(v->{filter=s;documents(type);});
-        }
-        place(body,filters);gap(body,12);
-        LinearLayout totals=horizontal();
-        List<Store.Document> all=db.documents(type);
-        TextView totalCount=label("Ukupno: "+all.size(),11,sub(),false);
-        totals.addView(totalCount,new LinearLayout.LayoutParams(0,dp(30),1));
-        if(Store.INVOICE.equals(type)){
-            long unpaid=0;for(Store.Document d:all)if(Store.ISSUED.equals(d.status))unpaid+=d.outstanding();
-            totals.addView(label("Neplaćeno: "+Money.euros(unpaid),11,sub(),false));
-        }
-        place(body,totals);gap(body,7);
-        int shown=0;for(Store.Document d:all){
-            if(!matches(d,filter))continue;
-            documentRow(d);shown++;
-        }
-        if(shown==0)caption(body,"Nema dokumenata u ovoj kategoriji.");
-        gap(body,18);
-        floatingAction(Store.INVOICE.equals(type)?"Dodaj novi račun":"Dodaj novu ponudu",
-            ()->newDocument(type));
-        search.addTextChangedListener(new android.text.TextWatcher(){
-            public void beforeTextChanged(CharSequence s,int st,int count,int after){}
-            public void onTextChanged(CharSequence s,int st,int before,int count){
-                for(int i=0;i<body.getChildCount();i++){View v=body.getChildAt(i);
-                    if(v.getTag() instanceof Store.Document){Store.Document d=(Store.Document)v.getTag();
-                        String term=s.toString().toLowerCase(Locale.ROOT);
-                        boolean hit=(d.clientName+" "+d.number+" "+d.status).toLowerCase(Locale.ROOT).contains(term);
-                        v.setVisibility(hit&&matches(d,filter)?View.VISIBLE:View.GONE);
-                    }
-                }
-            }
-            public void afterTextChanged(android.text.Editable e){}
+        boolean invoice=Store.INVOICE.equals(type);
+        setup(invoice?"invoices":"quotes",true);
+        LinearLayout header=horizontal();
+        LinearLayout heading=vertical();
+        heading.addView(label(invoice?"Računi":"Ponude",23,ink(),true));
+        gap(heading,5);
+        heading.addView(label(invoice?"Svi vaši izdani računi":"Sve vaše ponude",
+            12,sub(),false));
+        header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        ImageView searchAction=icon(R.drawable.ic_search,sub());
+        searchAction.setPadding(dp(10),dp(10),dp(10),dp(10));
+        searchAction.setBackground(shape(panel(),13));
+        searchAction.setContentDescription("Pretraži dokumente");
+        LinearLayout.LayoutParams searchLp=lp(42,42);
+        searchLp.rightMargin=dp(8);header.addView(searchAction,searchLp);
+        ImageView filtersAction=icon(R.drawable.ic_filter,sub());
+        filtersAction.setPadding(dp(10),dp(10),dp(10),dp(10));
+        filtersAction.setBackground(shape(panel(),13));
+        filtersAction.setContentDescription("Odaberi prikaz dokumenata");
+        header.addView(filtersAction,lp(42,42));
+        place(body,header);gap(body,18);
+
+        LinearLayout searchBar=horizontal();
+        searchBar.setBackground(outlined(panel()));
+        searchBar.setPadding(dp(12),dp(4),dp(12),dp(4));
+        searchBar.addView(icon(R.drawable.ic_search,sub()),lp(25,25));
+        EditText search=field(invoice?"Pretraži račune...":"Pretraži ponude...",
+            documentSearchQuery);
+        search.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        search.setSingleLine(true);
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        LinearLayout.LayoutParams inputLp=new LinearLayout.LayoutParams(0,dp(45),1);
+        inputLp.leftMargin=dp(8);searchBar.addView(search,inputLp);
+        ImageView searchFilter=icon(R.drawable.ic_filter,sub());
+        searchFilter.setContentDescription("Otvori filtre");
+        searchFilter.setPadding(dp(5),dp(5),dp(5),dp(5));
+        searchBar.addView(searchFilter,lp(34,34));
+        searchAction.setOnClickListener(v->{
+            search.requestFocus();
+            android.view.inputmethod.InputMethodManager keyboard=
+                (android.view.inputmethod.InputMethodManager)
+                    getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if(keyboard!=null)keyboard.showSoftInput(search,
+                android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
         });
+        String[] states=invoice?
+            new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:
+            new String[]{"Svi","Potvrđene","Skice"};
+        Runnable chooseFilter=()->new AlertDialog.Builder(this)
+            .setTitle("Filtriraj "+(invoice?"račune":"ponude"))
+            .setSingleChoiceItems(states,java.util.Arrays.asList(states).indexOf(filter),
+                (dialog,which)->{
+                    filter=states[which];dialog.dismiss();documents(type);
+                })
+            .setNegativeButton("Odustani",null).show();
+        filtersAction.setOnClickListener(v->chooseFilter.run());
+        searchFilter.setOnClickListener(v->chooseFilter.run());
+        place(body,searchBar);gap(body,15);
+
+        LinearLayout chips=horizontal();pad(chips,4,4);
+        chips.setBackground(shape(dark?0xff1d2a40:0xffe9edf4,15));
+        for(String state:states){
+            boolean selected=filter.equals(state);
+            TextView chip=label(state,11,selected?BLUE:sub(),true);
+            chip.setGravity(Gravity.CENTER);
+            if(selected)chip.setBackground(shape(panel(),12));
+            chip.setContentDescription("Prikaži: "+state);
+            LinearLayout.LayoutParams item=new LinearLayout.LayoutParams(0,dp(36),1);
+            item.leftMargin=dp(1);item.rightMargin=dp(1);
+            chips.addView(chip,item);
+            chip.setOnClickListener(v->{filter=state;documents(type);});
+        }
+        place(body,chips);gap(body,14);
+
+        List<Store.Document> all=db.documents(type);
+        LinearLayout totals=horizontal();
+        TextView total=label("Ukupno "+(invoice?"računa":"ponuda")+"  "+all.size(),
+            11,sub(),false);
+        totals.addView(total,new LinearLayout.LayoutParams(0,-2,1));
+        if(invoice){
+            long unpaid=0;
+            for(Store.Document document:all)
+                if(Store.ISSUED.equals(document.status))
+                    unpaid=Math.addExact(unpaid,document.outstanding());
+            TextView remaining=label("Neplaćeno  "+Money.euros(unpaid),11,ink(),true);
+            remaining.setSingleLine(true);
+            totals.addView(remaining);
+        }
+        place(body,totals);gap(body,12);
+
+        LinearLayout group=vertical();
+        group.setBackground(outlined(panel()));
+        for(Store.Document document:all){
+            if(matches(document,filter))documentRowGrouped(group,document);
+        }
+        place(body,group);
+        TextView empty=label("Nema dokumenata za odabranu pretragu.",12,sub(),false);
+        empty.setGravity(Gravity.CENTER);
+        gap(body,12);place(body,empty);
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence value,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence value,int start,int before,int count){
+                documentSearchQuery=value.toString();
+                filterDocumentRows(group,documentSearchQuery,empty);
+            }
+            @Override public void afterTextChanged(android.text.Editable value){}
+        });
+        filterDocumentRows(group,documentSearchQuery,empty);
+        body.setFocusableInTouchMode(true);body.requestFocus();
+        floatingAction(invoice?"Dodaj novi račun":"Dodaj novu ponudu",()->newDocument(type));
     }
+
+    private void documentRowGrouped(LinearLayout target,Store.Document document){
+        LinearLayout item=vertical();item.setTag(document);
+        View divider=new View(this);divider.setBackgroundColor(border());
+        item.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        LinearLayout row=horizontal();pad(row,12,15);
+        ImageView symbol=icon(Store.INVOICE.equals(document.type)?
+            R.drawable.ic_invoice:R.drawable.ic_quote,
+            Store.INVOICE.equals(document.type)?BLUE:TEAL);
+        symbol.setPadding(dp(9),dp(9),dp(9),dp(9));
+        symbol.setBackground(shape(Store.INVOICE.equals(document.type)?
+            0xffe8edff:0xffdcf8f4,12));
+        row.addView(symbol,lp(42,42));
+        LinearLayout description=vertical();
+        LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(0,-2,1);
+        descLp.leftMargin=dp(10);
+        row.addView(description,descLp);
+        String number=document.number==null?"Nacrt #"+document.id:document.number;
+        TextView documentNumber=label(number,13,ink(),true);
+        documentNumber.setSingleLine(true);
+        documentNumber.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        place(description,documentNumber);gap(description,3);
+        TextView client=label(document.clientName,11,sub(),false);
+        client.setSingleLine(true);
+        client.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        place(description,client);gap(description,3);
+        place(description,label(readableDate(document.issueDate),10,sub(),false));
+        // Explicit width is essential: a weighted client description otherwise
+        // measures at full width and silently clips the amount on Android 10.
+        LinearLayout amount=vertical();amount.setGravity(Gravity.RIGHT);
+        TextView total=label(Money.euros(document.totalCents),12,ink(),true);
+        total.setGravity(Gravity.RIGHT);
+        total.setSingleLine(true);
+        total.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        amount.addView(total,new LinearLayout.LayoutParams(-1,-2));
+        gap(amount,6);
+        String status=DocumentStatus.label(document,DocumentStatus.today(),
+            DocumentStatus.inSevenDays());
+        String shortStatus="Djelomično plaćen".equals(status)?"Dio plaćen":status;
+        TextView badge=label(shortStatus,10,badgeForeground(status),true);
+        badge.setGravity(Gravity.CENTER);
+        badge.setSingleLine(true);
+        badge.setPadding(dp(8),dp(5),dp(8),dp(5));
+        badge.setBackground(shape(badgeBackground(status),15));
+        LinearLayout.LayoutParams badgeLp=new LinearLayout.LayoutParams(-2,-2);
+        badgeLp.gravity=Gravity.END;
+        amount.addView(badge,badgeLp);
+        row.addView(amount,lp(109,-2));
+        place(item,row);target.addView(item,new LinearLayout.LayoutParams(-1,-2));
+        item.setContentDescription(number+", "+document.clientName+", "+
+            Money.euros(document.totalCents)+", "+status);
+        item.setOnClickListener(v->showDocument(document.id));
+    }
+
+    private void filterDocumentRows(LinearLayout group,String raw,TextView empty){
+        String term=raw.trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
+        int count=0;
+        for(int index=0;index<group.getChildCount();index++){
+            View child=group.getChildAt(index);
+            if(!(child.getTag() instanceof Store.Document))continue;
+            Store.Document document=(Store.Document)child.getTag();
+            String searchable=(document.number+" "+document.clientName+" "+
+                document.issueDate+" "+document.dueDate+" "+
+                DocumentStatus.label(document,DocumentStatus.today(),
+                    DocumentStatus.inSevenDays())).toLowerCase(Locale.forLanguageTag("hr-HR"));
+            boolean show=searchable.contains(term);
+            child.setVisibility(show?View.VISIBLE:View.GONE);
+            if(show){
+                ((LinearLayout)child).getChildAt(0)
+                    .setVisibility(count==0?View.GONE:View.VISIBLE);
+                count++;
+            }
+        }
+        group.setVisibility(count==0?View.GONE:View.VISIBLE);
+        empty.setVisibility(count==0?View.VISIBLE:View.GONE);
+    }
+
+    private String readableDate(String iso){
+        if(iso==null||!iso.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"))return "";
+        return iso.substring(8,10)+". "+iso.substring(5,7)+". "+
+            iso.substring(0,4)+".";
+    }
+
+    private int badgeForeground(String status){
+        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xff078a65;
+        if("Dospijeva".equals(status))return 0xffaf6c08;
+        if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffd44759;
+        return dark?0xffd0d9ee:0xff61718b;
+    }
+    private int badgeBackground(String status){
+        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xffdcf8ec;
+        if("Dospijeva".equals(status))return 0xfffff1d8;
+        if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffffe8eb;
+        return dark?0xff273953:0xffe9eef7;
+    }
+
     private boolean matches(Store.Document d,String f){
         if("Skice".equals(f))return Store.DRAFT.equals(d.status);
         if("Plaćeni".equals(f))return Store.PAID.equals(d.status);
         if("Neplaćeni".equals(f))return Store.ISSUED.equals(d.status);
-        if("Poslane".equals(f))return Store.SENT.equals(d.status);
+        if("Potvrđene".equals(f)||"Poslane".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
-    private void documentRow(Store.Document d){
-        LinearLayout wrap=card();wrap.setTag(d);
-        LinearLayout r=horizontal();
-        TextView icon=label(Store.INVOICE.equals(d.type)?"▤":"▣",24,Store.INVOICE.equals(d.type)?BLUE:TEAL,true);
-        r.addView(icon,lp(40,43));
-        LinearLayout name=vertical();name.addView(label(d.number==null?"Nacrt #"+d.id:d.number,13,ink(),true));
-        name.addView(label(d.clientName+"  •  "+d.issueDate,11,sub(),false));
-        r.addView(name,new LinearLayout.LayoutParams(0,-2,1));
-        LinearLayout amounts=vertical();amounts.setGravity(Gravity.END);
-        amounts.addView(label(Money.euros(d.totalCents),13,ink(),true));
-        amounts.addView(label(status(d.status),10,Store.PAID.equals(d.status)?TEAL:BLUE,false));
-        r.addView(amounts);place(wrap,r);
-        LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);
-        rowParams.topMargin=dp(9);
-        body.addView(wrap,rowParams);
-        wrap.setOnClickListener(v->showDocument(d.id));
+    private void documentRow(Store.Document document){
+        LinearLayout card=vertical();
+        card.setBackground(outlined(panel()));
+        documentRowGrouped(card,document);
+        ((LinearLayout)card.getChildAt(0)).getChildAt(0)
+            .setVisibility(View.GONE);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.topMargin=dp(9);
+        body.addView(card,params);
     }
     private String status(String s){switch(s){
         case Store.DRAFT:return "Nacrt";case Store.ISSUED:return "Potvrđeno";
@@ -881,8 +1053,8 @@ public final class MainActivity extends Activity {
             LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
             header.addView(label(item.name,14,ink(),true),
                 new LinearLayout.LayoutParams(0,-2,1));
-            TextView edit=label("✎",23,sub(),false);
-            edit.setGravity(Gravity.CENTER);
+            ImageView edit=icon(R.drawable.ic_edit,sub());
+            edit.setPadding(dp(9),dp(9),dp(9),dp(9));
             edit.setContentDescription("Uredi stavku "+item.name);
             header.addView(edit,lp(42,42));
             edit.setOnClickListener(v->editLine(selected));
@@ -1870,18 +2042,34 @@ public final class MainActivity extends Activity {
         EditText pass=field("Lozinka (barem 10 znakova)","");
         pass.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         LinearLayout box=vertical();pad(box,18,10);place(box,pass);
-        new AlertDialog.Builder(this).setTitle(importing?"Vrati sigurnosnu kopiju":"Šifriraj sigurnosnu kopiju")
-            .setView(box).setNegativeButton("Odustani",null).setPositiveButton("Nastavi",(dialog,which)->{
-                char[] pwd=pass.getText().toString().toCharArray();
-                if(pwd.length<10){Arrays.fill(pwd,'\0');toast("Lozinka mora imati barem 10 znakova");return;}
-                if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
-                pendingPassword=pwd;
-                if(importing)new AlertDialog.Builder(this).setTitle("Zamjena podataka")
-                    .setMessage("Uvoz će zamijeniti sve postojeće podatke. Nastaviti?")
-                    .setNegativeButton("Odustani",(dlg,w)->clearPass())
-                    .setPositiveButton("Odaberi datoteku",(dlg,w)->openBackup()).show();
-                else createFile(BACKUP_EXPORT,"application/octet-stream","Fakturiva-backup.fak");
-            }).show();
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle(importing?"Vrati sigurnosnu kopiju":"Šifriraj sigurnosnu kopiju")
+            .setView(box)
+            .setNegativeButton("Odustani",null)
+            .setPositiveButton("Nastavi",null).create();
+        dialog.setOnShowListener(ignored->
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{
+                char[] password=pass.getText().toString().toCharArray();
+                if(password.length<10){
+                    Arrays.fill(password,'\0');
+                    pass.setError("Lozinka mora imati barem 10 znakova");
+                    pass.requestFocus();
+                    return;
+                }
+                clearPass();
+                pendingPassword=password;
+                dialog.dismiss();
+                if(importing){
+                    new AlertDialog.Builder(this).setTitle("Zamjena podataka")
+                        .setMessage("Uvoz će zamijeniti sve postojeće podatke. Nastaviti?")
+                        .setNegativeButton("Odustani",(confirmation,which)->clearPass())
+                        .setPositiveButton("Odaberi datoteku",(confirmation,which)->openBackup())
+                        .setOnCancelListener(confirmation->clearPass())
+                        .show();
+                }else createFile(BACKUP_EXPORT,"application/octet-stream",
+                    "Fakturiva-backup.fak");
+            }));
+        dialog.show();
     }
     private void openBackup(){
         Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);
@@ -1920,8 +2108,14 @@ public final class MainActivity extends Activity {
             return;
         }
         Uri uri=data.getData();
+        if((code==BACKUP_EXPORT||code==BACKUP_IMPORT)&&pendingPassword==null){
+            toast("Lozinka nije dostupna nakon ponovnog pokretanja. Ponovite izvoz ili uvoz.");
+            return;
+        }
         try{
             if(code==PDF_EXPORT){
+                if(pendingPdfId<=0)
+                    throw new IllegalStateException("Dokument za izvoz nije poznat. Ponovite izvoz.");
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
                     if(out==null)throw new IllegalStateException("Nije moguće otvoriti datoteku");
                     PdfMaker.write(db,db.document(pendingPdfId),out);
