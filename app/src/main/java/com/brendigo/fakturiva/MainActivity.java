@@ -537,9 +537,7 @@ public final class MainActivity extends Activity {
         LinearLayout c=card();pad(c,14,13);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
-        image.setBackground(shape(dark?
-            (accent==TEAL?0xff204b48:0xff26365e):
-            (accent==TEAL?0xffdff8f4:0xffe8edff),12));
+        image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
         c.addView(image,lp(38,38));gap(c,7);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
@@ -552,9 +550,7 @@ public final class MainActivity extends Activity {
         int tint=quote?TEAL:client?0xffeb963c:BLUE;
         ImageView image=icon(figureIcon(glyph),tint);
         image.setPadding(dp(10),dp(10),dp(10),dp(10));
-        image.setBackground(shape(dark?
-            (quote?0xff214844:client?0xff533b28:0xff273a66):
-            (quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff),12));
+        image.setBackground(shape(quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
@@ -773,10 +769,11 @@ public final class MainActivity extends Activity {
             LinearLayout cell=vertical();cell.setGravity(Gravity.CENTER);
             final boolean complete=i+1<current;
             TextView dot=label(complete?"✓":String.valueOf(i+1),12,
-                complete||i+1==current?WHITE:sub(),true);
+                complete?0xff15996d:(i+1==current?WHITE:sub()),true);
             dot.setGravity(Gravity.CENTER);
-            dot.setBackground(shape(complete?TEAL:(i+1==current?BLUE:
-                (dark?0xff253550:0xffe9edff)),18));
+            dot.setBackground(shape(complete?
+                (dark?0xff2f6558:0xffdcf7ed):
+                (i+1==current?BLUE:(dark?0xff253550:0xffe9edff)),18));
             LinearLayout.LayoutParams dotLp=lp(32,32);dotLp.gravity=Gravity.CENTER;
             cell.addView(dot,dotLp);gap(cell,5);
             TextView label=label(names[i],10,i+1==current?BLUE:sub(),i+1==current);
