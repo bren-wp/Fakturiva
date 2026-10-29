@@ -2,7 +2,7 @@ name: Fakturiva preview distribution
 on:
   push:
     branches:
-      - feature/v0.8-20-screen-design-parity
+      - feature/v0.9-list-detail-pixel-polish
 jobs:
   publish-preview:
     if: contains(github.event.head_commit.message, '[release-preview]')
@@ -43,25 +43,25 @@ jobs:
           test -s app/build/outputs/apk/debug/app-debug.apk
           test -s app/build/outputs/bundle/debug/app-debug.aab
           test -s app/build/outputs/bundle/release/app-release.aab
-          cp app/build/outputs/apk/debug/app-debug.apk build/publish/Fakturiva-v0.8.0-preview.1-debug.apk
-          cp app/build/outputs/bundle/debug/app-debug.aab build/publish/Fakturiva-v0.8.0-preview.1-DEBUG-SIGNED.aab
-          cp app/build/outputs/bundle/release/app-release.aab build/publish/Fakturiva-v0.8.0-preview.1-UNSIGNED.aab
+          cp app/build/outputs/apk/debug/app-debug.apk build/publish/Fakturiva-v0.9.0-preview.1-debug.apk
+          cp app/build/outputs/bundle/debug/app-debug.aab build/publish/Fakturiva-v0.9.0-preview.1-DEBUG-SIGNED.aab
+          cp app/build/outputs/bundle/release/app-release.aab build/publish/Fakturiva-v0.9.0-preview.1-UNSIGNED.aab
           (cd build/publish && sha256sum *.apk *.aab > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
-          name: Fakturiva-0.8.0-preview.1-packages
+          name: Fakturiva-0.9.0-preview.1-packages
           path: build/publish/*
       - name: Publish GitHub prerelease when authorized
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release create v0.8.0-preview.1 \
-            build/publish/Fakturiva-v0.8.0-preview.1-debug.apk \
-            build/publish/Fakturiva-v0.8.0-preview.1-DEBUG-SIGNED.aab \
-            build/publish/Fakturiva-v0.8.0-preview.1-UNSIGNED.aab \
+          if gh release create v0.9.0-preview.1 \
+            build/publish/Fakturiva-v0.9.0-preview.1-debug.apk \
+            build/publish/Fakturiva-v0.9.0-preview.1-DEBUG-SIGNED.aab \
+            build/publish/Fakturiva-v0.9.0-preview.1-UNSIGNED.aab \
             build/publish/SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
-            --title "Fakturiva v0.8.0-preview.1 — Android pretpregled" \
+            --title "Fakturiva v0.9.0-preview.1 — Android pretpregled" \
             --notes-file docs/PREVIEW_RELEASE_NOTES.md \
             --prerelease; then
             echo "Published GitHub preview release"
