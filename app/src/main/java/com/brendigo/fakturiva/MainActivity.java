@@ -1857,19 +1857,45 @@ public final class MainActivity extends Activity {
     }
     private final class RevenueLine extends View{
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
-        RevenueLine(android.content.Context ctx){super(ctx);}
+        private final long[] cumulative;
+        RevenueLine(android.content.Context context){
+            super(context);
+            Calendar calendar=Calendar.getInstance();
+            String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(calendar.getTime());
+            cumulative=ReceiptsChart.cumulative(
+                db.payments(),month,calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+        }
         @Override protected void onDraw(android.graphics.Canvas canvas){
             super.onDraw(canvas);
-            float w=getWidth(),h=getHeight();
-            android.graphics.Path path=new android.graphics.Path();
-            long[] monthly=db.monthlyReceipts();
-            long max=1;for(long value:monthly)max=Math.max(max,value);
-            for(int i=0;i<monthly.length;i++){
-                float x=i*w/(monthly.length-1),y=h-(h*0.85f*monthly[i]/max);
-                if(i==0)path.moveTo(x,y);else path.lineTo(x,y);
+            float width=getWidth(),height=getHeight();
+            if(width<=0||height<=0)return;
+            long maximum=Math.max(1,cumulative[cumulative.length-1]);
+            float[] y=new float[cumulative.length];
+            float[] x=new float[cumulative.length];
+            for(int n=0;n<cumulative.length;n++){
+                x[n]=width*n/(cumulative.length-1);
+                y[n]=height*(0.88f-0.73f*cumulative[n]/maximum);
             }
-            paint.setColor(0xff72dadb);paint.setStrokeWidth(dp(2));paint.setStyle(android.graphics.Paint.Style.STROKE);
-            canvas.drawPath(path,paint);paint.setStyle(android.graphics.Paint.Style.FILL);
+            android.graphics.Path line=new android.graphics.Path();
+            line.moveTo(x[0],y[0]);
+            for(int n=1;n<x.length;n++){
+                float midX=(x[n-1]+x[n])/2;
+                float midY=(y[n-1]+y[n])/2;
+                line.quadTo(x[n-1],y[n-1],midX,midY);
+            }
+            line.lineTo(x[x.length-1],y[y.length-1]);
+            android.graphics.Path area=new android.graphics.Path(line);
+            area.lineTo(width,height);area.lineTo(0,height);area.close();
+            paint.setStyle(android.graphics.Paint.Style.FILL);
+            paint.setShader(new android.graphics.LinearGradient(0,0,0,height,
+                0x6082d9e7,0x0082d9e7,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawPath(area,paint);paint.setShader(null);
+            paint.setColor(0xff86dfdf);paint.setStrokeWidth(dp(2.2f));
+            paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            canvas.drawPath(line,paint);
+            paint.setStyle(android.graphics.Paint.Style.FILL);
         }
     }
 }
