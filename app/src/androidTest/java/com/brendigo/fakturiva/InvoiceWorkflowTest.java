@@ -258,4 +258,41 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
         }
     }
 
+    public void testWorkingDraftSurvivesReopenAndTamperingIsRejected()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());
+        try{
+            JSONObject draft=new JSONObject();
+            draft.put("version",1);
+            draft.put("type",Store.INVOICE);
+            draft.put("notes","Spremljen radni nacrt");
+            RecoveryVault.saveWorkingDraft(context,draft);
+            assertTrue(RecoveryVault.hasWorkingDraft(context));
+            assertEquals("Spremljen radni nacrt",
+                RecoveryVault.readWorkingDraft(context).getString("notes"));
+            File file=new File(context.getFilesDir(),"recovery/working-draft.fv");
+            byte[] damaged;
+            try(java.io.FileInputStream in=new java.io.FileInputStream(file)){
+                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                byte[] part=new byte[1024];int n;
+                while((n=in.read(part))!=-1)buffer.write(part,0,n);
+                damaged=buffer.toByteArray();
+            }
+            damaged[damaged.length-1]^=1;
+            try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)){
+                out.write(damaged);out.getFD().sync();
+            }
+            try{
+                RecoveryVault.readWorkingDraft(context);
+                fail("Tampered AES-GCM draft must never be accepted");
+            }catch(javax.crypto.AEADBadTagException expected){
+                // Android Keystore authenticates the complete encrypted working draft.
+            }
+            RecoveryVault.saveWorkingDraft(context,draft);
+            assertEquals("Spremljen radni nacrt",
+                RecoveryVault.readWorkingDraft(context).getString("notes"));
+            RecoveryVault.clearWorkingDraft(context);
+            assertFalse(RecoveryVault.hasWorkingDraft(context));
+        }finally{context.clean();}
+    }
+
 }
