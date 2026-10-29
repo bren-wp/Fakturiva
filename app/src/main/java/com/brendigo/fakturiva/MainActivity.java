@@ -865,18 +865,107 @@ public final class MainActivity extends Activity {
         button(body,"＋ Dodaj klijenta",this::addClient);
     }
     private void clientDetails(Store.Client c){
-        setup("client_detail",true);toolbar("Detalji klijenta","Profil poslovnog partnera",true);
-        LinearLayout card=card();title(card,c.name);gap(card,18);
-        caption(card,"OIB: "+c.oib);gap(card,10);caption(card,"Adresa: "+c.address);
-        gap(card,10);caption(card,"E-mail: "+c.email);gap(card,10);
-        caption(card,"Telefon: "+(c.phone==null?"":c.phone));gap(card,10);
-        caption(card,"PDV ID: "+(c.vatId==null?"":c.vatId));place(body,card);
-        gap(body,11);secondary(body,"✎ Uredi podatke klijenta",()->showClientEditor(c));
-        section("Dokumenti klijenta");
-        int n=0;for(String t:new String[]{Store.INVOICE,Store.QUOTE})
-            for(Store.Document d:db.documents(t))if(d.clientId==c.id){documentRow(d);n++;}
-        if(n==0)caption(body,"Još nema dokumenata za ovog klijenta.");
-        gap(body,13);button(body,"＋ Novi račun za klijenta",()->{newDocument(Store.INVOICE);editClientId=c.id;editDocumentScreen();});
+        setup("client_detail",true);
+        toolbar("Detalji klijenta","Profil i povijest poslovanja",true);
+        String initials="";
+        for(String part:c.name.trim().split("\\s+")){
+            if(!part.isEmpty()&&initials.length()<2)initials+=part.substring(0,1).toUpperCase(Locale.forLanguageTag("hr-HR"));
+        }
+        LinearLayout identity=vertical();identity.setGravity(Gravity.CENTER);
+        TextView logo=label(initials.isEmpty()?"K":initials,25,BLUE,true);
+        logo.setGravity(Gravity.CENTER);logo.setBackground(shape(dark?0xff263759:0xffe8edff,21));
+        LinearLayout.LayoutParams logoLp=lp(70,70);logoLp.gravity=Gravity.CENTER;
+        identity.addView(logo,logoLp);gap(identity,13);
+        TextView companyName=label(c.name,20,ink(),true);companyName.setGravity(Gravity.CENTER);
+        place(identity,companyName);gap(identity,5);
+        TextView caption=label("Poslovni partner · "+(c.address.isEmpty()?"Hrvatska":c.address),11,sub(),false);
+        caption.setGravity(Gravity.CENTER);caption.setMaxLines(2);place(identity,caption);gap(identity,12);
+        TextView active=label("Aktivan",11,0xff15996d,true);
+        active.setGravity(Gravity.CENTER);
+        active.setBackground(shape(dark?0xff204737:0xffdcf7eb,15));pad(active,11,6);
+        LinearLayout.LayoutParams activeLp=lp(-2,-2);activeLp.gravity=Gravity.CENTER;
+        identity.addView(active,activeLp);
+        place(body,identity);gap(body,23);
+
+        long paid=0;int invoiceCount=0;
+        List<Store.Document> history=new ArrayList<>();
+        for(String t:new String[]{Store.INVOICE,Store.QUOTE}){
+            for(Store.Document d:db.documents(t)){
+                if(d.clientId!=c.id)continue;
+                history.add(d);
+                if(Store.INVOICE.equals(t)){
+                    invoiceCount++;
+                    paid=Math.addExact(paid,d.paidCents);
+                }
+            }
+        }
+        LinearLayout indicators=horizontal();
+        LinearLayout invoices=clientIndicator("Računi",String.valueOf(invoiceCount),"▤","Ukupno",BLUE);
+        LinearLayout receipt=clientIndicator("Naplaćeno",Money.euros(paid),"✓","Ukupno",TEAL);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(132),1);
+        left.setMargins(0,0,dp(6),0);indicators.addView(invoices,left);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(132),1);
+        right.setMargins(dp(6),0,0,0);indicators.addView(receipt,right);
+        place(body,indicators);
+        section("Podaci o klijentu");
+        LinearLayout details=card();
+        clientField(details,"Naziv",c.name);
+        clientField(details,"Adresa",c.address);
+        clientField(details,"OIB",c.oib);
+        clientField(details,"PDV ID",c.vatId);
+        clientField(details,"E-pošta",c.email);
+        clientField(details,"Telefon",c.phone);
+        place(body,details);
+        section("Posljednji dokumenti");
+        history.sort((a,b)->Long.compare(b.id,a.id));
+        int count=0;
+        for(Store.Document document:history){
+            if(count++>=3)break;
+            documentRow(document);
+        }
+        if(count==0)caption(body,"Još nema dokumenata za ovog klijenta.");
+        gap(body,12);
+        secondary(body,"Uredi podatke klijenta",()->showClientEditor(c));
+        gap(body,8);
+        button(body,"＋ Izradi račun za klijenta",()->newDocumentForClient(c.id));
+        gap(body,18);
+    }
+    private LinearLayout clientIndicator(String name,String value,String symbol,String qualifier,int color){
+        LinearLayout c=card();
+        TextView icon=label(symbol,17,color,true);icon.setGravity(Gravity.CENTER);
+        icon.setBackground(shape(color==TEAL?(dark?0xff1f4743:0xffdcf8f4):
+            (dark?0xff293b66:0xffe8edff),11));
+        c.addView(icon,lp(36,36));gap(c,7);
+        c.addView(label(name,11,sub(),false));gap(c,2);
+        c.addView(label(value,21,ink(),true));
+        c.addView(label(qualifier,10,sub(),false));
+        return c;
+    }
+    private void clientField(LinearLayout target,String label,String value){
+        if(value==null||value.isEmpty())return;
+        LinearLayout row=horizontal();
+        TextView name=label(label,11,sub(),false);
+        row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
+        TextView current=label(value,11,ink(),true);
+        current.setMaxLines(3);
+        current.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        row.addView(current,new LinearLayout.LayoutParams(0,-2,1.7f));
+        place(target,row);gap(target,12);
+    }
+    private void newDocumentForClient(long id){
+        if(RecoveryVault.hasWorkingDraft(this)){
+            new AlertDialog.Builder(this).setTitle("Pronađen je nedovršeni dokument")
+                .setMessage("Nastavite automatski spremljeni nacrt ili započnite novi račun za odabranog klijenta.")
+                .setPositiveButton("Nastavi nacrt",(d,w)->loadWorkingDraft())
+                .setNeutralButton("Novi račun",(d,w)->startEmptyClientInvoice(id))
+                .setNegativeButton("Odustani",null).show();
+        }else startEmptyClientInvoice(id);
+    }
+    private void startEmptyClientInvoice(long id){
+        startEmptyDocument(Store.INVOICE);
+        editClientId=id;
+        saveWorkingDraft();
+        editDocumentScreen();
     }
     private void addClient(){showClientEditor(null);}
     private void showClientEditor(Store.Client saved){
