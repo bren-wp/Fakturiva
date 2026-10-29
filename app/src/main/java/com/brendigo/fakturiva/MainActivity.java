@@ -771,16 +771,32 @@ public final class MainActivity extends Activity {
         }
         fieldLabel(form,"Količina",qty);fieldLabel(form,"Jedinična cijena bez PDV-a",price);
         gap(form,11);form.addView(label("Stopa PDV-a (informativni odabir)",12,ink(),true));place(form,tax);
-        new AlertDialog.Builder(this).setTitle("Nova stavka").setView(form)
-            .setNegativeButton("Odustani",null).setPositiveButton("Dodaj",(dialog,which)->{
-                try{Store.Item i=new Store.Item();i.name=name.getText().toString().trim();
-                    i.qtyMilli=Money.quantity(qty.getText().toString());
-                    i.unitCents=Money.cents(price.getText().toString());
-                    i.taxRate=Integer.parseInt(rates[tax.getSelectedItemPosition()].replace("%",""));
-                    if(i.name.isEmpty()||i.unitCents<0)throw new IllegalArgumentException("Provjerite naziv i cijenu");
-                    draftItems.add(i);saveWorkingDraft();editItemsScreen();
-                }catch(Exception e){error(e);}
-            }).show();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Nova stavka").setView(form)
+            .setNegativeButton("Odustani",null).setPositiveButton("Dodaj",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            .setOnClickListener(button->{
+                try{
+                    String description=name.getText().toString().trim();
+                    if(description.isEmpty()){
+                        name.setError("Unesite naziv artikla ili usluge");name.requestFocus();return;
+                    }
+                    Store.Item item=new Store.Item();item.name=description;
+                    try{item.qtyMilli=Money.quantity(qty.getText().toString());}
+                    catch(Exception error){qty.setError("Provjerite količinu");qty.requestFocus();return;}
+                    try{item.unitCents=Money.cents(price.getText().toString());}
+                    catch(Exception error){price.setError("Provjerite cijenu");price.requestFocus();return;}
+                    if(item.qtyMilli<=0||item.unitCents<0){
+                        qty.setError("Količina mora biti veća od nule");qty.requestFocus();return;
+                    }
+                    item.taxRate=Integer.parseInt(rates[tax.getSelectedItemPosition()].replace("%",""));
+                    item.net();item.tax(); // Check overflow before touching a draft.
+                    draftItems.add(item);
+                    saveWorkingDraft();
+                    dialog.dismiss();
+                    editItemsScreen();
+                }catch(Exception error){error(error);}
+            }));
+        dialog.show();
     }
     private void reviewDraft(){
         saveWorkingDraft();
@@ -1099,19 +1115,32 @@ public final class MainActivity extends Activity {
         fieldLabel(form,"Telefon",phone);
         ScrollView content=new ScrollView(this);
         content.setFillViewport(false);content.addView(form);
-        new AlertDialog.Builder(this).setTitle(editing?"Uredi klijenta":"Novi klijent").setView(content)
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle(editing?"Uredi klijenta":"Novi klijent").setView(content)
             .setNegativeButton("Odustani",null)
-            .setPositiveButton("Spremi",(dlg,w)->{
+            .setPositiveButton("Spremi",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            .setOnClickListener(button->{
                 try{
+                    String company=name.getText().toString().trim();
                     String id=oib.getText().toString().trim();
-                    if(!id.isEmpty()&&!Oib.valid(id))throw new IllegalArgumentException("OIB nije valjan");
-                    if(editing)db.updateClient(saved.id,name.getText().toString(),id,address.getText().toString(),
+                    if(company.isEmpty()){
+                        name.setError("Unesite naziv klijenta");name.requestFocus();return;
+                    }
+                    if(!id.isEmpty()&&!Oib.valid(id)){
+                        oib.setError("OIB nije valjan");oib.requestFocus();return;
+                    }
+                    if(editing)db.updateClient(saved.id,company,id,address.getText().toString(),
                         email.getText().toString(),phone.getText().toString(),vat.getText().toString());
-                    else db.saveClientDetailed(name.getText().toString(),id,address.getText().toString(),
+                    else db.saveClientDetailed(company,id,address.getText().toString(),
                         email.getText().toString(),phone.getText().toString(),vat.getText().toString());
-                    clients();
-                }catch(Exception e){error(e);}
-            }).show();
+                    dialog.dismiss();
+                    if(editing)clientDetails(db.clients().stream()
+                        .filter(client->client.id==saved.id).findFirst().orElse(saved));
+                    else clients();
+                }catch(Exception error){error(error);}
+            }));
+        dialog.show();
     }
     private void catalog(){
         setup("catalog",true);
