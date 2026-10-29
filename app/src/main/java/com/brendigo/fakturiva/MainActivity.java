@@ -763,22 +763,15 @@ public final class MainActivity extends Activity {
         if("Poslane".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
-    private void documentRow(Store.Document d){
-        LinearLayout wrap=card();wrap.setTag(d);
-        LinearLayout r=horizontal();
-        TextView icon=label(Store.INVOICE.equals(d.type)?"▤":"▣",24,Store.INVOICE.equals(d.type)?BLUE:TEAL,true);
-        r.addView(icon,lp(40,43));
-        LinearLayout name=vertical();name.addView(label(d.number==null?"Nacrt #"+d.id:d.number,13,ink(),true));
-        name.addView(label(d.clientName+"  •  "+d.issueDate,11,sub(),false));
-        r.addView(name,new LinearLayout.LayoutParams(0,-2,1));
-        LinearLayout amounts=vertical();amounts.setGravity(Gravity.END);
-        amounts.addView(label(Money.euros(d.totalCents),13,ink(),true));
-        amounts.addView(label(status(d.status),10,Store.PAID.equals(d.status)?TEAL:BLUE,false));
-        r.addView(amounts);place(wrap,r);
-        LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);
-        rowParams.topMargin=dp(9);
-        body.addView(wrap,rowParams);
-        wrap.setOnClickListener(v->showDocument(d.id));
+    private void documentRow(Store.Document document){
+        LinearLayout card=vertical();
+        card.setBackground(outlined(panel()));
+        documentRowGrouped(card,document);
+        ((LinearLayout)card.getChildAt(0)).getChildAt(0)
+            .setVisibility(View.GONE);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.topMargin=dp(9);
+        body.addView(card,params);
     }
     private String status(String s){switch(s){
         case Store.DRAFT:return "Nacrt";case Store.ISSUED:return "Potvrđeno";
