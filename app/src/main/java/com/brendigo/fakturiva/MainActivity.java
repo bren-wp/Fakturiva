@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -1048,7 +1049,7 @@ public final class MainActivity extends Activity {
         boolean editing=current!=null;
         LinearLayout form=vertical();pad(form,18,5);
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
-        EditText price=field("Jedinična cijena (EUR)",editing?Money.decimalEuros(current.unitCents):"0,00");
+        EditText price=field("Jedinična cijena (EUR)",editing?String.format(Locale.forLanguageTag("hr-HR"),"%.2f",current.unitCents/100.0):"0,00");
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] rates={"25%","13%","5%","0%"};
         Spinner vat=new Spinner(this);
@@ -1071,6 +1072,161 @@ public final class MainActivity extends Activity {
                 }catch(Exception e){error(e);}
             }));
         dialog.show();
+    }
+    private void reports(){
+        setup("reports",true);
+        toolbar("Izvještaji","Statistika i analiza poslovanja",true);
+
+        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR")).format(new java.util.Date());
+        LinearLayout period=horizontal();
+        TextView picker=label("▣  "+month,13,ink(),true);
+        pad(picker,13,11);picker.setBackground(outlined(panel()));
+        period.addView(picker,new LinearLayout.LayoutParams(0,-2,1));
+        TextView current=label("Ovaj mjesec",11,BLUE,true);
+        current.setGravity(Gravity.CENTER);current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
+        LinearLayout.LayoutParams selected=lp(115,40);selected.setMargins(dp(12),0,0,0);
+        period.addView(current,selected);
+        place(body,period);gap(body,14);
+
+        LinearLayout revenue=card();pad(revenue,18,18);
+        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,10);
+        revenue.addView(label(Money.euros(db.invoicedCents()),29,ink(),true));gap(revenue,8);
+        revenue.addView(label("Potvrđeni računi · bez nacrta",11,sub(),false));
+        place(body,revenue);gap(body,14);
+
+        int invoiceCount=0,paid=0;
+        for(Store.Document d:db.documents(Store.INVOICE)){
+            if(Store.DRAFT.equals(d.status))continue;
+            invoiceCount++;
+            if(Store.PAID.equals(d.status))paid++;
+        }
+        LinearLayout metrics=horizontal();
+        reportMetric(metrics,"Izdani računi",String.valueOf(invoiceCount),"▤",BLUE,0);
+        reportMetric(metrics,"Plaćeni računi",String.valueOf(paid),"✓",TEAL,1);
+        place(body,metrics);gap(body,14);
+
+        LinearLayout chart=card();pad(chart,18,17);
+        LinearLayout heading=horizontal();
+        heading.addView(label("Kretanje naplate",16,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
+        heading.addView(label("Posljednjih 6 mj.",10,sub(),false));
+        place(chart,heading);gap(chart,12);
+        chart.addView(new RevenueBars(this),lp(-1,194));place(body,chart);gap(body,14);
+
+        LinearLayout payout=card();
+        title(payout,"Pregled naplate");gap(payout,18);
+        clientField(payout,"Naplaćeno",Money.euros(db.receivedCents()));
+        clientField(payout,"Nenaplaćeno",Money.euros(db.outstandingCents()));
+        place(body,payout);gap(body,12);
+        secondary(body,"Pregled svih uplata",this::payments);
+        gap(body,18);
+    }
+    private void reportMetric(LinearLayout row,String caption,String value,String glyph,int accent,int index){
+        LinearLayout c=card();
+        TextView symbol=label(glyph,19,accent,true);
+        symbol.setGravity(Gravity.CENTER);
+        symbol.setBackground(shape(accent==TEAL?(dark?0xff20534b:0xffdcf8f4):
+            (dark?0xff263a65:0xffe8edff),12));
+        c.addView(symbol,lp(39,39));gap(c,9);
+        c.addView(label(caption,11,sub(),false));gap(c,3);
+        c.addView(label(value,25,ink(),true));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(114),1);
+        if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
+        row.addView(c,lp);
+    }
+    private void payments(){
+        setup("payments",true);
+        toolbar("Naplata","Evidencija uplata i potraživanja",true);
+        List<Store.Payment> history=db.payments();
+        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
+        int monthlyCount=0;long monthlyAmount=0;
+        for(Store.Payment p:history)if(p.paidOn.startsWith(month)){
+            monthlyCount++;monthlyAmount=Math.addExact(monthlyAmount,p.amountCents);
+        }
+        LinearLayout hero=vertical();pad(hero,19,18);
+        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            new int[]{0xff173b69,0xff102844});
+        gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
+        hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
+        hero.addView(label(Money.euros(db.receivedCents()),29,WHITE,true));gap(hero,13);
+        hero.addView(label("✓  "+monthlyCount+" uplata ovaj mjesec · "+Money.euros(monthlyAmount),
+            11,0xff73dfd0,false));
+        place(body,hero);gap(body,15);
+
+        LinearLayout filters=horizontal();
+        filters.setTag("payment-filters");
+        filters.setBackground(shape(dark?0xff263852:0xffe9eef6,15));
+        pad(filters,3,3);
+        String[] names={"Sve uplate","Ovaj mjesec","Za naplatu"};
+        for(int n=0;n<names.length;n++){
+            final int selected=n;
+            TextView tab=label(names[n],11,paymentFilter==n?BLUE:sub(),paymentFilter==n);
+            tab.setGravity(Gravity.CENTER);
+            if(paymentFilter==n)tab.setBackground(shape(panel(),12));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
+            filters.addView(tab,p);
+            tab.setOnClickListener(v->{paymentFilter=selected;payments();});
+        }
+        place(body,filters);gap(body,17);
+        LinearLayout heading=horizontal();
+        heading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",17,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        if(paymentFilter!=2){
+            TextView export=label("Izvoz CSV",11,BLUE,true);
+            heading.addView(export);export.setOnClickListener(v->createFile(104,"text/csv","Fakturiva-uplate.csv"));
+        }
+        place(body,heading);gap(body,11);
+
+        LinearLayout card=card();pad(card,0,0);
+        if(paymentFilter==2){
+            int n=0;
+            for(Store.Document d:db.documents(Store.INVOICE)){
+                if(!Store.ISSUED.equals(d.status)||d.outstanding()<=0)continue;
+                if(n++>0)paymentDivider(card);
+                LinearLayout row=horizontal();pad(row,14,15);
+                LinearLayout detail=vertical();
+                detail.addView(label(d.clientName,13,ink(),true));
+                detail.addView(label(d.number+" · "+d.dueDate,11,sub(),false));
+                row.addView(detail,new LinearLayout.LayoutParams(0,-2,1));
+                LinearLayout right=vertical();right.setGravity(Gravity.RIGHT);
+                right.addView(label(Money.euros(d.outstanding()),13,BLUE,true));
+                right.addView(label("Za naplatu",10,sub(),false));
+                row.addView(right);place(card,row);
+                row.setOnClickListener(v->showDocument(d.id));
+            }
+            if(n==0){pad(card,16,16);place(card,label("Nema nenaplaćenih potvrđenih računa.",12,sub(),false));}
+        }else{
+            int n=0;
+            for(Store.Payment p:history){
+                if(paymentFilter==1&&!p.paidOn.startsWith(month))continue;
+                if(n++>0)paymentDivider(card);
+                LinearLayout row=horizontal();pad(row,12,17);
+                TextView check=label("✓",19,TEAL,true);check.setGravity(Gravity.CENTER);
+                check.setBackground(shape(dark?0xff22463e:0xffdbf7ea,12));
+                row.addView(check,lp(42,42));
+                LinearLayout description=vertical();pad(description,10,0);
+                description.addView(label(p.clientName,13,ink(),true));
+                description.addView(label(p.invoiceNumber+" · "+p.paidOn,11,sub(),false));
+                row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+                row.addView(label("+"+Money.euros(p.amountCents),12,TEAL,true));
+                place(card,row);
+                row.setOnClickListener(v->showDocument(p.documentId));
+            }
+            if(n==0){pad(card,16,16);place(card,label(
+                paymentFilter==1?"Nema evidentiranih uplata ovaj mjesec.":"Nema evidentiranih uplata.",
+                12,sub(),false));}
+        }
+        place(body,card);gap(body,15);
+        caption(body,"Naplate se prikazuju prema stvarno evidentiranim uplatama.");
+        gap(body,20);
+    }
+    private void paymentDivider(LinearLayout card){
+        View divider=new View(this);
+        divider.setBackgroundColor(border());
+        card.addView(divider,lp(-1,1));
+    }
+    private String getPackageVersion(){
+        try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}
+        catch(Exception ignored){return "Android";}
     }
     private void settings(){
         setup("settings",true);toolbar("Postavke","Upravljajte svojom aplikacijom",false);
