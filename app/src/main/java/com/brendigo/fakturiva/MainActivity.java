@@ -50,6 +50,7 @@ public final class MainActivity extends Activity {
     private Store db; private SharedPreferences prefs;
     private LinearLayout root,body; private ScrollView scroller;
     private int paymentFilter=0;
+    private String pendingPaymentsCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private boolean dark=false;
@@ -1336,7 +1337,12 @@ public final class MainActivity extends Activity {
             new LinearLayout.LayoutParams(0,-2,1));
         if(paymentFilter!=2){
             TextView export=label("Izvoz CSV",11,BLUE,true);
-            heading.addView(export);export.setOnClickListener(v->createFile(104,"text/csv","Fakturiva-uplate.csv"));
+            heading.addView(export);
+            export.setOnClickListener(v->{
+                pendingPaymentsCsvMonth=paymentFilter==1?month:null;
+                String suffix=pendingPaymentsCsvMonth==null?"sve":pendingPaymentsCsvMonth;
+                createFile(104,"text/csv","Fakturiva-uplate-"+suffix+".csv");
+            });
         }
         place(body,heading);gap(body,11);
 
@@ -1637,6 +1643,7 @@ public final class MainActivity extends Activity {
         super.onActivityResult(code,result,data);
         if(result!=RESULT_OK||data==null||data.getData()==null){
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
+            if(code==104)pendingPaymentsCsvMonth=null;
             return;
         }
         Uri uri=data.getData();
@@ -1650,7 +1657,7 @@ public final class MainActivity extends Activity {
             }else if(code==104){
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
                     if(out==null)throw new IllegalStateException("Datoteka nije dostupna");
-                    PaymentsCsv.write(db.payments(),out);
+                    PaymentsCsv.write(PaymentsCsv.forMonth(db.payments(),pendingPaymentsCsvMonth),out);
                 }
                 toast("CSV evidencija uplata spremljena");
             }else if(code==BACKUP_EXPORT){
@@ -1675,7 +1682,10 @@ public final class MainActivity extends Activity {
                 toast("Sigurnosna kopija obnovljena");navigate("home");
             }
         }catch(Exception e){error(e);}
-        finally{if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();}
+        finally{
+            if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
+            if(code==104)pendingPaymentsCsvMonth=null;
+        }
     }
     private void clearPass(){if(pendingPassword!=null){Arrays.fill(pendingPassword,'\0');pendingPassword=null;}}
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
