@@ -30,7 +30,7 @@ public final class PaymentsCsvTest extends AndroidTestCase {
         assertEquals("\"'=1+1\"",PaymentsCsv.cell("=1+1"));
         assertEquals("\"'@SUM(1)\"",PaymentsCsv.cell("@SUM(1)"));
         assertEquals("\"'  =2+2\"",PaymentsCsv.cell("  =2+2"));
-        assertEquals("\"'\\t+2+2\"",PaymentsCsv.cell("\\t+2+2"));
+        assertEquals("\"'\t+2+2\"",PaymentsCsv.cell("\t+2+2"));
         assertEquals("\"plain text\"",PaymentsCsv.cell("plain text"));
     }
     public void testSelectedMonthExportContainsOnlyVisiblePayments()throws Exception{
