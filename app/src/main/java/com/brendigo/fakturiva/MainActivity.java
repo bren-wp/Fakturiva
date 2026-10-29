@@ -162,12 +162,22 @@ public final class MainActivity extends Activity {
     }
     private void toolbar(String title,String subtitle,boolean back){
         LinearLayout row=horizontal();
-        if(back){TextView b=label("‹",31,ink(),false);b.setGravity(Gravity.CENTER);row.addView(b,lp(34,45));b.setOnClickListener(v->backFromToolbar());}
+        if(back){
+            TextView b=label("‹",31,ink(),false);
+            b.setGravity(Gravity.CENTER);
+            b.setContentDescription("Natrag");
+            row.addView(b,lp(40,48));
+            b.setOnClickListener(v->backFromToolbar());
+        }
         LinearLayout heading=vertical();TextView t=label(title,23,ink(),true);place(heading,t);
         if(subtitle!=null){TextView st=label(subtitle,11,sub(),false);place(heading,st);}
         row.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        TextView more=label("⋯",29,ink(),true);more.setGravity(Gravity.CENTER);
-        row.addView(more,lp(36,42));more.setOnClickListener(v->navigate("settings"));
+        TextView more=label("•••",15,sub(),true);
+        more.setGravity(Gravity.CENTER);
+        more.setBackground(shape(panel(),12));
+        more.setContentDescription("Otvori postavke");
+        row.addView(more,lp(44,44));
+        more.setOnClickListener(v->navigate("settings"));
         place(body,row);gap(body,18);
     }
     private ImageView icon(int id,int tint){
@@ -207,7 +217,9 @@ public final class MainActivity extends Activity {
             LinearLayout.LayoutParams badgeLp=lp(39,35);badgeLp.gravity=Gravity.CENTER_HORIZONTAL;tab.addView(badge,badgeLp);
             TextView name=label(names[i],10,selected?BLUE:sub(),selected);
             name.setGravity(Gravity.CENTER);tab.addView(name,lp(-1,19));
-            bar.addView(tab,new LinearLayout.LayoutParams(0,dp(56),1));tab.setOnClickListener(v->navigate(destination));
+            tab.setContentDescription("Otvori "+names[i]);
+            bar.addView(tab,new LinearLayout.LayoutParams(0,dp(56),1));
+            tab.setOnClickListener(v->navigate(destination));
         }
         place(root,bar);
     }
@@ -525,7 +537,9 @@ public final class MainActivity extends Activity {
         LinearLayout c=card();pad(c,14,13);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
-        image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
+        image.setBackground(shape(dark?
+            (accent==TEAL?0xff204b48:0xff26365e):
+            (accent==TEAL?0xffdff8f4:0xffe8edff),12));
         c.addView(image,lp(38,38));gap(c,7);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
@@ -538,7 +552,9 @@ public final class MainActivity extends Activity {
         int tint=quote?TEAL:client?0xffeb963c:BLUE;
         ImageView image=icon(figureIcon(glyph),tint);
         image.setPadding(dp(10),dp(10),dp(10),dp(10));
-        image.setBackground(shape(quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
+        image.setBackground(shape(dark?
+            (quote?0xff214844:client?0xff533b28:0xff273a66):
+            (quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff),12));
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
