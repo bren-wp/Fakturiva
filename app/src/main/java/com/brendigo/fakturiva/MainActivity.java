@@ -287,17 +287,79 @@ public final class MainActivity extends Activity {
         }
     }
     private void welcome(){
-        setup("welcome",false);gap(body,70);
-        ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.brand_mark);
-        LinearLayout.LayoutParams il=lp(90,90);il.gravity=Gravity.CENTER_HORIZONTAL;body.addView(icon,il);
-        gap(body,20);TextView t=label("Fakturiva",35,ink(),true);t.setGravity(Gravity.CENTER);place(body,t);
-        TextView subtitle=label("Računi i ponude, jednostavno.",14,sub(),false);subtitle.setGravity(Gravity.CENTER);place(body,subtitle);
-        gap(body,55);
-        title(body,"Manje papirologije.\nViše vremena za posao.");gap(body,16);
-        caption(body,"Profesionalno upravljanje računima, ponudama i klijentima — sve lokalno na vašem Android uređaju.");
-        gap(body,38);
-        button(body,"Započni  ›",()->{prefs.edit().putBoolean("welcomed",true).apply();navigate("home");});
-        gap(body,20);caption(body,"Bez registracije, oglasa i mrežnih servisa.");
+        setup("welcome",false);
+        root.setBackgroundColor(WHITE);
+        body.setBackgroundColor(WHITE);
+        pad(body,25,20);
+        LinearLayout brand=horizontal();
+        ImageView mark=new ImageView(this);
+        mark.setImageResource(R.drawable.brand_mark);brand.addView(mark,lp(43,43));
+        TextView brandName=label("Fakturiva",24,NAVY,true);
+        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(10);
+        brand.addView(brandName,brandLp);
+        place(body,brand);gap(body,20);
+        place(body,new WelcomeIllustration(this),lp(-1,330));gap(body,24);
+        place(body,label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true));gap(body,11);
+        TextView heading=label("Manje papirologije.\nViše vremena za posao.",26,NAVY,true);
+        heading.setLineSpacing(dp(3),1.0f);
+        place(body,heading);gap(body,11);
+        TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",13,MUTED,false);
+        info.setLineSpacing(dp(3),1.0f);place(body,info);
+        gap(body,14);
+        LinearLayout dots=horizontal();
+        for(int n=0;n<3;n++){
+            View dot=new View(this);
+            dot.setBackground(shape(n==0?BLUE:0xffdbe2ef,7));
+            LinearLayout.LayoutParams p=lp(n==0?23:7,7);p.rightMargin=dp(6);dots.addView(dot,p);
+        }
+        place(body,dots);gap(body,23);
+        button(body,"›  Započni",()->{
+            prefs.edit().putBoolean("welcomed",true).apply();navigate("home");
+        });
+        gap(body,11);
+        TextView note=label("Bez registracije. Vaši podaci ostaju na uređaju.",11,MUTED,false);
+        note.setGravity(Gravity.CENTER);place(body,note);gap(body,23);
+    }
+    /** Entirely native, static illustration; all actions remain real UI controls. */
+    private final class WelcomeIllustration extends View{
+        private final android.graphics.Paint p=new android.graphics.Paint(3);
+        WelcomeIllustration(Context ctx){super(ctx);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        @Override protected void onDraw(android.graphics.Canvas canvas){
+            super.onDraw(canvas);
+            canvas.save();canvas.scale(getWidth()/340f,getHeight()/340f);
+            p.setStyle(android.graphics.Paint.Style.FILL);
+            p.setShader(new android.graphics.LinearGradient(0,0,310,340,
+                new int[]{0xffe7edff,0xfff1f3ff,0xfff8f8fd},null,
+                android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(0,0,340,340,37,37,p);p.setShader(null);
+            p.setColor(0xffdae5fa);canvas.drawCircle(170,164,115,p);
+            canvas.save();canvas.rotate(-5,170,174);
+            p.setColor(0x330f2e72);p.setShadowLayer(19,0,16,0x330f2e72);
+            canvas.drawRoundRect(72,63,270,288,20,20,p);p.clearShadowLayer();
+            p.setColor(Color.WHITE);canvas.drawRoundRect(72,63,270,288,20,20,p);
+            p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+            p.setTextSize(11);canvas.drawText("FAKTURIVA",90,96,p);
+            p.setTextSize(25);canvas.drawText("RAČUN",90,156,p);
+            p.setColor(0xffe3eafd);
+            canvas.drawRoundRect(90,175,244,182,5,5,p);
+            canvas.drawRoundRect(90,193,184,200,5,5,p);
+            p.setStrokeWidth(1);canvas.drawLine(90,240,245,240,p);
+            p.setColor(0xff8191ad);p.setTextSize(11);p.setTypeface(Typeface.DEFAULT);
+            canvas.drawText("Ukupno",90,260,p);
+            p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+            p.setTextSize(16);canvas.drawText("1.250,00 €",192,261,p);
+            canvas.restore();
+            p.setColor(0xff15beb1);p.setShadowLayer(12,0,10,0x5515beb1);
+            canvas.drawRoundRect(246,243,315,308,23,23,p);p.clearShadowLayer();
+            p.setColor(Color.WHITE);p.setStrokeWidth(4.8f);
+            p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            android.graphics.Path check=new android.graphics.Path();
+            check.moveTo(264,272);check.lineTo(275,283);check.lineTo(296,258);
+            canvas.drawPath(check,p);p.setStyle(android.graphics.Paint.Style.FILL);
+            canvas.restore();
+        }
     }
     private void backupAlert(){
         if(db.backupWarning().isEmpty())return;
