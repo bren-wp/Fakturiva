@@ -18,11 +18,11 @@ Sve što vam treba za pripremu ponuda i računa, evidenciju klijenata i pregled 
 
 | 🧾 **Računi** | 📑 **Ponude** | 👥 **Klijenti** |
 | :-- | :-- | :-- |
-| Sastavite račun, uredite nacrt i evidentirajte naplatu. | Izradite ponudu, pregledajte je i pretvorite u račun. | Upravljajte kontaktima i poslovnim podacima te pratite račune i naplate po klijentu. |
+| Sastavite račun, uredite pojedinačne stavke, sačuvajte nacrt i evidentirajte naplatu. | Izradite ponudu, uredite stavke, pregledajte dokument i pretvorite ga u račun. | Upravljajte kontaktima i poslovnim podacima te pratite račune i naplate po klijentu. |
 
 | 🛍️ **Artikli i usluge** | 📊 **Izvještaji** | 📄 **PDF** |
 | :-- | :-- | :-- |
-| Pretražujte i uređujte artikle, usluge, cijene i PDV stope. | Birajte mjesec, pratite račune i pogledajte šestomjesečni pregled naplate. | Spremite i podijelite čitljive dokumente izravno s uređaja. |
+| Pretražujte i uređujte artikle, usluge, cijene i PDV stope. | Birajte mjesec, pratite iznose računa i pregledajte graf stvarno evidentiranih uplata. | Spremite i podijelite čitljive dokumente izravno s uređaja. |
 
 ## Profesionalni dokumenti s vašim identitetom
 
@@ -50,17 +50,21 @@ Kad potvrdite dokument, podaci izdavatelja i klijenta ostaju zabilježeni u doku
 Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — poznato Android iskustvo na hrvatskom jeziku.
 </div>
 
+### Računi i ponude od prvog koraka do naplate
+
+Uredite klijenta, datume i podatke za plaćanje, dodajte ili izmijenite stavke te pregledajte dokument prije potvrde. Na početnoj stranici prate se stvarno evidentirane uplate i nedavni računi, bez izmišljenih financijskih pokazatelja.
+
 ### Fakturiva u svakodnevnom poslovanju
 
 <p align="center">
   <img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — Početna" width="180">
-  <img src="docs/screenshots/05_racuni.png" alt="Fakturiva — Računi" width="180">
-  <img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — Pregled računa" width="180">
+  <img src="docs/screenshots/06_novi_racun.png" alt="Fakturiva — Izrada računa" width="180">
+  <img src="docs/screenshots/07_stavke_racuna.png" alt="Fakturiva — Uređivanje stavki računa" width="180">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/09_ponude.png" alt="Fakturiva — Ponude" width="180">
-  <img src="docs/screenshots/16_naplata.png" alt="Fakturiva — Naplata" width="180">
+  <img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — PDF pregled računa" width="180">
+  <img src="docs/screenshots/16_naplata.png" alt="Fakturiva — Evidencija naplate" width="180">
   <img src="docs/screenshots/20_tamna_tema.png" alt="Fakturiva — Tamna tema" width="180">
 </p>
 
@@ -104,7 +108,7 @@ Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — po
 
 </details>
 
-**Upoznajte Fakturivu kroz stvarne prikaze njezinih Android zaslona.** Od prve ponude do evidencije naplate — sve na jednom mjestu.
+**Upoznajte Fakturivu kroz stvarne snimke svih 20 Android zaslona**, snimljene na emulatoru — ne kroz umjetno generirane makete.
 
 ## Preuzimanje
 
