@@ -298,7 +298,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(10);
         brand.addView(brandName,brandLp);
         place(body,brand);gap(body,20);
-        place(body,new WelcomeIllustration(this),lp(-1,330));gap(body,24);
+        body.addView(new WelcomeIllustration(this),lp(-1,330));gap(body,24);
         place(body,label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true));gap(body,11);
         TextView heading=label("Manje papirologije.\nViše vremena za posao.",26,NAVY,true);
         heading.setLineSpacing(dp(3),1.0f);
