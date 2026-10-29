@@ -726,7 +726,9 @@ public final class MainActivity extends Activity {
         badge.setSingleLine(true);
         badge.setPadding(dp(8),dp(5),dp(8),dp(5));
         badge.setBackground(shape(badgeBackground(status),15));
-        amount.addView(badge);
+        LinearLayout.LayoutParams badgeLp=new LinearLayout.LayoutParams(-2,-2);
+        badgeLp.gravity=Gravity.END;
+        amount.addView(badge,badgeLp);
         row.addView(amount,lp(109,-2));
         place(item,row);target.addView(item,new LinearLayout.LayoutParams(-1,-2));
         item.setContentDescription(number+", "+document.clientName+", "+
