@@ -112,6 +112,8 @@ Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — po
 
 Android 7.0 ili noviji. Uz svako izdanje navedeno je je li APK debug-potpisan i je li AAB potpisan za produkcijsko izdavanje. Izravni Play Store upload zahtijeva odgovarajući postojeći ključ i dodatne produkcijske provjere.
 
+**Važno pri nadogradnji razvojne verzije:** debug-potpisani APK iz različitih izdanja možda neće imati isti ključ. Nemojte deinstalirati postojeću aplikaciju prije izvoza i provjere šifrirane kopije izvan uređaja. Za pouzdane produkcijske nadogradnje potreban je stabilan produkcijski potpisni ključ.
+
 **Važno za hrvatsko tržište:** Fakturiva trenutačno ne provodi fiskalizaciju ni razmjenu strukturiranih eRačuna. Izvezeni PDF nije fiskaliziran račun niti strukturirani eRačun. Prije korištenja u zakonski obveznim poslovnim procesima treba implementirati i provjeriti primjenjive zakonske zahtjeve.
 
 ---
