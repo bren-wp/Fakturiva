@@ -551,7 +551,10 @@ public final class MainActivity extends Activity {
         LinearLayout amounts=vertical();amounts.setGravity(Gravity.END);
         amounts.addView(label(Money.euros(d.totalCents),13,ink(),true));
         amounts.addView(label(status(d.status),10,Store.PAID.equals(d.status)?TEAL:BLUE,false));
-        r.addView(amounts);place(wrap,r);gap(body,9);place(body,wrap);
+        r.addView(amounts);place(wrap,r);
+        LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);
+        rowParams.topMargin=dp(9);
+        body.addView(wrap,rowParams);
         wrap.setOnClickListener(v->showDocument(d.id));
     }
     private String status(String s){switch(s){
@@ -1037,7 +1040,10 @@ public final class MainActivity extends Activity {
             details.addView(label(secondary,11,sub(),false));
             line.addView(details,new LinearLayout.LayoutParams(0,-2,1));
             line.addView(label("›",25,sub(),false));
-            place(card,line);place(results,card);gap(results,9);
+            place(card,line);
+            LinearLayout.LayoutParams itemLp=new LinearLayout.LayoutParams(-1,-2);
+            itemLp.bottomMargin=dp(9);
+            results.addView(card,itemLp);
             card.setTag((client.name+" "+client.oib+" "+client.address+" "+
                 client.email+" "+client.phone).toLowerCase(Locale.forLanguageTag("hr-HR")));
             card.setOnClickListener(v->clientDetails(client));
@@ -1247,7 +1253,10 @@ public final class MainActivity extends Activity {
             text.addView(label("Cijena bez PDV-a · "+item.taxRate+"% PDV",11,sub(),false));
             row.addView(text,new LinearLayout.LayoutParams(0,-2,1));
             row.addView(label(Money.euros(item.unitCents),12,ink(),true));
-            place(c,row);place(rows,c);gap(rows,9);
+            place(c,row);
+            LinearLayout.LayoutParams itemLp=new LinearLayout.LayoutParams(-1,-2);
+            itemLp.bottomMargin=dp(9);
+            rows.addView(c,itemLp);
             c.setTag(item.name.toLowerCase(Locale.forLanguageTag("hr-HR")));
             c.setOnClickListener(v->editProduct(item));
         }
