@@ -135,9 +135,30 @@ public final class MainActivity extends Activity {
         body=vertical();pad(body,17,18);scroller.addView(body,new ScrollView.LayoutParams(-1,-2));
         if(nav)bottomNav();
     }
+    /** Keep native back navigation consistent with the current business workflow. */
+    private void backFromToolbar(){
+        switch(screen){
+            case "client_detail":clients();break;
+            case "new_doc":
+                if(Store.INVOICE.equals(editType))documents(Store.INVOICE);
+                else documents(Store.QUOTE);
+                break;
+            case "edit_items":editDocumentScreen();break;
+            case "review":editItemsScreen();break;
+            case "detail":
+                try{
+                    Store.Document d=db.document(currentDocumentId);
+                    documents(d.type);
+                }catch(Exception e){home();}
+                break;
+            case "catalog":case "reports":case "payments":case "company":case "eracun":
+            case "backup":settings();break;
+            default:home();
+        }
+    }
     private void toolbar(String title,String subtitle,boolean back){
         LinearLayout row=horizontal();
-        if(back){TextView b=label("‹",31,ink(),false);b.setGravity(Gravity.CENTER);row.addView(b,lp(34,45));b.setOnClickListener(v->navigate("home"));}
+        if(back){TextView b=label("‹",31,ink(),false);b.setGravity(Gravity.CENTER);row.addView(b,lp(34,45));b.setOnClickListener(v->backFromToolbar());}
         LinearLayout heading=vertical();TextView t=label(title,23,ink(),true);place(heading,t);
         if(subtitle!=null){TextView st=label(subtitle,11,sub(),false);place(heading,st);}
         row.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
@@ -1465,9 +1486,7 @@ public final class MainActivity extends Activity {
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
     @Override public void onBackPressed(){
         if("home".equals(screen))super.onBackPressed();
-        else if("edit_items".equals(screen))editDocumentScreen();
-        else if("review".equals(screen))editItemsScreen();
-        else navigate("home");
+        else backFromToolbar();
     }
     private final class RevenueBars extends View{
         final android.graphics.Paint p=new android.graphics.Paint(3);
