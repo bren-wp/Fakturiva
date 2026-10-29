@@ -606,7 +606,7 @@ public final class MainActivity extends Activity {
         });
         String[] states=invoice?
             new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:
-            new String[]{"Svi","Poslane","Skice"};
+            new String[]{"Svi","Potvrđene","Skice"};
         Runnable chooseFilter=()->new AlertDialog.Builder(this)
             .setTitle("Filtriraj "+(invoice?"račune":"ponude"))
             .setSingleChoiceItems(states,java.util.Arrays.asList(states).indexOf(filter),
@@ -744,13 +744,13 @@ public final class MainActivity extends Activity {
     }
 
     private int badgeForeground(String status){
-        if("Plaćen".equals(status)||"Poslana".equals(status))return 0xff078a65;
+        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xff078a65;
         if("Dospijeva".equals(status))return 0xffaf6c08;
         if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffd44759;
         return dark?0xffd0d9ee:0xff61718b;
     }
     private int badgeBackground(String status){
-        if("Plaćen".equals(status)||"Poslana".equals(status))return 0xffdcf8ec;
+        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xffdcf8ec;
         if("Dospijeva".equals(status))return 0xfffff1d8;
         if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffffe8eb;
         return dark?0xff273953:0xffe9eef7;
@@ -760,7 +760,7 @@ public final class MainActivity extends Activity {
         if("Skice".equals(f))return Store.DRAFT.equals(d.status);
         if("Plaćeni".equals(f))return Store.PAID.equals(d.status);
         if("Neplaćeni".equals(f))return Store.ISSUED.equals(d.status);
-        if("Poslane".equals(f))return Store.SENT.equals(d.status);
+        if("Potvrđene".equals(f)||"Poslane".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
     private void documentRow(Store.Document document){
