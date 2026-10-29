@@ -872,93 +872,165 @@ public final class MainActivity extends Activity {
         });
     }
     private void editItemsScreen(){
-        setup("edit_items",true);toolbar("Stavke dokumenta","Stavke i iznosi",true);
+        setup("edit_items",true);
+        toolbar(Store.INVOICE.equals(editType)?"Stavke računa":"Stavke ponude",
+            "2. korak od 3",true);
         wizardSteps(2);
         if(draftItems.isEmpty())caption(body,"Dodajte usluge ili artikle u dokument.");
-        int index=0;
-        for(Store.Item i:draftItems){
-            final int delete=index++;
-            LinearLayout c=card();c.addView(label(i.name,14,ink(),true));gap(c,7);
-            c.addView(label(Money.decimalQuantity(i.qtyMilli)+" × "+Money.euros(i.unitCents)+" · PDV "+i.taxRate+"%",11,sub(),false));
-            gap(c,8);c.addView(label(Money.euros(i.net()+i.tax()),17,BLUE,true));
-            gap(c,7);
-            TextView remove=label("Ukloni stavku",12,RED,true);place(c,remove);remove.setOnClickListener(v->{
-                Store.Item removed=draftItems.remove(delete);
-                if(!saveWorkingDraft()){
-                    draftItems.add(delete,removed);
-                    return;
-                }
-                editItemsScreen();
-            });
-            place(body,c);gap(body,10);
+        for(int index=0;index<draftItems.size();index++){
+            Store.Item item=draftItems.get(index);
+            final int selected=index;
+            LinearLayout c=card();
+            LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+            header.addView(label(item.name,14,ink(),true),
+                new LinearLayout.LayoutParams(0,-2,1));
+            TextView edit=label("✎",23,sub(),false);
+            edit.setGravity(Gravity.CENTER);
+            edit.setContentDescription("Uredi stavku "+item.name);
+            header.addView(edit,lp(42,42));
+            edit.setOnClickListener(v->editLine(selected));
+            place(c,header);gap(c,3);
+            c.addView(label(Money.decimalQuantity(item.qtyMilli)+" × "+
+                Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
+            gap(c,10);
+            LinearLayout bottom=horizontal();
+            bottom.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),
+                16,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
+            TextView delete=label("Ukloni",11,RED,true);
+            delete.setContentDescription("Ukloni stavku "+item.name);
+            bottom.addView(delete);
+            delete.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setTitle("Ukloniti stavku?")
+                .setMessage(item.name+" bit će uklonjena samo iz radnog nacrta.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Ukloni",(dialog,which)->{
+                    Store.Item removed=draftItems.remove(selected);
+                    if(!saveWorkingDraft()){
+                        draftItems.add(selected,removed);
+                        return;
+                    }
+                    editItemsScreen();
+                }).show());
+            place(c,bottom);place(body,c);gap(body,9);
         }
-        secondary(body,"＋ Dodaj artikl ili uslugu",this::addLine);
+        TextView add=label("＋  Dodaj artikl ili uslugu",13,BLUE,true);
+        add.setGravity(Gravity.CENTER);add.setContentDescription("Dodaj stavku dokumenta");
+        GradientDrawable outline=shape(dark?0xff1b2b4b:0xffeef0ff,15);
+        outline.setStroke(dp(1),0xff97a1ff,dp(5),dp(4));
+        add.setBackground(outline);add.setMinimumHeight(dp(53));
+        add.setOnClickListener(v->addLine());
+        place(body,add);gap(body,14);
+
+        long net=0,tax=0;
+        for(Store.Item item:draftItems){
+            net=Math.addExact(net,item.net());tax=Math.addExact(tax,item.tax());
+        }
+        LinearLayout summary=card();
+        title(summary,Store.INVOICE.equals(editType)?"Sažetak računa":"Sažetak ponude");
+        gap(summary,14);
+        amountRow(summary,"Osnovica",Money.euros(net),false);
+        gap(summary,12);
+        amountRow(summary,"PDV",Money.euros(tax),false);
+        gap(summary,12);
+        View line=new View(this);line.setBackgroundColor(border());
+        place(summary,line,new LinearLayout.LayoutParams(-1,dp(1)));
+        gap(summary,15);
+        amountRow(summary,"UKUPNO",Money.euros(Math.addExact(net,tax)),true);
+        place(body,summary);gap(body,12);
+        caption(body,"Iznosi se automatski računaju iz unesenih stavki i poreznih stopa.");
         gap(body,13);
-        long net=0,tax=0;for(Store.Item i:draftItems){net+=i.net();tax+=i.tax();}
-        LinearLayout summary=card();summary.addView(label("Osnovica: "+Money.euros(net),13,ink(),false));
-        summary.addView(label("PDV: "+Money.euros(tax),13,ink(),false));gap(summary,7);
-        summary.addView(label("UKUPNO: "+Money.euros(net+tax),20,BLUE,true));
-        place(body,summary);gap(body,14);
-        gap(body,9);secondary(body,"‹ Natrag na podatke",this::editDocumentScreen);
-        stickyPrimary("Pregled dokumenta  ›",()->{
-            if(draftItems.isEmpty())toast("Dodajte barem jednu stavku");else reviewDraft();
+        secondary(body,"‹ Natrag na podatke",this::editDocumentScreen);
+        stickyPrimary(Store.INVOICE.equals(editType)?"Pregled računa  ›":"Pregled ponude  ›",()->{
+            if(draftItems.isEmpty())toast("Dodajte barem jednu stavku");
+            else reviewDraft();
         });
     }
-    private void addLine(){
+    private void amountRow(LinearLayout target,String title,String value,boolean total){
+        LinearLayout row=horizontal();
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(label(title,total?13:12,total?ink():sub(),total),
+            new LinearLayout.LayoutParams(0,-2,1));
+        row.addView(label(value,total?21:13,ink(),true));
+        place(target,row);
+    }
+    private void addLine(){editLine(-1);}
+    /** Edit/add an invoice line without losing the user's input on validation failure. */
+    private void editLine(int index){
+        boolean editing=index>=0;
+        Store.Item current=editing?draftItems.get(index):null;
         LinearLayout form=vertical();pad(form,16,5);
-        EditText name=field("Naziv artikla ili usluge","");
-        EditText qty=field("Količina","1");
-        EditText price=field("Jedinična cijena, EUR","0,00");
+        EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
+        EditText qty=field("Količina",editing?
+            Money.decimalQuantity(current.qtyMilli):"1");
+        EditText price=field("Jedinična cijena, EUR",editing?
+            String.format(Locale.forLanguageTag("hr-HR"),"%.2f",current.unitCents/100.0):"0,00");
         qty.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] rates={"25%","13%","5%","0%"};
-        Spinner tax=new Spinner(this);tax.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,rates));
+        Spinner tax=new Spinner(this);
+        tax.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,rates));
+        if(editing)for(int i=0;i<rates.length;i++)
+            if(rates[i].equals(current.taxRate+"%"))tax.setSelection(i);
         fieldLabel(form,"Stavka",name);
-        if(!db.products().isEmpty()){
-            Spinner product=new Spinner(this);List<Store.Item> products=db.products();
-            ArrayList<String> options=new ArrayList<>();options.add("Odaberite iz kataloga (neobavezno)");
-            for(Store.Item p:products)options.add(p.name);
-            product.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,options));
+        List<Store.Item> catalog=db.products();
+        if(!catalog.isEmpty()){
+            Spinner product=new Spinner(this);
+            ArrayList<String> options=new ArrayList<>();
+            options.add("Odaberite iz kataloga (neobavezno)");
+            for(Store.Item item:catalog)options.add(item.name);
+            product.setAdapter(new ArrayAdapter<>(
+                this,android.R.layout.simple_spinner_dropdown_item,options));
             product.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-                public void onNothingSelected(android.widget.AdapterView<?> parent){}
-                public void onItemSelected(android.widget.AdapterView<?> parent,View view,int pos,long id){
-                    if(pos>0){Store.Item it=products.get(pos-1);name.setText(it.name);
-                        price.setText(String.format(Locale.forLanguageTag("hr-HR"),"%.2f",it.unitCents/100.0));
-                        for(int j=0;j<rates.length;j++)if(rates[j].equals(it.taxRate+"%"))tax.setSelection(j);
-                    }
+                @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+                @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                        View view,int pos,long id){
+                    if(pos<=0)return;
+                    Store.Item item=catalog.get(pos-1);
+                    name.setText(item.name);
+                    price.setText(String.format(Locale.forLanguageTag("hr-HR"),
+                        "%.2f",item.unitCents/100.0));
+                    for(int j=0;j<rates.length;j++)
+                        if(rates[j].equals(item.taxRate+"%"))tax.setSelection(j);
                 }
             });
-            gap(form,12);form.addView(label("Iz kataloga",12,ink(),true));gap(form,6);
+            gap(form,12);
+            form.addView(label("Iz kataloga",12,ink(),true));gap(form,6);
             place(form,product);
         }
-        fieldLabel(form,"Količina",qty);fieldLabel(form,"Jedinična cijena bez PDV-a",price);
-        gap(form,11);form.addView(label("Stopa PDV-a (informativni odabir)",12,ink(),true));place(form,tax);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Nova stavka").setView(form)
-            .setNegativeButton("Odustani",null).setPositiveButton("Dodaj",null).create();
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            .setOnClickListener(button->{
+        fieldLabel(form,"Količina",qty);
+        fieldLabel(form,"Jedinična cijena bez PDV-a",price);
+        gap(form,11);form.addView(label("Stopa PDV-a",12,ink(),true));
+        place(form,tax);
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle(editing?"Uredi stavku":"Nova stavka")
+            .setView(form).setNegativeButton("Odustani",null)
+            .setPositiveButton("Spremi",null).create();
+        dialog.setOnShowListener(ignored->
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{
                 try{
                     String description=name.getText().toString().trim();
                     if(description.isEmpty()){
-                        name.setError("Unesite naziv artikla ili usluge");name.requestFocus();return;
+                        name.setError("Unesite naziv stavke");name.requestFocus();return;
                     }
                     Store.Item item=new Store.Item();item.name=description;
                     try{item.qtyMilli=Money.quantity(qty.getText().toString());}
-                    catch(Exception error){qty.setError("Provjerite količinu");qty.requestFocus();return;}
+                    catch(Exception e){qty.setError("Provjerite količinu");qty.requestFocus();return;}
                     try{item.unitCents=Money.cents(price.getText().toString());}
-                    catch(Exception error){price.setError("Provjerite cijenu");price.requestFocus();return;}
+                    catch(Exception e){price.setError("Provjerite cijenu");price.requestFocus();return;}
                     if(item.qtyMilli<=0||item.unitCents<0){
-                        qty.setError("Količina mora biti veća od nule");qty.requestFocus();return;
+                        qty.setError("Količina mora biti veća od nule");
+                        qty.requestFocus();return;
                     }
-                    item.taxRate=Integer.parseInt(rates[tax.getSelectedItemPosition()].replace("%",""));
-                    item.net();item.tax(); // Check overflow before touching a draft.
-                    draftItems.add(item);
+                    item.taxRate=Integer.parseInt(rates[
+                        tax.getSelectedItemPosition()].replace("%",""));
+                    Math.addExact(item.net(),item.tax());
+                    if(editing)draftItems.set(index,item);else draftItems.add(item);
                     if(!saveWorkingDraft()){
-                        draftItems.remove(draftItems.size()-1);
-                        return; // Keep form inputs visible after a failed durable save.
+                        if(editing)draftItems.set(index,current);
+                        else draftItems.remove(draftItems.size()-1);
+                        return;
                     }
-                    dialog.dismiss();
-                    editItemsScreen();
+                    dialog.dismiss();editItemsScreen();
                 }catch(Exception error){error(error);}
             }));
         dialog.show();
