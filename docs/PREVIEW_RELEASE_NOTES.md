@@ -42,3 +42,7 @@ Redovito izvozite verificiranu šifriranu kopiju izvan telefona. Nulti rizik od 
 ### Provjera izdanja
 
 APK i AAB objavljuju se kao *razvojni pretpregled* uz SHA-256 sažetke. Za korištenje u proizvodnji potrebni su dodatni testovi na fizičkim Android uređajima i produkcijski upload ključ. Glavni README sadrži stvarne zaslone aplikacije.
+
+
+### Završne provjere preview.2
+Gradle izgradnja, osnovni testovi i Android emulator instrumentacijski testovi uspješno su izvršeni. Provjereno je 20 stvarnih emulator PNG-ova uz RGB MAE prosjek 16,31/255 (testni datum, vrijeme i sadržaj utječu na rezultat). Android fizički uređaji ostaju izvan dosega ovih automatiziranih provjera, a ovaj paket nije odobren za produkciju.
