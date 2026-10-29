@@ -53,6 +53,7 @@ public final class MainActivity extends Activity {
     private String pendingPaymentsCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
+    private String documentSearchQuery="";
     private boolean dark=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
     private String draftIssue="",draftDue="",draftSupply="",draftNote="";
@@ -255,6 +256,7 @@ public final class MainActivity extends Activity {
     }
     private void navigate(String dest){
         filter="Svi";
+        documentSearchQuery="";
         switch(dest){
             case "home":home();break;
             case "invoices":documents(Store.INVOICE);break;
@@ -557,48 +559,206 @@ public final class MainActivity extends Activity {
         p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);c.setOnClickListener(v->action.run());
     }
     private void documents(String type){
-        setup(Store.INVOICE.equals(type)?"invoices":"quotes",true);
-        toolbar(Store.INVOICE.equals(type)?"Računi":"Ponude","Pregled i pretraga dokumenata",false);
-        EditText search=field("Pretraži dokumente…","");place(body,search);gap(body,12);
-        LinearLayout filters=horizontal();
-        String[] states=Store.INVOICE.equals(type)?new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:new String[]{"Svi","Poslane","Skice"};
-        for(String s:states){TextView f=label(s,11,filter.equals(s)?WHITE:sub(),true);f.setGravity(Gravity.CENTER);
-            if(filter.equals(s))background(f,BLUE,12);
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(35),1);p.setMargins(dp(2),0,dp(2),0);
-            filters.addView(f,p);f.setOnClickListener(v->{filter=s;documents(type);});
-        }
-        place(body,filters);gap(body,12);
-        LinearLayout totals=horizontal();
-        List<Store.Document> all=db.documents(type);
-        TextView totalCount=label("Ukupno: "+all.size(),11,sub(),false);
-        totals.addView(totalCount,new LinearLayout.LayoutParams(0,dp(30),1));
-        if(Store.INVOICE.equals(type)){
-            long unpaid=0;for(Store.Document d:all)if(Store.ISSUED.equals(d.status))unpaid+=d.outstanding();
-            totals.addView(label("Neplaćeno: "+Money.euros(unpaid),11,sub(),false));
-        }
-        place(body,totals);gap(body,7);
-        int shown=0;for(Store.Document d:all){
-            if(!matches(d,filter))continue;
-            documentRow(d);shown++;
-        }
-        if(shown==0)caption(body,"Nema dokumenata u ovoj kategoriji.");
-        gap(body,18);
-        floatingAction(Store.INVOICE.equals(type)?"Dodaj novi račun":"Dodaj novu ponudu",
-            ()->newDocument(type));
-        search.addTextChangedListener(new android.text.TextWatcher(){
-            public void beforeTextChanged(CharSequence s,int st,int count,int after){}
-            public void onTextChanged(CharSequence s,int st,int before,int count){
-                for(int i=0;i<body.getChildCount();i++){View v=body.getChildAt(i);
-                    if(v.getTag() instanceof Store.Document){Store.Document d=(Store.Document)v.getTag();
-                        String term=s.toString().toLowerCase(Locale.ROOT);
-                        boolean hit=(d.clientName+" "+d.number+" "+d.status).toLowerCase(Locale.ROOT).contains(term);
-                        v.setVisibility(hit&&matches(d,filter)?View.VISIBLE:View.GONE);
-                    }
-                }
-            }
-            public void afterTextChanged(android.text.Editable e){}
+        boolean invoice=Store.INVOICE.equals(type);
+        setup(invoice?"invoices":"quotes",true);
+        LinearLayout header=horizontal();
+        LinearLayout heading=vertical();
+        heading.addView(label(invoice?"Računi":"Ponude",23,ink(),true));
+        gap(heading,5);
+        heading.addView(label(invoice?"Svi vaši izdani računi":"Sve vaše ponude",
+            12,sub(),false));
+        header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        ImageView searchAction=icon(R.drawable.ic_search,sub());
+        searchAction.setPadding(dp(10),dp(10),dp(10),dp(10));
+        searchAction.setBackground(shape(panel(),13));
+        searchAction.setContentDescription("Pretraži dokumente");
+        LinearLayout.LayoutParams searchLp=lp(42,42);
+        searchLp.rightMargin=dp(8);header.addView(searchAction,searchLp);
+        ImageView filtersAction=icon(R.drawable.ic_filter,sub());
+        filtersAction.setPadding(dp(10),dp(10),dp(10),dp(10));
+        filtersAction.setBackground(shape(panel(),13));
+        filtersAction.setContentDescription("Odaberi prikaz dokumenata");
+        header.addView(filtersAction,lp(42,42));
+        place(body,header);gap(body,18);
+
+        LinearLayout searchBar=horizontal();
+        searchBar.setBackground(outlined(panel()));
+        searchBar.setPadding(dp(12),dp(4),dp(12),dp(4));
+        searchBar.addView(icon(R.drawable.ic_search,sub()),lp(25,25));
+        EditText search=field(invoice?"Pretraži račune...":"Pretraži ponude...",
+            documentSearchQuery);
+        search.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        search.setSingleLine(true);
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        LinearLayout.LayoutParams inputLp=new LinearLayout.LayoutParams(0,dp(45),1);
+        inputLp.leftMargin=dp(8);searchBar.addView(search,inputLp);
+        ImageView searchFilter=icon(R.drawable.ic_filter,sub());
+        searchFilter.setContentDescription("Otvori filtre");
+        searchFilter.setPadding(dp(5),dp(5),dp(5),dp(5));
+        searchBar.addView(searchFilter,lp(34,34));
+        searchAction.setOnClickListener(v->{
+            search.requestFocus();
+            android.view.inputmethod.InputMethodManager keyboard=
+                (android.view.inputmethod.InputMethodManager)
+                    getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if(keyboard!=null)keyboard.showSoftInput(search,
+                android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
         });
+        String[] states=invoice?
+            new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:
+            new String[]{"Svi","Poslane","Skice"};
+        Runnable chooseFilter=()->new AlertDialog.Builder(this)
+            .setTitle("Filtriraj "+(invoice?"račune":"ponude"))
+            .setSingleChoiceItems(states,java.util.Arrays.asList(states).indexOf(filter),
+                (dialog,which)->{
+                    filter=states[which];dialog.dismiss();documents(type);
+                })
+            .setNegativeButton("Odustani",null).show();
+        filtersAction.setOnClickListener(v->chooseFilter.run());
+        searchFilter.setOnClickListener(v->chooseFilter.run());
+        place(body,searchBar);gap(body,15);
+
+        LinearLayout chips=horizontal();pad(chips,4,4);
+        chips.setBackground(shape(dark?0xff1d2a40:0xffe9edf4,15));
+        for(String state:states){
+            boolean selected=filter.equals(state);
+            TextView chip=label(state,11,selected?BLUE:sub(),true);
+            chip.setGravity(Gravity.CENTER);
+            if(selected)chip.setBackground(shape(panel(),12));
+            chip.setContentDescription("Prikaži: "+state);
+            LinearLayout.LayoutParams item=new LinearLayout.LayoutParams(0,dp(36),1);
+            item.leftMargin=dp(1);item.rightMargin=dp(1);
+            chips.addView(chip,item);
+            chip.setOnClickListener(v->{filter=state;documents(type);});
+        }
+        place(body,chips);gap(body,14);
+
+        List<Store.Document> all=db.documents(type);
+        LinearLayout totals=horizontal();
+        TextView total=label("Ukupno "+(invoice?"računa":"ponuda")+"  "+all.size(),
+            11,sub(),false);
+        totals.addView(total,new LinearLayout.LayoutParams(0,-2,1));
+        if(invoice){
+            long unpaid=0;
+            for(Store.Document document:all)
+                if(Store.ISSUED.equals(document.status))
+                    unpaid=Math.addExact(unpaid,document.outstanding());
+            TextView remaining=label("Neplaćeno  "+Money.euros(unpaid),11,ink(),true);
+            remaining.setSingleLine(true);
+            totals.addView(remaining);
+        }
+        place(body,totals);gap(body,12);
+
+        LinearLayout group=vertical();
+        group.setBackground(outlined(panel()));
+        List<Store.Document> matching=new ArrayList<>();
+        for(Store.Document document:all){
+            if(!matches(document,filter))continue;
+            matching.add(document);
+            documentRowGrouped(group,document);
+        }
+        place(body,group);
+        TextView empty=label("Nema dokumenata za odabranu pretragu.",12,sub(),false);
+        empty.setGravity(Gravity.CENTER);
+        gap(body,12);place(body,empty);
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence value,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence value,int start,int before,int count){
+                documentSearchQuery=value.toString();
+                filterDocumentRows(group,documentSearchQuery,empty);
+            }
+            @Override public void afterTextChanged(android.text.Editable value){}
+        });
+        filterDocumentRows(group,documentSearchQuery,empty);
+        body.setFocusableInTouchMode(true);body.requestFocus();
+        floatingAction(invoice?"Dodaj novi račun":"Dodaj novu ponudu",()->newDocument(type));
     }
+
+    private void documentRowGrouped(LinearLayout target,Store.Document document){
+        LinearLayout item=vertical();item.setTag(document);
+        View divider=new View(this);divider.setBackgroundColor(border());
+        item.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        LinearLayout row=horizontal();pad(row,12,15);
+        ImageView symbol=icon(Store.INVOICE.equals(document.type)?
+            R.drawable.ic_invoice:R.drawable.ic_quote,
+            Store.INVOICE.equals(document.type)?BLUE:TEAL);
+        symbol.setPadding(dp(9),dp(9),dp(9),dp(9));
+        symbol.setBackground(shape(Store.INVOICE.equals(document.type)?
+            0xffe8edff:0xffdcf8f4,12));
+        row.addView(symbol,lp(42,42));
+        LinearLayout description=vertical();
+        LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(0,-2,1);
+        descLp.leftMargin=dp(10);
+        row.addView(description,descLp);
+        String number=document.number==null?"Nacrt #"+document.id:document.number;
+        TextView documentNumber=label(number,13,ink(),true);
+        documentNumber.setSingleLine(true);
+        documentNumber.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        place(description,documentNumber);gap(description,3);
+        TextView client=label(document.clientName,11,sub(),false);
+        client.setSingleLine(true);
+        client.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        place(description,client);gap(description,3);
+        place(description,label(readableDate(document.issueDate),10,sub(),false));
+        LinearLayout amount=vertical();amount.setGravity(Gravity.RIGHT);
+        amount.addView(label(Money.euros(document.totalCents),12,ink(),true));
+        gap(amount,6);
+        String status=DocumentStatus.label(document,DocumentStatus.today(),
+            DocumentStatus.inSevenDays());
+        TextView badge=label(status,10,badgeForeground(status),true);
+        badge.setGravity(Gravity.CENTER);
+        badge.setPadding(dp(9),dp(5),dp(9),dp(5));
+        badge.setBackground(shape(badgeBackground(status),15));
+        amount.addView(badge);
+        row.addView(amount);
+        place(item,row);target.addView(item,new LinearLayout.LayoutParams(-1,-2));
+        item.setContentDescription(number+", "+document.clientName+", "+
+            Money.euros(document.totalCents)+", "+status);
+        item.setOnClickListener(v->showDocument(document.id));
+    }
+
+    private void filterDocumentRows(LinearLayout group,String raw,TextView empty){
+        String term=raw.trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
+        int count=0;
+        for(int index=0;index<group.getChildCount();index++){
+            View child=group.getChildAt(index);
+            if(!(child.getTag() instanceof Store.Document))continue;
+            Store.Document document=(Store.Document)child.getTag();
+            String searchable=(document.number+" "+document.clientName+" "+
+                document.issueDate+" "+document.dueDate+" "+
+                DocumentStatus.label(document,DocumentStatus.today(),
+                    DocumentStatus.inSevenDays())).toLowerCase(Locale.forLanguageTag("hr-HR"));
+            boolean show=searchable.contains(term);
+            child.setVisibility(show?View.VISIBLE:View.GONE);
+            if(show){
+                ((LinearLayout)child).getChildAt(0)
+                    .setVisibility(count==0?View.GONE:View.VISIBLE);
+                count++;
+            }
+        }
+        group.setVisibility(count==0?View.GONE:View.VISIBLE);
+        empty.setVisibility(count==0?View.VISIBLE:View.GONE);
+    }
+
+    private String readableDate(String iso){
+        if(iso==null||!iso.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"))return "";
+        return iso.substring(8,10)+". "+iso.substring(5,7)+". "+
+            iso.substring(0,4)+".";
+    }
+
+    private int badgeForeground(String status){
+        if("Plaćen".equals(status)||"Poslana".equals(status))return 0xff078a65;
+        if("Dospijeva".equals(status))return 0xffaf6c08;
+        if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffd44759;
+        return dark?0xffd0d9ee:0xff61718b;
+    }
+    private int badgeBackground(String status){
+        if("Plaćen".equals(status)||"Poslana".equals(status))return 0xffdcf8ec;
+        if("Dospijeva".equals(status))return 0xfffff1d8;
+        if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffffe8eb;
+        return dark?0xff273953:0xffe9eef7;
+    }
+
     private boolean matches(Store.Document d,String f){
         if("Skice".equals(f))return Store.DRAFT.equals(d.status);
         if("Plaćeni".equals(f))return Store.PAID.equals(d.status);
