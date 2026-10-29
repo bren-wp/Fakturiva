@@ -25,3 +25,7 @@ Ovo je razvojna verzija. Nije dokazano pixel-perfect 1:1 svih 20 originalnih PNG
 Redovito izvozite verificiranu šifriranu kopiju izvan telefona. Nulti rizik od gubitka podataka na jednom uređaju nije moguć.
 
 **Fakturiva by Brendigo.**
+
+### Provjera izdanja
+
+APK i AAB objavljuju se kao *razvojni pretpregled* uz SHA-256 sažetke. Za korištenje u proizvodnji potrebni su dodatni testovi na fizičkim Android uređajima i produkcijski upload ključ. Glavni README sadrži stvarne zaslone aplikacije.
