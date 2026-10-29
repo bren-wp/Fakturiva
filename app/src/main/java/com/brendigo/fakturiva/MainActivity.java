@@ -933,7 +933,7 @@ public final class MainActivity extends Activity {
         amountRow(summary,"PDV",Money.euros(tax),false);
         gap(summary,12);
         View line=new View(this);line.setBackgroundColor(border());
-        place(summary,line,new LinearLayout.LayoutParams(-1,dp(1)));
+        summary.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
         gap(summary,15);
         amountRow(summary,"UKUPNO",Money.euros(Math.addExact(net,tax)),true);
         place(body,summary);gap(body,12);
