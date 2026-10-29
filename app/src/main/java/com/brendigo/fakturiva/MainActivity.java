@@ -50,6 +50,7 @@ public final class MainActivity extends Activity {
     private Store db; private SharedPreferences prefs;
     private LinearLayout root,body; private ScrollView scroller;
     private int paymentFilter=0;
+    private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private boolean dark=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
@@ -1188,26 +1189,37 @@ public final class MainActivity extends Activity {
         setup("reports",true);
         toolbar("Izvještaji","Statistika i analiza poslovanja",true);
 
-        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR")).format(new java.util.Date());
+        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR")).format(reportMonth.getTime());
+        String yearMonth=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(reportMonth.getTime());
+        Calendar now=Calendar.getInstance();
+        boolean currentMonth=reportMonth.get(Calendar.YEAR)==now.get(Calendar.YEAR)&&
+            reportMonth.get(Calendar.MONTH)==now.get(Calendar.MONTH);
         LinearLayout period=horizontal();
-        TextView picker=label("▣  "+month,13,ink(),true);
+        TextView picker=label("▣  "+month+"  ›",13,ink(),true);
         pad(picker,13,11);picker.setBackground(outlined(panel()));
         period.addView(picker,new LinearLayout.LayoutParams(0,-2,1));
-        TextView current=label("Ovaj mjesec",11,BLUE,true);
+        picker.setOnClickListener(v->{
+            DatePickerDialog dialog=new DatePickerDialog(this,(view,year,m,day)->{
+                reportMonth.set(year,m,1);reports();
+            },reportMonth.get(Calendar.YEAR),reportMonth.get(Calendar.MONTH),1);
+            dialog.show();
+        });
+        TextView current=label(currentMonth?"Ovaj mjesec":"Odabrani",11,BLUE,true);
         current.setGravity(Gravity.CENTER);current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
-        LinearLayout.LayoutParams selected=lp(115,40);selected.setMargins(dp(12),0,0,0);
+        LinearLayout.LayoutParams selected=lp(102,40);selected.setMargins(dp(10),0,0,0);
         period.addView(current,selected);
+        current.setOnClickListener(v->{reportMonth.setTimeInMillis(System.currentTimeMillis());reports();});
         place(body,period);gap(body,14);
 
         LinearLayout revenue=card();pad(revenue,18,18);
         revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,10);
-        revenue.addView(label(Money.euros(db.invoicedCents()),29,ink(),true));gap(revenue,8);
+        revenue.addView(label(Money.euros(db.invoicedCentsMonth(yearMonth)),29,ink(),true));gap(revenue,8);
         revenue.addView(label("Potvrđeni računi · bez nacrta",11,sub(),false));
         place(body,revenue);gap(body,14);
 
         int invoiceCount=0,paid=0;
         for(Store.Document d:db.documents(Store.INVOICE)){
-            if(Store.DRAFT.equals(d.status))continue;
+            if(Store.DRAFT.equals(d.status)||!d.issueDate.startsWith(yearMonth))continue;
             invoiceCount++;
             if(Store.PAID.equals(d.status))paid++;
         }
