@@ -164,8 +164,8 @@ public final class MainActivity extends Activity {
     private void toolbar(String title,String subtitle,boolean back){
         LinearLayout row=horizontal();
         if(back){
-            TextView b=label("‹",31,ink(),false);
-            b.setGravity(Gravity.CENTER);
+            ImageView b=icon(R.drawable.ic_back,sub());
+            b.setPadding(dp(8),dp(8),dp(8),dp(8));
             b.setContentDescription("Natrag");
             row.addView(b,lp(40,48));
             b.setOnClickListener(v->backFromToolbar());
@@ -651,11 +651,8 @@ public final class MainActivity extends Activity {
 
         LinearLayout group=vertical();
         group.setBackground(outlined(panel()));
-        List<Store.Document> matching=new ArrayList<>();
         for(Store.Document document:all){
-            if(!matches(document,filter))continue;
-            matching.add(document);
-            documentRowGrouped(group,document);
+            if(matches(document,filter))documentRowGrouped(group,document);
         }
         place(body,group);
         TextView empty=label("Nema dokumenata za odabranu pretragu.",12,sub(),false);
@@ -1041,8 +1038,8 @@ public final class MainActivity extends Activity {
             LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
             header.addView(label(item.name,14,ink(),true),
                 new LinearLayout.LayoutParams(0,-2,1));
-            TextView edit=label("✎",23,sub(),false);
-            edit.setGravity(Gravity.CENTER);
+            ImageView edit=icon(R.drawable.ic_edit,sub());
+            edit.setPadding(dp(9),dp(9),dp(9),dp(9));
             edit.setContentDescription("Uredi stavku "+item.name);
             header.addView(edit,lp(42,42));
             edit.setOnClickListener(v->editLine(selected));
