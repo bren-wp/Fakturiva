@@ -29,6 +29,29 @@ public final class PaymentsCsvTest extends AndroidTestCase {
     public void testSpreadsheetFormulaInjectionIsEscaped() {
         assertEquals("\"'=1+1\"",PaymentsCsv.cell("=1+1"));
         assertEquals("\"'@SUM(1)\"",PaymentsCsv.cell("@SUM(1)"));
-        assertEquals("\"' - if prefixed spaces are not formula\"",PaymentsCsv.cell("' - if prefixed spaces are not formula"));
+        assertEquals("\"'  =2+2\"",PaymentsCsv.cell("  =2+2"));
+        assertEquals("\"'\t+2+2\"",PaymentsCsv.cell("\t+2+2"));
+        assertEquals("\"plain text\"",PaymentsCsv.cell("plain text"));
     }
+    public void testSelectedMonthExportContainsOnlyVisiblePayments()throws Exception{
+        Store.Payment october=new Store.Payment();
+        october.invoiceNumber="R-10";october.clientName="Listopadski kupac";
+        october.paidOn="2026-10-15";october.amountCents=12500;
+        Store.Payment september=new Store.Payment();
+        september.invoiceNumber="R-09";september.clientName="Rujanski kupac";
+        september.paidOn="2026-09-28";september.amountCents=3300;
+        java.util.List<Store.Payment> payments=Arrays.asList(october,september);
+        assertEquals(2,PaymentsCsv.forMonth(payments,null).size());
+        assertEquals(1,PaymentsCsv.forMonth(payments,"2026-10").size());
+        assertEquals("R-10",PaymentsCsv.forMonth(payments,"2026-10").get(0).invoiceNumber);
+        assertEquals(0,PaymentsCsv.forMonth(payments,"2026-11").size());
+        try{PaymentsCsv.forMonth(payments,"2026-19");fail("Invalid month");}
+        catch(IllegalArgumentException expected){}
+        ByteArrayOutputStream output=new ByteArrayOutputStream();
+        PaymentsCsv.write(PaymentsCsv.forMonth(payments,"2026-10"),output);
+        String csv=new String(output.toByteArray(),StandardCharsets.UTF_8);
+        assertTrue(csv.contains("Listopadski kupac"));
+        assertFalse(csv.contains("Rujanski kupac"));
+    }
+
 }

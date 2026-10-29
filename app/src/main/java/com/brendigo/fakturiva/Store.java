@@ -169,6 +169,17 @@ public final class Store extends SQLiteOpenHelper {
         long id=getWritableDatabase().insertOrThrow("catalog",null,v);
         snapshotAfterWrite();return id;
     }
+    /** Update a catalog entry without changing historical invoice/quote line snapshots. */
+    public void updateProduct(long id,String name,long priceCents,int taxRate){
+        if(name==null||name.trim().isEmpty()||priceCents<0)
+            throw new IllegalArgumentException("Neispravan naziv ili cijena artikla");
+        Money.tax(0,taxRate);
+        ContentValues v=new ContentValues();
+        v.put("name",name.trim());v.put("price_cents",priceCents);v.put("tax_rate",taxRate);
+        if(getWritableDatabase().update("catalog",v,"id=?",new String[]{Long.toString(id)})!=1)
+            throw new IllegalArgumentException("Artikl ne postoji");
+        snapshotAfterWrite();
+    }
     public List<Item> products() {
         ArrayList<Item> out=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery("SELECT id,name,price_cents,tax_rate FROM catalog ORDER BY name COLLATE NOCASE",null)) {
@@ -364,6 +375,14 @@ public final class Store extends SQLiteOpenHelper {
     public long count(String table) {
         if(!table.equals("clients")&&!table.equals("catalog")&&!table.equals("documents")) return 0;
         return DatabaseUtils.longForQuery(getReadableDatabase(),"SELECT COUNT(*) FROM "+table,null);
+    }
+    public long invoicedCentsMonth(String yearMonth){
+        if(yearMonth==null||!yearMonth.matches("[0-9]{4}-[0-9]{2}"))
+            throw new IllegalArgumentException("Neispravan mjesec izvještaja");
+        return DatabaseUtils.longForQuery(getReadableDatabase(),
+            "SELECT COALESCE(SUM(total_cents),0) FROM documents "+
+            "WHERE type='INVOICE' AND status IN ('ISSUED','PAID') "+
+            "AND substr(issue_date,1,7)=?",new String[]{yearMonth});
     }
     public long invoicedCents() {
         return DatabaseUtils.longForQuery(getReadableDatabase(),

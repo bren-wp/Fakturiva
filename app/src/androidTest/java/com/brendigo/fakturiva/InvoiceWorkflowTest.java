@@ -206,5 +206,93 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
             }
         }finally{if(db!=null)db.close();context.clean();}
     }
+    public void testCatalogEditingDoesNotRewriteIssuedDocument() throws Exception {
+        IsolatedContext context=new IsolatedContext(getContext());
+        Store db=null;
+        try {
+            db=new Store(context);
+            db.setting("name","Testni izdavatelj");
+            db.setting("oib","12345678903");
+            db.setting("address","Rijeka");
+            long customer=db.saveClient("Klijent","","Rijeka","");
+            long productId=db.saveProduct("Stara usluga",12000,25);
+            Store.Item item=db.products().get(0);
+            long documentId=db.createDraft(Store.INVOICE,customer,
+                "2026-10-28","2026-11-28","2026-10-28","",
+                java.util.Arrays.asList(item));
+            db.confirm(documentId);
+            db.updateProduct(productId,"Nova usluga",19000,13);
+            assertEquals("Stara usluga",db.document(documentId).items.get(0).name);
+            assertEquals(12000L,db.document(documentId).items.get(0).unitCents);
+            assertEquals(25,db.document(documentId).items.get(0).taxRate);
+            assertEquals("Nova usluga",db.products().get(0).name);
+            assertEquals(19000L,db.products().get(0).unitCents);
+            assertEquals(13,db.products().get(0).taxRate);
+        } finally {
+            if(db!=null)db.close();
+            context.clean();
+        }
+    }
+
+    public void testReportsAreScopedToActualIssuingMonth() throws Exception {
+        IsolatedContext context=new IsolatedContext(getContext()); Store db=null;
+        try {
+            db=new Store(context);
+            db.setting("name","Izdavatelj");
+            db.setting("oib","12345678903");
+            db.setting("address","Rijeka");
+            long client=db.saveClient("Kupac","","Rijeka","");
+            Store.Item item=new Store.Item();item.name="Usluga";
+            item.qtyMilli=1000;item.unitCents=10000;item.taxRate=25;
+            long october=db.createDraft(Store.INVOICE,client,"2026-10-28","2026-11-28","",Arrays.asList(item));
+            db.confirm(october);
+            long september=db.createDraft(Store.INVOICE,client,"2026-09-28","2026-10-28","",Arrays.asList(item));
+            db.confirm(september);
+            assertEquals(12500L,db.invoicedCentsMonth("2026-10"));
+            assertEquals(12500L,db.invoicedCentsMonth("2026-09"));
+            assertEquals(0L,db.invoicedCentsMonth("2026-08"));
+            assertEquals(25000L,db.invoicedCents());
+        } finally {
+            if(db!=null)db.close();
+            context.clean();
+        }
+    }
+
+    public void testWorkingDraftSurvivesReopenAndTamperingIsRejected()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());
+        try{
+            JSONObject draft=new JSONObject();
+            draft.put("version",1);
+            draft.put("type",Store.INVOICE);
+            draft.put("notes","Spremljen radni nacrt");
+            RecoveryVault.saveWorkingDraft(context,draft);
+            assertTrue(RecoveryVault.hasWorkingDraft(context));
+            assertEquals("Spremljen radni nacrt",
+                RecoveryVault.readWorkingDraft(context).getString("notes"));
+            File file=new File(context.getFilesDir(),"recovery/working-draft.fv");
+            byte[] damaged;
+            try(java.io.FileInputStream in=new java.io.FileInputStream(file)){
+                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                byte[] part=new byte[1024];int n;
+                while((n=in.read(part))!=-1)buffer.write(part,0,n);
+                damaged=buffer.toByteArray();
+            }
+            damaged[damaged.length-1]^=1;
+            try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)){
+                out.write(damaged);out.getFD().sync();
+            }
+            try{
+                RecoveryVault.readWorkingDraft(context);
+                fail("Tampered AES-GCM draft must never be accepted");
+            }catch(javax.crypto.AEADBadTagException expected){
+                // Android Keystore authenticates the complete encrypted working draft.
+            }
+            RecoveryVault.saveWorkingDraft(context,draft);
+            assertEquals("Spremljen radni nacrt",
+                RecoveryVault.readWorkingDraft(context).getString("notes"));
+            RecoveryVault.clearWorkingDraft(context);
+            assertFalse(RecoveryVault.hasWorkingDraft(context));
+        }finally{context.clean();}
+    }
 
 }

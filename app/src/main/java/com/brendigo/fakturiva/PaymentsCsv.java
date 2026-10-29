@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.ArrayList;
 
 /** Local, UTF-8 Croatian Excel-friendly payment CSV export. */
 public final class PaymentsCsv {
@@ -14,9 +15,26 @@ public final class PaymentsCsv {
     static String cell(String raw){
         String value=raw==null?"":raw.replace("\r"," ").replace("\n"," ");
         // Prevent spreadsheet formula injection via client names and identifiers.
-        if(!value.isEmpty() && ("=+-@".indexOf(value.charAt(0))>=0 ||
-            value.charAt(0)=='\t'))value="'"+value;
+        // Some spreadsheet importers ignore leading whitespace before a formula.
+        int position=0;
+        while(position<value.length() && Character.isWhitespace(value.charAt(position)))
+            position++;
+        if(position<value.length() && "=+-@".indexOf(value.charAt(position))>=0)
+            value="'"+value;
+        else if(!value.isEmpty() && value.charAt(0)=='\t')
+            value="'"+value;
         return "\""+value.replace("\"","\"\"")+"\"";
+    }
+    /** A null month includes all transactions; other values select the shown month. */
+    public static List<Store.Payment> forMonth(List<Store.Payment> payments,String yearMonth){
+        if(yearMonth!=null && !yearMonth.matches("[0-9]{4}-(0[1-9]|1[0-2])"))
+            throw new IllegalArgumentException("Neispravan mjesec izvoza");
+        List<Store.Payment> result=new ArrayList<>();
+        for(Store.Payment payment:payments){
+            if(yearMonth==null || (payment.paidOn!=null && payment.paidOn.startsWith(yearMonth)))
+                result.add(payment);
+        }
+        return result;
     }
     public static void write(List<Store.Payment> payments,OutputStream output) throws IOException{
         // UTF-8 BOM is intentional for desktop Excel's Croatian locale.

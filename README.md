@@ -18,11 +18,11 @@ Sve što vam treba za pripremu ponuda i računa, evidenciju klijenata i pregled 
 
 | 🧾 **Računi** | 📑 **Ponude** | 👥 **Klijenti** |
 | :-- | :-- | :-- |
-| Sastavite račun, uredite nacrt i evidentirajte naplatu. | Izradite ponudu, pregledajte je i pretvorite u račun. | Sačuvajte kontakte, adrese i identifikacijske podatke partnera. |
+| Sastavite račun, uredite nacrt i evidentirajte naplatu. | Izradite ponudu, pregledajte je i pretvorite u račun. | Upravljajte kontaktima i poslovnim podacima te pratite račune i naplate po klijentu. |
 
 | 🛍️ **Artikli i usluge** | 📊 **Izvještaji** | 📄 **PDF** |
 | :-- | :-- | :-- |
-| Pripremite katalog proizvoda, usluga i cijena. | Pratite dokumente, uplate i nenaplaćene iznose. | Spremite i podijelite čitljive dokumente izravno s uređaja. |
+| Pretražujte i uređujte artikle, usluge, cijene i PDV stope. | Birajte mjesec, pratite račune i pogledajte šestomjesečni pregled naplate. | Spremite i podijelite čitljive dokumente izravno s uređaja. |
 
 ## Profesionalni dokumenti s vašim identitetom
 
@@ -70,7 +70,7 @@ Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — po
 <p align="center">
   <img src="docs/screenshots/01_pocetni_zaslon.png" alt="Fakturiva — 01 pocetni zaslon" width="180">
   <img src="docs/screenshots/02_dobrodosli.png" alt="Fakturiva — 02 dobrodosli" width="180">
-  <img src="docs/screenshots/03_prijava.png" alt="Fakturiva — 03 prijava" width="180">
+  <img src="docs/screenshots/03_prijava.png" alt="Fakturiva — 03 uvodni zaslon bez obvezne prijave" width="180">
   <img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — 04 pocetna" width="180">
 </p>
 
@@ -104,13 +104,15 @@ Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — po
 
 </details>
 
-Svi prikazi su **stvarne snimke nativne Android aplikacije na emulatoru**, bez generiranih marketinških maketa. Aplikacija se kontinuirano usklađuje s referentnim dizajnom.
+**Upoznajte Fakturivu kroz stvarne prikaze njezinih Android zaslona.** Od prve ponude do evidencije naplate — sve na jednom mjestu.
 
 ## Preuzimanje
 
 [**GitHub izdanja za Android (APK i AAB)**](https://github.com/bren-wp/Fakturiva/releases)
 
 Android 7.0 ili noviji. Uz svako izdanje navedeno je je li APK debug-potpisan i je li AAB potpisan za produkcijsko izdavanje. Izravni Play Store upload zahtijeva odgovarajući postojeći ključ i dodatne produkcijske provjere.
+
+**Važno pri nadogradnji razvojne verzije:** debug-potpisani APK iz različitih izdanja možda neće imati isti ključ. Nemojte deinstalirati postojeću aplikaciju prije izvoza i provjere šifrirane kopije izvan uređaja. Za pouzdane produkcijske nadogradnje potreban je stabilan produkcijski potpisni ključ.
 
 **Važno za hrvatsko tržište:** Fakturiva trenutačno ne provodi fiskalizaciju ni razmjenu strukturiranih eRačuna. Izvezeni PDF nije fiskaliziran račun niti strukturirani eRačun. Prije korištenja u zakonski obveznim poslovnim procesima treba implementirati i provjeriti primjenjive zakonske zahtjeve.
 
