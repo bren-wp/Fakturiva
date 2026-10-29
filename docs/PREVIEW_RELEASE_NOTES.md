@@ -1,32 +1,27 @@
-# Fakturiva v0.6.0-preview.2 — Android razvojno izdanje
+# Fakturiva v0.7.0-preview.1 — native Android UI refresh
 
-**Računi i ponude, jednostavno.** Native Android aplikacija s lokalnom SQLite pohranom, osobnim poslovnim profilom, evidencijom klijenata, naplatom i PDF dokumentima bez obveznog oblaka.
+**Računi i ponude, jednostavno.** Offline-first Android aplikacija za klijente, račune, ponude, katalog, naplatu, izvještaje i PDF dokumente.
 
-## Novo u v0.6
+### Novo
+- Potpuno preuređen ekran klijenta: avatar, broj računa i stvarno naplaćen iznos, poslovni podaci, povijest dokumenata.
+- Preuređen ekran izvještaja: točno fakturirani i naplaćeni iznosi te šestomjesečni graf na temelju stvarnih SQLite evidencija.
+- Katalog artikala i usluga: funkcionalna pretraga te uređivanje naziva, cijene i PDV stope bez promjene povijesnih računa i ponuda.
+- Grupirane postavke s funkcionalnim redovima i prebacivanjem teme.
+- Native pozdravni ekran s originalnim Fakturiva brendom i ilustracijom dokumenta izrađenom Android Canvasom.
+- Ujednačen prikaz koraka izrade računa i ponuda.
+- Ispravljena navigacija na prethodni ekran i sigurnost prilikom otvaranja novog računa s nedovršenim nacrtom.
+- eRačuni i fiskalizacija: točni pokazatelji profila i jasne upute; ne prikazuje se nepostojeće slanje.
+- Dodani instrumentacijski testovi koji potvrđuju da uređivanje kataloga ne mijenja izdane račune.
 
-- Ispravljeno odsijecanje natpisa brzih radnji na početnom i tamnom zaslonu na temelju stvarnog emulatorskog testa.
-- U marketing README ugrađeno svih 20 stvarnih Android screenshots, ne makete.
+### Android paketi
+- `Fakturiva-v0.7.0-preview.1-debug.apk` — debug-potpisan APK za testiranje.
+- `Fakturiva-v0.7.0-preview.1-DEBUG-SIGNED.aab` — AAB s debug ključem, NIJE produkcijski Play Store upload.
+- `Fakturiva-v0.7.0-preview.1-UNSIGNED.aab` — nepotpisani release bundle.
+- `SHA256SUMS.txt`.
 
-- Tri stvarna prikaza naplate: sve uplate, tekući mjesec i nenaplaćeni računi.
-- Izvoz evidencije uplata u lokalni UTF-8 CSV; klijentski unosi zaštićeni od izvršavanja formula u tabličnom programu.
-- Ugrađeni Android PdfRenderer za pregled pravog PDF-a računa i ponude, s povezanim akcijama spremanja i dijeljenja.
-- Bolja validacija novčane uplate i datuma bez gubitka unosa u obrascu.
-- Tamna tema usklađena s uzorkovanim RGB vrijednostima korisnikovih izvornih zaslona.
-- Stroga provjera financijskih iznosa pri povratu sigurnosne kopije; odbijanje neispravne kopije i oporavak Android AtomicFile povijesne kopije.
-- Regresijski Android testovi: višestranični PDF, djelomična uplata, dvostruko numeriranje, ponovno otvaranje baze i oporavak.
-- Postupak za testiranje na stvarnim fizičkim Android uređajima u `docs/PHYSICAL_DEVICE_ACCEPTANCE.md`.
+### Ograničenja
+Ovo je razvojna verzija. Nije dokazano pixel-perfect 1:1 svih 20 originalnih PNG ekrana niti odsutnost svih grešaka. Za produkciju nedostaju provjere na fizičkim Android uređajima, pravilno produkcijsko potpisivanje i, ovisno o poslovanju, fiskalizacija te strukturirani eRačun. PDF nije fiskalizirani račun niti eRačun.
 
-## Što je u paketu
+Redovito izvozite verificiranu šifriranu kopiju izvan telefona. Nulti rizik od gubitka podataka na jednom uređaju nije moguć.
 
-- `Fakturiva-v0.6.0-preview.2-debug.apk` — APK potpisan Android debug ključem, **isključivo za testiranje**.
-- `Fakturiva-v0.6.0-preview.2-DEBUG-SIGNED.aab` — razvojni AAB s debug ključem, **nije produkcijski Play Store paket**.
-- `Fakturiva-v0.6.0-preview.2-UNSIGNED.aab` — release bundle bez produkcijskog potpisa, ne može se izravno poslati na Play bez ispravnog ključa.
-- `SHA256SUMS.txt` — provjera integriteta.
-
-## Status kvalitete
-
-Snimke svih 20 originalnih referenci uspoređuju se sa stvarnim Android emulatorskim snimkama. **Potpuna 1:1 podudarnost nije potvrđena.** Testiranje na fizičkim uređajima nije izvršeno u ovom okruženju i preduvjet je za produkcijsko izdanje.
-
-Fakturiva zasad **ne implementira fiskalizaciju ni razmjenu strukturiranih eRačuna**. Izvezeni PDF nije dokaz fiskalizacije. Nijedna aplikacija s isključivo lokalnom pohranom ne može jamčiti da podaci neće biti izgubljeni pri gubitku ili brisanju uređaja; izvezite provjerene šifrirane kopije izvan telefona.
-
-**Fakturiva by Brendigo**.
+**Fakturiva by Brendigo.**
