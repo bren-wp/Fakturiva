@@ -52,7 +52,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/screenshots/
-          git diff --cached --quiet || git commit -m "docs: add genuine Android emulator screenshots"
+          git diff --cached --quiet || git commit -m "docs: refresh genuine Android screen gallery"
+          # CI captures can overlap with updates in the open PR. Rebase only
+          # the screenshot commit onto the latest branch head, never force-push.
+          git fetch origin feature/v0.7-pixel-perfect-ui-overhaul
+          git rebase origin/feature/v0.7-pixel-perfect-ui-overhaul
           if ! git push origin HEAD:feature/v0.7-pixel-perfect-ui-overhaul; then
             echo "::warning::Screenshots captured and uploaded to Actions artifacts. Commit needs GitHub Actions write permission."
             exit 1
