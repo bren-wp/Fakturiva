@@ -1229,26 +1229,50 @@ public final class MainActivity extends Activity {
         catch(Exception ignored){return "Android";}
     }
     private void settings(){
-        setup("settings",true);toolbar("Postavke","Upravljajte svojom aplikacijom",false);
-        LinearLayout brand=card();brand.setBackground(shape(NAVY,17));
-        brand.addView(label("Fakturiva",22,WHITE,true));gap(brand,5);
-        brand.addView(label("Računi i ponude, jednostavno.",12,0xffc7d8ec,false));
-        place(body,brand);gap(body,13);
-        settingRow("▤  Tvrtka i poslovni podaci","Identitet izdavatelja",this::company);
-        settingRow("♧  Artikli i usluge","Katalog poslovanja",this::catalog);
-        settingRow("▣  Izvještaji","Statistika prihoda i naplate",this::reports);
-        settingRow("◈  eRačuni i fiskalizacija","Objašnjenje ograničenja",this::eracun);
-        settingRow("⇩  Sigurnosna kopija","Zaštita i oporavak podataka",this::backupScreen);
-        settingRow("◐  Tamna tema","Prebaci prikaz aplikacije",()->{
+        setup("settings",true);
+        toolbar("Postavke","Upravljajte svojom aplikacijom",false);
+        LinearLayout brand=horizontal();pad(brand,15,15);
+        brand.setBackground(shape(NAVY,19));
+        ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.brand_mark);
+        brand.addView(mark,lp(57,57));
+        LinearLayout brandText=vertical();pad(brandText,11,0);
+        brandText.addView(label("Fakturiva",20,WHITE,true));
+        brandText.addView(label("Postavke aplikacije",12,0xffb6cbe2,false));
+        brand.addView(brandText,new LinearLayout.LayoutParams(0,-2,1));
+        brand.addView(label("›",23,0xffb6cbe2,true));
+        place(body,brand);gap(body,14);
+
+        LinearLayout options=card();pad(options,0,2);
+        place(body,options);
+        settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa, OIB, IBAN",this::company);
+        settingRow(options,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
+        settingRow(options,"▥","Izvještaji","Analitika računa i naplate",this::reports);
+        settingRow(options,"⇄","eRačuni i fiskalizacija","Trenutačno stanje integracije",this::eracun);
+        settingRow(options,"♢","Izvoz i sigurnosne kopije","Zaštita i oporavak dokumenata",this::backupScreen);
+        settingRow(options,"☼","Izgled aplikacije",dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
             dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
         });
-        gap(body,16);caption(body,"Fakturiva "+getPackageVersion()+" · Brendigo · Podaci ostaju na uređaju");
+        gap(body,17);
+        caption(body,"Fakturiva "+getPackageVersion()+" · Brendigo");
+        gap(body,19);
     }
-    private void settingRow(String title,String subtitle,Runnable action){
-        LinearLayout c=card();LinearLayout row=horizontal();LinearLayout text=vertical();
-        text.addView(label(title,14,ink(),true));gap(text,5);text.addView(label(subtitle,11,sub(),false));
-        row.addView(text,new LinearLayout.LayoutParams(0,-2,1));row.addView(label("›",22,sub(),true));
-        place(c,row);place(body,c);gap(body,9);c.setOnClickListener(v->action.run());
+    private void settingRow(LinearLayout target,String symbol,String name,String subtitle,Runnable action){
+        if(target.getChildCount()>0){
+            View divider=new View(this);divider.setBackgroundColor(border());
+            LinearLayout.LayoutParams dividerLp=lp(-1,1);dividerLp.setMargins(dp(12),0,dp(12),0);
+            target.addView(divider,dividerLp);
+        }
+        LinearLayout row=horizontal();pad(row,13,13);
+        TextView mark=label(symbol,19,BLUE,true);
+        mark.setGravity(Gravity.CENTER);mark.setBackground(shape(dark?0xff293a60:0xffecf0ff,12));
+        row.addView(mark,lp(38,38));
+        LinearLayout info=vertical();pad(info,12,0);
+        info.addView(label(name,13,ink(),true));gap(info,3);
+        info.addView(label(subtitle,11,sub(),false));
+        row.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+        row.addView(label("›",22,sub(),false));
+        place(target,row);
+        row.setOnClickListener(v->action.run());
     }
     private void company(){
         setup("company",true);toolbar("Profil tvrtke","Podaci za dokumente",true);
