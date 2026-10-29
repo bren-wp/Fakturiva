@@ -376,6 +376,14 @@ public final class Store extends SQLiteOpenHelper {
         if(!table.equals("clients")&&!table.equals("catalog")&&!table.equals("documents")) return 0;
         return DatabaseUtils.longForQuery(getReadableDatabase(),"SELECT COUNT(*) FROM "+table,null);
     }
+    public long invoicedCentsMonth(String yearMonth){
+        if(yearMonth==null||!yearMonth.matches("[0-9]{4}-[0-9]{2}"))
+            throw new IllegalArgumentException("Neispravan mjesec izvještaja");
+        return DatabaseUtils.longForQuery(getReadableDatabase(),
+            "SELECT COALESCE(SUM(total_cents),0) FROM documents "+
+            "WHERE type='INVOICE' AND status IN ('ISSUED','PAID') "+
+            "AND substr(issue_date,1,7)=?",new String[]{yearMonth});
+    }
     public long invoicedCents() {
         return DatabaseUtils.longForQuery(getReadableDatabase(),
             "SELECT COALESCE(SUM(total_cents),0) FROM documents WHERE type='INVOICE' AND status IN ('ISSUED','PAID')",null);
