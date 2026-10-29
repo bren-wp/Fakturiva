@@ -29,6 +29,9 @@
 - `Fakturiva-v0.7.0-preview.2-UNSIGNED.aab` — nepotpisani release bundle.
 - `SHA256SUMS.txt`.
 
+### Nadogradnja bez gubitka podataka
+Razvojni APK i AAB koriste Android debug potpis. **Debug ključ između izdanja nije zajamčeno isti**: novu razvojnu verziju zato možda nećete moći instalirati preko stare bez pogreške potpisa. **Ne brišite postojeću aplikaciju s jedinim primjerkom računa ili ponuda.** Najprije izvezite šifriranu prijenosnu kopiju na sigurno mjesto izvan telefona, sačuvajte lozinku i provjerite oporavak na odvojenoj testnoj instalaciji. Produkcijske nadogradnje moraju koristiti stabilan, ispravno zaštićen potpisni ključ.
+
 ### Ograničenja
 Ovo je razvojna verzija. Nije dokazano pixel-perfect 1:1 svih 20 originalnih PNG ekrana niti odsutnost svih grešaka. Za produkciju nedostaju provjere na fizičkim Android uređajima, pravilno produkcijsko potpisivanje i, ovisno o poslovanju, fiskalizacija te strukturirani eRačun. PDF nije fiskalizirani račun niti eRačun.
 
