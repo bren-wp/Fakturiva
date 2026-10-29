@@ -206,5 +206,32 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
             }
         }finally{if(db!=null)db.close();context.clean();}
     }
+    public void testCatalogEditingDoesNotRewriteIssuedDocument() throws Exception {
+        IsolatedContext context=new IsolatedContext(getContext());
+        Store db=null;
+        try {
+            db=new Store(context);
+            db.setting("name","Testni izdavatelj");
+            db.setting("oib","12345678903");
+            db.setting("address","Rijeka");
+            long customer=db.saveClient("Klijent","","Rijeka","");
+            long productId=db.saveProduct("Stara usluga",12000,25);
+            Store.Item item=db.products().get(0);
+            long documentId=db.createDraft(Store.INVOICE,customer,
+                "2026-10-28","2026-11-28","2026-10-28","",
+                java.util.Arrays.asList(item));
+            db.confirm(documentId);
+            db.updateProduct(productId,"Nova usluga",19000,13);
+            assertEquals("Stara usluga",db.document(documentId).items.get(0).name);
+            assertEquals(12000L,db.document(documentId).items.get(0).unitCents);
+            assertEquals(25,db.document(documentId).items.get(0).taxRate);
+            assertEquals("Nova usluga",db.products().get(0).name);
+            assertEquals(19000L,db.products().get(0).unitCents);
+            assertEquals(13,db.products().get(0).taxRate);
+        } finally {
+            if(db!=null)db.close();
+            context.clean();
+        }
+    }
 
 }
