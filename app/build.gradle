@@ -1,15 +1,15 @@
 plugins { id 'com.android.application' }
 android {
     namespace 'com.brendigo.fakturiva'
-    compileSdk 35
+    compileSdk 36
     useLibrary "android.test.base"
     useLibrary "android.test.runner"
     defaultConfig {
         applicationId 'com.brendigo.fakturiva'
         minSdk 24
-        targetSdk 35
-        versionCode 11
-        versionName '0.9.0-preview.1'
+        targetSdk 36
+        versionCode 12
+        versionName '0.10.0-preview.1'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
     compileOptions {

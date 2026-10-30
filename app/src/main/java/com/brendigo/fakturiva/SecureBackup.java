@@ -15,6 +15,8 @@ import javax.crypto.spec.SecretKeySpec;
 public final class SecureBackup {
     private static final byte[] HEADER={'F','A','K','1'};
     private static final int ITERATIONS=210000;
+    private static final int MAX_FILE_BYTES=25_000_000;
+    private static final int OVERHEAD_BYTES=4+16+12+16;
     private SecureBackup(){}
     private static SecretKey key(char[] password,byte[] salt)throws Exception{
         if(password.length<10)throw new IllegalArgumentException("Lozinka mora imati barem 10 znakova");
@@ -25,6 +27,9 @@ public final class SecureBackup {
         }finally{spec.clearPassword();}
     }
     public static byte[] encrypt(byte[] plaintext,char[] password)throws Exception{
+        // Same capacity as decrypt: never issue a backup that cannot be restored.
+        if(plaintext==null||plaintext.length>MAX_FILE_BYTES-OVERHEAD_BYTES)
+            throw new IllegalArgumentException("Prevelika sigurnosna kopija");
         byte[] salt=new byte[16], nonce=new byte[12]; SecureRandom rnd=new SecureRandom();rnd.nextBytes(salt);rnd.nextBytes(nonce);
         Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE,key(password,salt),new GCMParameterSpec(128,nonce));
@@ -35,7 +40,7 @@ public final class SecureBackup {
         return out.toByteArray();
     }
     public static byte[] decrypt(byte[] data,char[] password)throws Exception{
-        if(data.length<48||data.length>25000000)throw new IllegalArgumentException("Neispravna ili prevelika sigurnosna kopija");
+        if(data==null||data.length<OVERHEAD_BYTES||data.length>MAX_FILE_BYTES)throw new IllegalArgumentException("Neispravna ili prevelika sigurnosna kopija");
         for(int i=0;i<HEADER.length;i++)if(data[i]!=HEADER[i])throw new IllegalArgumentException("Neispravan format sigurnosne kopije");
         byte[] salt=Arrays.copyOfRange(data,4,20),nonce=Arrays.copyOfRange(data,20,32);
         Cipher c=Cipher.getInstance("AES/GCM/NoPadding");
