@@ -45,7 +45,7 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private static final int BG=0xfff6f8fc, WHITE=Color.WHITE, NAVY=0xff14263f,
         TEXT=0xff253449, MUTED=0xff8592a5, BLUE=0xff5566f8,
-        TEAL=0xff14b9a4, LINE=0xffe9edf5, RED=0xffdb4c56;
+        TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103;
     private Store db; private SharedPreferences prefs;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
@@ -143,6 +143,20 @@ public final class MainActivity extends Activity {
         getWindow().setStatusBarColor(bg());getWindow().setNavigationBarColor(panel());
         getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         root=vertical();root.setBackgroundColor(bg());setContentView(root);
+        // API 35+ enforces edge-to-edge for targetSdk 35/36. Keep functional
+        // navigation and forms away from both gesture and three-button bars.
+        // Return unconsumed insets so the IME and children retain their callbacks.
+        if(android.os.Build.VERSION.SDK_INT>=35){
+            View decor=getWindow().getDecorView();
+            decor.setOnApplyWindowInsetsListener((view,insets)->{
+                android.graphics.Insets bars=insets.getInsets(
+                    android.view.WindowInsets.Type.systemBars()|
+                    android.view.WindowInsets.Type.displayCutout());
+                root.setPadding(bars.left,bars.top,bars.right,bars.bottom);
+                return insets;
+            });
+            decor.requestApplyInsets();
+        }
         contentFrame=new FrameLayout(this);
         root.addView(contentFrame,new LinearLayout.LayoutParams(-1,0,1));
         scroller=new ScrollView(this);scroller.setFillViewport(false);scroller.setClipToPadding(false);

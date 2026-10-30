@@ -43,6 +43,20 @@ public final class NativeCoreSmoke {
         require(rejected,"Tampered backup rejected");
         rejected=false;try{SecureBackup.decrypt(encrypted,"wrong-password".toCharArray());}catch(Exception expected){rejected=true;}
         require(rejected,"Wrong password rejected");
+        rejected=false;
+        byte[] wrongHeader=encrypted.clone();wrongHeader[0]^=1;
+        try{SecureBackup.decrypt(wrongHeader,password);}catch(Exception expected){rejected=true;}
+        require(rejected,"Backup header corruption rejected");
+        rejected=false;
+        try{SecureBackup.decrypt(Arrays.copyOf(encrypted,47),password);}catch(Exception expected){rejected=true;}
+        require(rejected,"Truncated backup rejected");
+        rejected=false;
+        try{SecureBackup.encrypt(new byte[25_000_000],password);}catch(IllegalArgumentException expected){rejected=true;}
+        require(rejected,"Unrestorable oversized backup blocked before encryption");
+        boolean overflow=false;
+        try{Money.cents("9999999999999999999999999999999");}
+        catch(ArithmeticException expected){overflow=true;}
+        require(overflow,"Money conversion overflow rejected");
         Arrays.fill(password,'\0');System.out.println("Fakturiva native core checks OK");
     }
 }
