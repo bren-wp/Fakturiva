@@ -1,63 +1,67 @@
 name: Verify native Android screens
 on:
-  push:
-    branches: [feature/v0.9-list-detail-pixel-polish]
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'ci/**'
+      - 'quality/**'
+      - '.github/workflows/screenshots.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   capture:
-    if: contains(github.event.head_commit.message, '[capture]') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: feature/v0.9-list-detail-pixel-polish
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '9.6.0'
+      - name: Install Android platform
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          "$MANAGER" "platforms;android-36" "build-tools;36.0.0"
       - name: Build Android application
-        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Enable emulator hardware acceleration
         run: |
           if [ -e /dev/kvm ]; then
             sudo chmod 666 /dev/kvm
             ls -l /dev/kvm
           fi
-      - name: Capture genuine emulator screenshots
+      - name: Run instrumentation tests and capture genuine APK screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 29
+          api-level: 36
           arch: x86_64
-          target: default
+          target: google_apis
           profile: pixel_2
           ram-size: 3072M
           disk-size: 4096M
-          disable-animations: false
+          disable-animations: true
           script: |
             gradle :app:connectedDebugAndroidTest --stacktrace
             bash ci/capture_screenshots.sh
-      - uses: actions/upload-artifact@v4
+      - name: Upload real screenshots and instrumentation results
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: Fakturiva-native-screen-captures
-          path: docs/screenshots/*.png
-      - name: Commit verified screenshots to pull request
-        continue-on-error: true
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/screenshots/
-          git diff --cached --quiet || git commit -m "docs: refresh genuine Android screen gallery"
-          # CI captures can overlap with updates in the open PR. Rebase only
-          # the screenshot commit onto the latest branch head, never force-push.
-          git fetch origin feature/v0.9-list-detail-pixel-polish
-          git rebase origin/feature/v0.9-list-detail-pixel-polish
-          if ! git push origin HEAD:feature/v0.9-list-detail-pixel-polish; then
-            echo "::warning::Screenshots captured and uploaded to Actions artifacts. Commit needs GitHub Actions write permission."
-            exit 1
-          fi
+          name: Fakturiva-Android36-real-screenshots
+          path: |
+            docs/screenshots/*.png
+            build/screenshot-errors.log
+            app/build/reports/androidTests/connected/**
+          if-no-files-found: warn
+      # Original 20 reference PNGs are private user-supplied assets and are
+      # NOT in the repository. Do not report fabricated pixel parity here.
+      # Download this artifact and compare it to the owner's original ZIP with
+      # quality/pixel_audit.py, which writes MAE, SSIM and per-pixel diff images.

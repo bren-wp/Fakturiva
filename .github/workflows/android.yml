@@ -20,12 +20,12 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '9.6.0'
       - name: Install Android platform
         run: |
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
-          "$MANAGER" "platforms;android-35" "build-tools;35.0.0"
+          "$MANAGER" "platforms;android-36" "build-tools;36.0.0"
       - name: Verify monetary and encrypted-backup core
         run: |
           mkdir -p build/smoke
