@@ -48,6 +48,7 @@ public final class MainActivity extends Activity {
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103;
     private Store db; private SharedPreferences prefs;
+    private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
     private int paymentFilter=0;
     private String pendingPaymentsCsvMonth=null;
@@ -63,6 +64,13 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b){super.onCreate(b);
         db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
+        // Android 13+ gesture back bypasses deprecated Activity.onBackPressed.
+        // Use the platform callback so no AndroidX runtime dependency is needed.
+        if(android.os.Build.VERSION.SDK_INT>=33){
+            systemBackCallback=()->handleBack();
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,systemBackCallback);
+        }
         dark=prefs.getBoolean("dark",false);
         if(b!=null){
             pendingPdfId=b.getLong("pendingPdfId",-1);
@@ -105,7 +113,12 @@ public final class MainActivity extends Activity {
             return false;
         }
     }
-    @Override protected void onDestroy(){if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');db.close();super.onDestroy();}
+    @Override protected void onDestroy(){
+        if(android.os.Build.VERSION.SDK_INT>=33&&systemBackCallback!=null)
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
+        if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
+        db.close();super.onDestroy();
+    }
     private int bg(){return dark?0xff0d1728:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
     private int ink(){return dark?WHITE:TEXT;}
@@ -2171,9 +2184,15 @@ public final class MainActivity extends Activity {
     private void clearPass(){if(pendingPassword!=null){Arrays.fill(pendingPassword,'\0');pendingPassword=null;}}
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
-    @Override public void onBackPressed(){
-        if("home".equals(screen))super.onBackPressed();
+    private void handleBack(){
+        if("home".equals(screen))finish();
         else backFromToolbar();
+    }
+    // Compatibility for API 24–32 hardware/system Back keys. On API 33+
+    // the registered OnBackInvokedCallback above handles predictive gestures.
+    @android.annotation.SuppressLint("GestureBackNavigation")
+    @Override public void onBackPressed(){
+        handleBack();
     }
     private final class RevenueBars extends View{
         final android.graphics.Paint p=new android.graphics.Paint(3);
