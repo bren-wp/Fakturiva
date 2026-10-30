@@ -31,6 +31,13 @@ jobs:
           mkdir -p build/smoke
           javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/Money.java app/src/main/java/com/brendigo/fakturiva/SecureBackup.java app/src/main/java/com/brendigo/fakturiva/Oib.java app/src/main/java/com/brendigo/fakturiva/IsoDates.java app/src/main/java/com/brendigo/fakturiva/Iban.java quality/NativeCoreSmoke.java
           java -cp build/smoke com.brendigo.fakturiva.NativeCoreSmoke
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify visual auditor arithmetic (not app parity)
+        run: |
+          python -m pip install -r quality/requirements.txt
+          python -m unittest discover -s quality -p 'test_*.py' -v
       - name: Compile app and lint
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
