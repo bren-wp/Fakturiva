@@ -380,7 +380,7 @@ public final class MainActivity extends Activity {
         setup("welcome",false);
         root.setBackgroundColor(WHITE);
         body.setBackgroundColor(WHITE);
-        pad(body,25,20);
+        pad(body,25,27);
         LinearLayout brand=horizontal();
         ImageView mark=new ImageView(this);
         mark.setImageResource(R.drawable.brand_mark);brand.addView(mark,lp(43,43));
@@ -388,14 +388,14 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(10);
         brand.addView(brandName,brandLp);
         place(body,brand);gap(body,20);
-        body.addView(new WelcomeIllustration(this),lp(-1,330));gap(body,24);
+        body.addView(new WelcomeIllustration(this),lp(-1,345));gap(body,30);
         place(body,label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true));gap(body,11);
         TextView heading=label("Manje papirologije.\nViše vremena za posao.",26,NAVY,true);
         heading.setLineSpacing(dp(3),1.0f);
         place(body,heading);gap(body,11);
         TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",13,MUTED,false);
         info.setLineSpacing(dp(3),1.0f);place(body,info);
-        gap(body,14);
+        gap(body,19);
         LinearLayout dots=horizontal();
         for(int n=0;n<3;n++){
             View dot=new View(this);
