@@ -62,7 +62,12 @@ public final class ScreenshotHarness {
         switch(page){
             case "01":call(a,"splash",new Class<?>[]{boolean.class},false);break;
             case "02":call(a,"welcome");break;
-            case "03":call(a,"securityScreen",new Class<?>[]{boolean.class,boolean.class},false,false);break;
+            case "03":
+                call(a,"securityScreen",new Class<?>[]{boolean.class,boolean.class},false,false);
+                // Genuine emulator QA screenshot only. Production screen keeps
+                // FLAG_SECURE to prevent sensitive data in recents/captures.
+                a.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+                break;
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
             case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
