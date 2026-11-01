@@ -92,5 +92,6 @@ public final class ScreenshotHarness {
             case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }
+        Log.i("FakturivaQA","QA_SCREEN_READY "+page);
     }
 }
