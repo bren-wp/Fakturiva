@@ -34,8 +34,8 @@ public final class ScreenshotHarness {
             store.setting("iban","HR0000000000000000000");
             store.saveClient("Studio Primjer d.o.o.","12345678903","Primjer ulica 3, Rijeka","studio@example.invalid");
             store.saveClient("Obrt Primjer","12345678903","Trg Primjera 8, Rijeka","obrt@example.invalid");
-            store.saveProduct("Dizajn web stranice",100000,25);
-            store.saveProduct("Tehnička podrška",5000,25);
+            store.saveProduct("Dizajn web stranice",100000,25,"SERVICE","kom");
+            store.saveProduct("Tehnička podrška",5000,25,"SERVICE","sat");
         }
         if(store.documents(Store.INVOICE).isEmpty()){
             long client=store.clients().get(0).id;
@@ -95,7 +95,10 @@ public final class ScreenshotHarness {
             case "12":call(a,"clients");break;
             case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
             case "14":call(a,"catalog");break;
-            case "15":call(a,"reports");break;
+            case "15":
+                ((java.util.Calendar)get(a,"reportMonth")).set(2026,java.util.Calendar.OCTOBER,1);
+                call(a,"reports");
+                break;
             case "16":call(a,"payments");break;
             case "17":call(a,"eracun");break;
             case "18":call(a,"settings");break;
