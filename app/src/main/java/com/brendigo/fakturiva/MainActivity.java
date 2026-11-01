@@ -1670,6 +1670,11 @@ public final class MainActivity extends Activity {
         String issuer=d.issuerName==null||d.issuerName.trim().isEmpty()?
             "Izdavatelj nije upisan":d.issuerName;
         place(paper,label(issuer,11,0xff647b97,false));
+        if(Store.QUOTE.equals(d.type) && d.quoteTitle!=null &&
+            !d.quoteTitle.trim().isEmpty()){
+            gap(paper,8);
+            place(paper,label(d.quoteTitle,14,NAVY,true));
+        }
         if(d.issuerAddress!=null&&!d.issuerAddress.isEmpty())
             place(paper,label(d.issuerAddress,10,0xff8798ad,false));
         gap(paper,20);
