@@ -49,7 +49,9 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.QUOTE).isEmpty()){
             Store.Item item=new Store.Item();item.name="Izrada web stranice";item.qtyMilli=1000;item.unitCents=80000;item.taxRate=25;
-            long id=store.createDraft(Store.QUOTE,store.clients().get(0).id,"2026-10-28","2026-11-28","Primjer ponude",Arrays.asList(item));
+            long id=store.createDraft(Store.QUOTE,store.clients().get(0).id,
+                "2026-10-28","2026-11-28","2026-11-15",
+                "Primjer ponude","Usluge digitalnog marketinga",Arrays.asList(item));
             store.confirm(id);
         }
     }
@@ -79,7 +81,11 @@ public final class ScreenshotHarness {
                 call(a,"editItemsScreen");break;
             case "08":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.INVOICE).get(0).id);break;
             case "09":call(a,"documents",new Class<?>[]{String.class},Store.QUOTE);break;
-            case "10":call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);break;
+            case "10":
+                call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);
+                set(a,"draftQuoteTitle","Usluge digitalnog marketinga");
+                call(a,"editDocumentScreen");
+                break;
             case "11":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.QUOTE).get(0).id);break;
             case "12":call(a,"clients");break;
             case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
