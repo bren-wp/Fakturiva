@@ -2887,8 +2887,29 @@ public final class MainActivity extends Activity {
         row.setOnClickListener(v->action.run());
     }
     private void company(){
-        setup("company",true);toolbar("Profil tvrtke","Podaci za dokumente",true);
-        LinearLayout hero=horizontal();pad(hero,15,15);
+        setup("company",true);
+        pad(body,17,14);
+        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView back=icon(R.drawable.ic_back,sub());
+        back.setPadding(dp(8),dp(8),dp(8),dp(8));
+        back.setContentDescription("Natrag u postavke");
+        back.setOnClickListener(v->settings());
+        header.addView(back,lp(38,46));
+        LinearLayout headings=vertical();
+        headings.addView(label("Profil tvrtke",23,ink(),true));gap(headings,4);
+        headings.addView(label("Podaci za dokumente",11,sub(),false));
+        header.addView(headings,new LinearLayout.LayoutParams(0,-2,1));
+        TextView more=label("•••",18,sub(),true);more.setGravity(Gravity.CENTER);
+        more.setBackground(shape(panel(),12));
+        more.setContentDescription("Informacije o profilu tvrtke");
+        more.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Podaci izdavatelja")
+            .setMessage("Promjene će se primijeniti na nove dokumente. " +
+                "Podaci na već potvrđenim dokumentima neće se promijeniti.")
+            .setPositiveButton("U redu",null).show());
+        header.addView(more,lp(43,43));
+        place(body,header);gap(body,19);
+        LinearLayout hero=horizontal();pad(hero,13,12);
         background(hero,dark?0xff26365a:0xffe9edff,18);
         ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.brand_mark);
         hero.addView(brand,lp(60,60));
@@ -2898,24 +2919,62 @@ public final class MainActivity extends Activity {
         gap(heroText,5);
         heroText.addView(label("Profil izdavatelja računa",11,sub(),false));
         hero.addView(heroText,new LinearLayout.LayoutParams(0,-2,1));
-        place(body,hero);gap(body,14);
-        caption(body,"Podaci se prikazuju na novim računima i ponudama. Potvrđeni dokumenti trajno čuvaju podatke iz trenutka potvrde.");
+        place(body,hero);gap(body,13);
+        caption(body,"Podaci se primjenjuju na nove račune i ponude. Potvrđeni dokumenti čuvaju izvorne podatke izdavatelja.");
         gap(body,14);
         LinearLayout form=card();
-        title(form,"Osnovni podaci");
+        place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,12);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note"};
         String[] labels={"Naziv tvrtke / obrta ili ime i prezime","OIB (11 znamenaka)","PDV identifikacijski broj (ako se primjenjuje)","Ulica i kućni broj / adresa","Poštanski broj","Grad / mjesto","Država","E-mail","Telefon","Web stranica","IBAN","Naziv banke","BIC / SWIFT","Registarski podatak (npr. MBS)","Oznaka poslovnog prostora","Oznaka operatera","Način plaćanja","Poziv na broj / model plaćanja","Porezni status ili zakonska napomena"};
         EditText[] fields=new EditText[keys.length];
-        for(int i=0;i<keys.length;i++){
-            if(i==3||i==10||i==13||i==18){gap(form,14);}
-            if(i==3)title(form,"Sjedište i kontakt");
-            if(i==10)title(form,"Plaćanje i banka");
-            if(i==13)title(form,"Poslovni i porezni podaci");
-            fields[i]=field(labels[i],db.setting(keys[i]));
-            fieldLabel(form,labels[i],fields[i]);
-            if(i==7)fields[i].setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        // Keep all existing keys and persistence indexes; only reorder the UI.
+        int[][] sections={{0,1,3,7,8},{10,11,12,16,17},{2,4,5,6,9,13,14,15,18}};
+        String[] headings={"Podaci o tvrtki","Podaci za plaćanje","Dodatni poslovni podaci"};
+        for(int group=0;group<sections.length;group++){
+            LinearLayout card=group==0?form:card();
+            if(group>0){
+                place(card,label(headings[group],17,ink(),true));
+                gap(card,12);
+            }
+            for(int index:sections[group]){
+                fields[index]=field(labels[index],db.setting(keys[index]));
+                if(index==7){
+                    fields[index].setInputType(InputType.TYPE_CLASS_TEXT|
+                        InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+                }else if(index==1){
+                    fields[index].setInputType(InputType.TYPE_CLASS_NUMBER|
+                        InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+                    fields[index].setFilters(new android.text.InputFilter[]{
+                        new android.text.InputFilter.LengthFilter(11)
+                    });
+                }else if(index==8){
+                    fields[index].setInputType(InputType.TYPE_CLASS_PHONE);
+                    fields[index].setTransformationMethod(
+                        android.text.method.PasswordTransformationMethod.getInstance());
+                }
+                fieldLabel(card,labels[index],fields[index]);
+                if(index==1||index==8){
+                    final int fieldIndex=index;
+                    TextView reveal=label("Prikaži "+(index==1?"OIB":"telefon"),11,BLUE,true);
+                    reveal.setContentDescription("Prikaži ili sakrij "+
+                        (index==1?"OIB":"telefon"));
+                    reveal.setOnClickListener(v->{
+                        EditText value=fields[fieldIndex];
+                        boolean masked=value.getTransformationMethod() instanceof
+                            android.text.method.PasswordTransformationMethod;
+                        value.setTransformationMethod(masked?null:
+                            android.text.method.PasswordTransformationMethod.getInstance());
+                        value.setSelection(value.length());
+                        reveal.setText((masked?"Sakrij ":"Prikaži ")+
+                            (fieldIndex==1?"OIB":"telefon"));
+                    });
+                    place(card,reveal);gap(card,8);
+                }
+            }
+            if(group==0)place(body,form);
+            else place(body,card);
+            gap(body,14);
         }
-        place(body,form);gap(body,16);
         Runnable saveCompany=()->{
             try{
                 String name=fields[0].getText().toString().trim();
