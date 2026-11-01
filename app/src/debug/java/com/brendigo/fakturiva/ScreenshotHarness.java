@@ -61,7 +61,8 @@ public final class ScreenshotHarness {
         String page=screen==null?"04":screen;
         switch(page){
             case "01":call(a,"splash",new Class<?>[]{boolean.class},false);break;
-            case "02":case "03":call(a,"welcome");break;
+            case "02":call(a,"welcome");break;
+            case "03":call(a,"securityScreen",new Class<?>[]{boolean.class,boolean.class},false,false);break;
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
             case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
