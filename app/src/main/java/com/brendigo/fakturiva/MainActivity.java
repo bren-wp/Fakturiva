@@ -46,7 +46,7 @@ public final class MainActivity extends Activity {
     private static final int BG=0xfff6f8fc, WHITE=Color.WHITE, NAVY=0xff14263f,
         TEXT=0xff253449, MUTED=0xff8592a5, BLUE=0xff5566f8,
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
-    private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103;
+    private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
     private Store db; private SharedPreferences prefs;
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
@@ -56,6 +56,9 @@ public final class MainActivity extends Activity {
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private String documentSearchQuery="";
     private boolean dark=false;
+    // 1=enable OS credential lock, 2=unlock, 3=disable.
+    private int deviceAuthAction=0;
+    private boolean securityFromSettings=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
     private String draftIssue="",draftDue="",draftSupply="",draftNote="";
     private final ArrayList<Store.Item> draftItems=new ArrayList<>();
@@ -75,6 +78,8 @@ public final class MainActivity extends Activity {
         if(b!=null){
             pendingPdfId=b.getLong("pendingPdfId",-1);
             pendingPaymentsCsvMonth=b.getString("pendingPaymentsCsvMonth");
+            deviceAuthAction=b.getInt("deviceAuthAction",0);
+            securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
         if(runScreenshotHarness())return;
         try{
@@ -90,6 +95,8 @@ public final class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle outState){
         outState.putLong("pendingPdfId",pendingPdfId);
         outState.putString("pendingPaymentsCsvMonth",pendingPaymentsCsvMonth);
+        outState.putInt("deviceAuthAction",deviceAuthAction);
+        outState.putBoolean("securityFromSettings",securityFromSettings);
         // Never persist the backup password, even in the Android Bundle.
         super.onSaveInstanceState(outState);
     }
@@ -370,8 +377,11 @@ public final class MainActivity extends Activity {
     private void finishSplash(){
         if(!"splash".equals(screen)||isFinishing()||isDestroyed())return;
         if(prefs.getBoolean("welcomed",false)){
-            navigate("home");
-            offerWorkingDraftRecovery();
+            if(prefs.getBoolean("device_lock",false))securityScreen(true,false);
+            else{
+                navigate("home");
+                offerWorkingDraftRecovery();
+            }
         }else{
             welcome();
         }
@@ -403,12 +413,104 @@ public final class MainActivity extends Activity {
             LinearLayout.LayoutParams p=lp(n==0?23:7,7);p.rightMargin=dp(6);dots.addView(dot,p);
         }
         place(body,dots);gap(body,23);
-        button(body,"›  Započni",()->{
-            prefs.edit().putBoolean("welcomed",true).apply();navigate("home");
-        });
+        button(body,"›  Započni",()->securityScreen(false,false));
         gap(body,11);
         TextView note=label("Bez registracije. Vaši podaci ostaju na uređaju.",11,MUTED,false);
         note.setGravity(Gravity.CENTER);place(body,note);gap(body,23);
+    }
+    /**
+     * Screen 03 is real offline protection, never fake cloud authentication.
+     * The operating system verifies credentials: we store no PIN or biometrics.
+     */
+    private void securityScreen(boolean locked,boolean fromSettings){
+        securityFromSettings=fromSettings;
+        setup(locked?"security_unlock":"security_setup",false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        root.setBackgroundColor(WHITE);
+        body.setBackgroundColor(WHITE);
+        pad(body,25,49);
+        ImageView mark=new ImageView(this);
+        mark.setImageResource(R.drawable.brand_mark);
+        LinearLayout.LayoutParams markLp=lp(72,72);
+        body.addView(mark,markLp);
+        gap(body,26);
+        place(body,label(locked?"Otključajte Fakturivu":"Zaštitite svoje poslovanje",26,NAVY,true));
+        gap(body,9);
+        place(body,label(locked?
+            "Potvrdite identitet zaključavanjem uređaja.":
+            "Vaši računi i klijenti ostaju lokalno na uređaju.",13,MUTED,false));
+        gap(body,62);
+
+        place(body,label("SIGURNOST APLIKACIJE",11,0xff6a81a5,true));
+        gap(body,12);
+        LinearLayout guard=vertical();
+        guard.setBackground(outlined(WHITE));
+        pad(guard,15,18);
+        place(guard,label("Zaštita pri ponovnom otvaranju",15,NAVY,true));
+        gap(guard,7);
+        place(guard,label("Koristi PIN, uzorak ili lozinku koju je postavio Android.",12,MUTED,false));
+        place(body,guard);
+        gap(body,22);
+        LinearLayout local=vertical();
+        local.setBackground(outlined(WHITE));
+        pad(local,15,17);
+        place(local,label("Bez registracije i cloud računa",14,NAVY,true));
+        gap(local,7);
+        place(local,label("Fakturiva ne sprema vaš PIN. Provjeru identiteta obavlja sustav.",12,MUTED,false));
+        place(body,local);
+        gap(body,34);
+
+        android.app.KeyguardManager manager=(android.app.KeyguardManager)
+            getSystemService(Context.KEYGUARD_SERVICE);
+        boolean secure=manager!=null&&manager.isDeviceSecure();
+        if(locked){
+            button(body,"Otključaj uređajem",()->confirmDeviceCredential(2));
+        }else if(prefs.getBoolean("device_lock",false)){
+            button(body,"Isključi zaštitu",()->confirmDeviceCredential(3));
+        }else{
+            button(body,secure?"Uključi zaštitu uređajem":"Postavi zaštitu uređaja",
+                ()->confirmDeviceCredential(1));
+        }
+        gap(body,16);
+        if(!locked){
+            place(body,action(fromSettings?"Natrag na postavke":"Nastavi bez dodatne zaštite",
+                BLUE,false,()->{
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                    if(fromSettings)settings();
+                    else{
+                        prefs.edit().putBoolean("welcomed",true).apply();
+                        navigate("home");
+                        offerWorkingDraftRecovery();
+                    }
+                }));
+        }
+        gap(body,54);
+        TextView note=label("Vaši poslovni podaci ostaju pod vašom kontrolom.",11,MUTED,false);
+        note.setGravity(Gravity.CENTER);
+        place(body,note);
+    }
+    private void confirmDeviceCredential(int action){
+        android.app.KeyguardManager manager=(android.app.KeyguardManager)
+            getSystemService(Context.KEYGUARD_SERVICE);
+        if(manager==null||!manager.isDeviceSecure()){
+            new AlertDialog.Builder(this).setTitle("Uključite zaključavanje uređaja")
+                .setMessage("Najprije postavite PIN, lozinku ili uzorak u Android postavkama.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Postavke uređaja",(d,w)->
+                    startActivity(new Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS)))
+                .show();
+            return;
+        }
+        Intent request=manager.createConfirmDeviceCredentialIntent("Fakturiva",
+            action==2?"Potvrdite identitet za pristup podacima":
+                "Potvrdite identitet za promjenu zaštite");
+        if(request==null){toast("Provjera identiteta nije dostupna");return;}
+        deviceAuthAction=action;
+        try{startActivityForResult(request,DEVICE_AUTH_REQUEST);}
+        catch(android.content.ActivityNotFoundException e){
+            deviceAuthAction=0;
+            toast("Provjera identiteta nije dostupna na uređaju");
+        }
     }
     /** Entirely native, static illustration; all actions remain real UI controls. */
     private final class WelcomeIllustration extends View{
@@ -1906,6 +2008,7 @@ public final class MainActivity extends Activity {
         settingRow(options,"▥","Izvještaji","Analitika računa i naplate",this::reports);
         settingRow(options,"⇄","eRačuni i fiskalizacija","Trenutačno stanje integracije",this::eracun);
         settingRow(options,"♢","Izvoz i sigurnosne kopije","Zaštita i oporavak dokumenata",this::backupScreen);
+        settingRow(options,"◈","Zaštita pri otvaranju",prefs.getBoolean("device_lock",false)?"Aktivna zaštita uređajem":"Nije uključena",()->securityScreen(false,true));
         settingRow(options,"☼","Izgled aplikacije",dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
             dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
         });
@@ -2144,6 +2247,26 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int code,int result,Intent data){
         super.onActivityResult(code,result,data);
+        if(code==DEVICE_AUTH_REQUEST){
+            int completedAction=deviceAuthAction;
+            deviceAuthAction=0;
+            if(result!=RESULT_OK)return;
+            if(completedAction==1){
+                prefs.edit().putBoolean("device_lock",true).putBoolean("welcomed",true).apply();
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                if(securityFromSettings)settings();
+                else{navigate("home");offerWorkingDraftRecovery();}
+            }else if(completedAction==2){
+                if(!"security_unlock".equals(screen))return;
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                navigate("home");offerWorkingDraftRecovery();
+            }else if(completedAction==3){
+                prefs.edit().putBoolean("device_lock",false).apply();
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                settings();
+            }
+            return;
+        }
         if(result!=RESULT_OK||data==null||data.getData()==null){
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
             if(code==104)pendingPaymentsCsvMonth=null;
@@ -2200,7 +2323,12 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
     private void handleBack(){
-        if("home".equals(screen))finish();
+        if("security_unlock".equals(screen))finish();
+        else if("security_setup".equals(screen)){
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            if(securityFromSettings)settings();else welcome();
+        }
+        else if("home".equals(screen))finish();
         else backFromToolbar();
     }
     // Compatibility for API 24–32 hardware/system Back keys. On API 33+
