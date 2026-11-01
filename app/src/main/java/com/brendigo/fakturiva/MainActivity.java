@@ -1949,14 +1949,8 @@ public final class MainActivity extends Activity {
                 View row=grouped.getChildAt(i);
                 if(!(row.getTag() instanceof Store.Client))continue;
                 Store.Client candidate=(Store.Client)row.getTag();
-                String text=(candidate.name+" "+candidate.oib+" "+candidate.address+
-                    " "+candidate.email+" "+candidate.phone)
-                    .toLowerCase(Locale.forLanguageTag("hr-HR"));
-                boolean has=documented.contains(candidate.id);
-                boolean match=text.contains(term) &&
-                    ("Svi".equals(filter[0]) ||
-                        ("S dokumentima".equals(filter[0])&&has) ||
-                        ("Bez dokumenata".equals(filter[0])&&!has));
+                boolean match=clientMatches(candidate,term,filter[0],
+                    documented.contains(candidate.id));
                 row.setVisibility(match?View.VISIBLE:View.GONE);
                 if(match)visible++;
             }
@@ -2010,6 +2004,16 @@ public final class MainActivity extends Activity {
         floatingAction("Dodaj klijenta",this::addClient);
     }
 
+    /** Source-of-truth client filter, independent of duplicate client names. */
+    static boolean clientMatches(Store.Client c,String search,String view,boolean hasDocs){
+        String key=(c.name+" "+c.oib+" "+c.address+" "+c.email+" "+c.phone)
+            .toLowerCase(Locale.forLanguageTag("hr-HR"));
+        String term=search==null?"":search.trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
+        return key.contains(term) &&
+            ("Svi".equals(view) || ("S dokumentima".equals(view)&&hasDocs) ||
+                ("Bez dokumenata".equals(view)&&!hasDocs));
+    }
+
     /** Two-letter initials, safe for empty strings and short client names. */
     static String clientInitials(String name){
         if(name==null||name.trim().isEmpty())return "K";
@@ -2028,6 +2032,9 @@ public final class MainActivity extends Activity {
     static String clientCity(String address){
         if(address==null||address.trim().isEmpty())return "";
         String[] parts=address.split(",");
+        // A street address without a city separator is not a known locality.
+        if(parts.length==1)
+            return address.matches(".*[0-9].*")?"":address.trim();
         String last=parts[parts.length-1].trim();
         if(parts.length>1&&("Hrvatska".equalsIgnoreCase(last)||
             "Croatia".equalsIgnoreCase(last)))
