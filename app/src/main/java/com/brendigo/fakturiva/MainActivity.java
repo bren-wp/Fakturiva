@@ -1923,8 +1923,7 @@ public final class MainActivity extends Activity {
             TextView chevron=label("›",25,sub(),false);
             chevron.setGravity(Gravity.CENTER);
             row.addView(chevron,lp(20,39));
-            row.setTag((client.name+" "+client.oib+" "+client.address+" "+
-                client.email+" "+client.phone).toLowerCase(Locale.forLanguageTag("hr-HR")));
+            row.setTag(client);
             row.setContentDescription("Otvori klijenta: "+client.name);
             row.setFocusable(true);
             row.setOnClickListener(v->clientDetails(client));
@@ -1946,19 +1945,12 @@ public final class MainActivity extends Activity {
             int visible=0;
             for(int i=0;i<grouped.getChildCount();i++){
                 View row=grouped.getChildAt(i);
-                if(!(row.getTag() instanceof String))continue;
-                // Each client row is followed or preceded by a separator.
-                // The preceding separator will be hidden for the first visible row.
-                String text=(String)row.getTag();
-                int matchingIndex=-1;
-                for(int j=0;j<all.size();j++){
-                    Store.Client candidate=all.get(j);
-                    String key=(candidate.name+" "+candidate.oib+" "+candidate.address+
-                        " "+candidate.email+" "+candidate.phone)
-                        .toLowerCase(Locale.forLanguageTag("hr-HR"));
-                    if(key.equals(text)){matchingIndex=j;break;}
-                }
-                boolean has=matchingIndex>=0 && documented.contains(all.get(matchingIndex).id);
+                if(!(row.getTag() instanceof Store.Client))continue;
+                Store.Client candidate=(Store.Client)row.getTag();
+                String text=(candidate.name+" "+candidate.oib+" "+candidate.address+
+                    " "+candidate.email+" "+candidate.phone)
+                    .toLowerCase(Locale.forLanguageTag("hr-HR"));
+                boolean has=documented.contains(candidate.id);
                 boolean match=text.contains(term) &&
                     ("Svi".equals(filter[0]) ||
                         ("S dokumentima".equals(filter[0])&&has) ||
@@ -1970,13 +1962,13 @@ public final class MainActivity extends Activity {
             boolean first=true;
             for(int i=0;i<grouped.getChildCount();i++){
                 View child=grouped.getChildAt(i);
-                if(child.getTag() instanceof String){
+                if(child.getTag() instanceof Store.Client){
                     if(child.getVisibility()!=View.VISIBLE)continue;
                     first=false;
                 }else{
                     boolean nextVisible=false;
                     for(int j=i+1;j<grouped.getChildCount();j++){
-                        if(grouped.getChildAt(j).getTag() instanceof String){
+                        if(grouped.getChildAt(j).getTag() instanceof Store.Client){
                             nextVisible=grouped.getChildAt(j).getVisibility()==View.VISIBLE;
                             break;
                         }
@@ -2034,7 +2026,11 @@ public final class MainActivity extends Activity {
     static String clientCity(String address){
         if(address==null||address.trim().isEmpty())return "";
         String[] parts=address.split(",");
-        return parts[parts.length-1].trim();
+        String last=parts[parts.length-1].trim();
+        if(parts.length>1&&("Hrvatska".equalsIgnoreCase(last)||
+            "Croatia".equalsIgnoreCase(last)))
+            return parts[parts.length-2].trim();
+        return last;
     }
 
     private void clientDetails(Store.Client c){
