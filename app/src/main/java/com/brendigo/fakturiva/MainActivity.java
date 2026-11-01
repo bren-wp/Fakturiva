@@ -1777,12 +1777,19 @@ public final class MainActivity extends Activity {
         for(Store.Item item:d.items){
             LinearLayout line=horizontal();
             line.setPadding(dp(5),dp(12),dp(5),dp(10));
-            LinearLayout description=vertical();
-            description.addView(label(item.name,11,0xff586c87,false));
-            description.addView(label(Money.decimalQuantity(item.qtyMilli)+
-                " × "+Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",
-                9,0xff96a4b7,false));
+            TextView description=label(item.name,11,0xff586c87,false);
+            description.setMaxLines(2);
+            description.setEllipsize(android.text.TextUtils.TruncateAt.END);
             line.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+            // Keep the reference's clean document row while retaining the
+            // exact quantity, unit price and VAT on tap and for accessibility.
+            String breakdown=Money.decimalQuantity(item.qtyMilli)+" × "+
+                Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%";
+            line.setContentDescription(item.name+", "+breakdown);
+            line.setFocusable(true);
+            line.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setTitle(item.name).setMessage(breakdown)
+                .setPositiveButton("Zatvori",null).show());
             TextView amount=label(Money.euros(
                 Math.addExact(item.net(),item.tax())),11,NAVY,true);
             amount.setGravity(Gravity.RIGHT);
@@ -1819,14 +1826,21 @@ public final class MainActivity extends Activity {
         target.addView(separator,new LinearLayout.LayoutParams(-1,dp(1)));
     }
 
-    private void paperAmount(LinearLayout target,String label,String amount,boolean total){
+    private void paperAmount(LinearLayout target,String title,String amount,boolean total){
         LinearLayout row=horizontal();
-        LinearLayout.LayoutParams labelParams=new LinearLayout.LayoutParams(0,-2,1);
-        row.addView(label(label,total?12:11,total?NAVY:0xff8699b0,total),
-            labelParams);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        // The original invoice puts subtotals into a right-aligned column,
+        // not at the left edge of the paper. Preserve exact monetary data.
+        row.addView(new View(this),new LinearLayout.LayoutParams(0,dp(1),1));
+        TextView caption=label(title,total?12:11,total?NAVY:0xff8699b0,total);
+        caption.setMaxLines(2);
+        row.addView(caption,lp(92,-2));
         TextView value=label(amount,total?17:11,total?BLUE:NAVY,true);
-        value.setGravity(Gravity.RIGHT);
-        row.addView(value);
+        value.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        value.setSingleLine(true);
+        value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        value.setContentDescription(title+": "+amount);
+        row.addView(value,lp(110,-2));
         place(target,row);
     }
 
