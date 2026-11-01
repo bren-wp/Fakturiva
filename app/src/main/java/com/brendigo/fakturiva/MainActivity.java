@@ -345,6 +345,42 @@ public final class MainActivity extends Activity {
         }
     }
 
+    /**
+     * Entirely native layered splash gradient: a vertical navy base plus a
+     * soft elliptical top-right blue bloom.  No static PNG is drawn at runtime.
+     * Geometry is normalized to the original owner's 1179x2556 reference.
+     */
+    private final class SplashBackdrop extends View{
+        private final android.graphics.Paint paint=new android.graphics.Paint(
+            android.graphics.Paint.ANTI_ALIAS_FLAG);
+        SplashBackdrop(Context context){super(context);}
+        @Override protected void onDraw(android.graphics.Canvas canvas){
+            super.onDraw(canvas);
+            float width=getWidth(),height=getHeight();
+            if(width<=0||height<=0)return;
+            paint.setShader(new android.graphics.LinearGradient(0,0,0,height,
+                new int[]{0xff163864,0xff0e2541,0xff0a1d32},
+                new float[]{0,.5f,1},android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRect(0,0,width,height,paint);
+            paint.setShader(null);
+
+            // Scale the shader's local Y axis to give the bloom the same
+            // *relative* elliptical geometry on all portrait devices.
+            canvas.save();
+            canvas.scale(1f,height/width);
+            paint.setShader(new android.graphics.RadialGradient(
+                width*.865f,width*.075f,width*.60f,
+                new int[]{0xff0d2344,0xb40d2344,0x6e0d2344,0x2f0d2344,0x000d2344},
+                new float[]{0,.25f,.5f,.75f,1f},
+                android.graphics.Shader.TileMode.CLAMP));
+            paint.setXfermode(new android.graphics.PorterDuffXfermode(
+                android.graphics.PorterDuff.Mode.ADD));
+            canvas.drawRect(0,0,width,width,paint);
+            paint.setXfermode(null);
+            paint.setShader(null);
+            canvas.restore();
+        }
+    }
     /** Native branded entry view, designed to match the dark Fakturiva splash reference. */
     private void splash(boolean animate){
         screen="splash";
@@ -355,18 +391,19 @@ public final class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_FULLSCREEN);
         FrameLayout frame=new FrameLayout(this);
-        GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            new int[]{0xff173a64,0xff102b4b,0xff09192d});
-        frame.setBackground(bg);
+        frame.addView(new SplashBackdrop(this),
+            new FrameLayout.LayoutParams(-1,-1));
         setContentView(frame);
         View rings=new View(this){
             final android.graphics.Paint brush=new android.graphics.Paint(3);
             @Override protected void onDraw(android.graphics.Canvas canvas){
-                brush.setColor(0x1affffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
-                brush.setStrokeWidth(dp(0.7f));
+                brush.setColor(0x16ffffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
+                brush.setStrokeWidth(dp(0.67f));
                 float unit=getWidth();
-                canvas.drawCircle(unit*1.20f,getHeight()*.32f,unit*.65f,brush);
-                canvas.drawCircle(-unit*.45f,getHeight()*.64f,unit*.88f,brush);
+                // Circle fits from three points on each original PNG outline.
+                // Right: center (1503,738), r=713; left: (-337,1606), r=816.
+                canvas.drawCircle(unit*1.275f,getHeight()*.289f,unit*.605f,brush);
+                canvas.drawCircle(-unit*.286f,getHeight()*.628f,unit*.692f,brush);
                 brush.setStyle(android.graphics.Paint.Style.FILL);
             }
         };
