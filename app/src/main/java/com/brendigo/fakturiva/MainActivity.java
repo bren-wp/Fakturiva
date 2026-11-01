@@ -2934,11 +2934,11 @@ public final class MainActivity extends Activity {
         EditText[] fields=new EditText[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
         int[][] sections={{0,1,3,7,8},{10,11,12,16,17},{2,4,5,6,9,13,14,15,18}};
-        String[] headings={"Podaci o tvrtki","Podaci za plaćanje","Dodatni poslovni podaci"};
+        String[] sectionNames={"Podaci o tvrtki","Podaci za plaćanje","Dodatni poslovni podaci"};
         for(int group=0;group<sections.length;group++){
             LinearLayout card=group==0?form:card();
             if(group>0){
-                place(card,label(headings[group],17,ink(),true));
+                place(card,label(sectionNames[group],17,ink(),true));
                 gap(card,12);
             }
             for(int index:sections[group]){
