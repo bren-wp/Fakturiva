@@ -312,7 +312,7 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
             assertEquals("Marketing za studeni",first.document(id).quoteTitle);
             assertEquals("2026-11-20",first.document(id).supplyDate);
             JSONObject backup=first.backup();
-            assertEquals(4,backup.getInt("schema"));
+            assertEquals(5,backup.getInt("schema"));
             IsolatedContext second=new IsolatedContext(getContext());
             Store restored=null;
             try{
