@@ -60,7 +60,7 @@ public final class MainActivity extends Activity {
     private int deviceAuthAction=0;
     private boolean securityFromSettings=false;
     private long currentDocumentId=-1,editClientId=-1,editingDraftId=-1;
-    private String draftIssue="",draftDue="",draftSupply="",draftNote="";
+    private String draftIssue="",draftDue="",draftSupply="",draftNote="",draftQuoteTitle="";
     private final ArrayList<Store.Item> draftItems=new ArrayList<>();
     private long pendingPdfId=-1;private char[] pendingPassword;
     private final SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT);
@@ -1031,7 +1031,26 @@ public final class MainActivity extends Activity {
     private void fieldLabel(LinearLayout target,String name,EditText field){
         gap(target,12);target.addView(label(name,12,ink(),true));gap(target,6);place(target,field);
     }
-    private void dateInput(EditText edit){
+    static String quoteDateForDisplay(String iso){
+        if(iso==null||!IsoDates.valid(iso))return iso==null?"":iso;
+        return Integer.parseInt(iso.substring(8,10))+". "+
+            Integer.parseInt(iso.substring(5,7))+". "+iso.substring(0,4)+".";
+    }
+    static String quoteDateToIso(String display){
+        if(display==null)return "";
+        String value=display.trim();
+        java.util.regex.Matcher match=java.util.regex.Pattern.compile(
+            "^(\\d{1,2})\\.\\s*(\\d{1,2})\\.\\s*(\\d{4})\\.?$"
+        ).matcher(value);
+        if(match.matches()){
+            return String.format(Locale.ROOT,"%04d-%02d-%02d",
+                Integer.parseInt(match.group(3)),Integer.parseInt(match.group(2)),
+                Integer.parseInt(match.group(1)));
+        }
+        return value;
+    }
+    private void dateInput(EditText edit){dateInput(edit,false);}
+    private void dateInput(EditText edit,boolean quoteDate){
         // Real platform DatePicker, with a local vector calendar affordance.
         android.graphics.drawable.Drawable calendar=getDrawable(R.drawable.ic_calendar);
         if(calendar!=null){
@@ -1043,8 +1062,12 @@ public final class MainActivity extends Activity {
         edit.setContentDescription(edit.getHint()+", otvori kalendar");
         edit.setFocusable(false);
         edit.setOnClickListener(v->{Calendar c=Calendar.getInstance();
-            try{c.setTime(dateFormat.parse(edit.getText().toString()));}catch(Exception ignored){}
-            new DatePickerDialog(this,(p,y,m,d)->edit.setText(String.format(Locale.ROOT,"%04d-%02d-%02d",y,m+1,d)),
+            try{c.setTime(dateFormat.parse(quoteDateToIso(edit.getText().toString())));}
+            catch(Exception ignored){}
+            new DatePickerDialog(this,(p,y,m,d)->{
+                String iso=String.format(Locale.ROOT,"%04d-%02d-%02d",y,m+1,d);
+                edit.setText(quoteDate?quoteDateForDisplay(iso):iso);
+            },
                 c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();
         });
     }
@@ -1056,6 +1079,7 @@ public final class MainActivity extends Activity {
             j.put("version",1);j.put("type",editType);j.put("savedId",editingDraftId);
             j.put("clientId",editClientId);j.put("issue",draftIssue);
             j.put("due",draftDue);j.put("supply",draftSupply);j.put("notes",draftNote);
+            j.put("quoteTitle",draftQuoteTitle);
             JSONArray lines=new JSONArray();
             for(Store.Item i:draftItems){
                 JSONObject row=new JSONObject();
@@ -1092,7 +1116,9 @@ public final class MainActivity extends Activity {
             editType=type;editingDraftId=j.getLong("savedId");
             editClientId=j.getLong("clientId");
             draftIssue=j.getString("issue");draftDue=j.getString("due");draftSupply=j.optString("supply",draftIssue);
-            draftNote=j.optString("notes");draftItems.clear();draftItems.addAll(loaded);
+            draftNote=j.optString("notes");
+            draftQuoteTitle=j.optString("quoteTitle","");
+            draftItems.clear();draftItems.addAll(loaded);
             if(editingDraftId>0){
                 Store.Document existing=db.document(editingDraftId);
                 if(!Store.DRAFT.equals(existing.status))
@@ -1128,7 +1154,9 @@ public final class MainActivity extends Activity {
     }
     private void startEmptyDocument(String type){
         editType=type;editingDraftId=-1;draftItems.clear();draftIssue=later(0);
-        draftDue=later(type.equals(Store.INVOICE)?15:30);draftSupply=draftIssue;draftNote="";editClientId=-1;
+        draftDue=later(type.equals(Store.INVOICE)?15:30);
+        draftSupply=type.equals(Store.QUOTE)?later(15):draftIssue;
+        draftNote="";draftQuoteTitle="";editClientId=-1;
         saveWorkingDraft();editDocumentScreen();
     }
     private void resumeSavedDraft(long id){
@@ -1146,7 +1174,9 @@ public final class MainActivity extends Activity {
             Store.Document d=db.document(id);
             if(!Store.DRAFT.equals(d.status))throw new IllegalStateException("Možete uređivati samo nacrt");
             editingDraftId=d.id;editType=d.type;editClientId=d.clientId;
-            draftIssue=d.issueDate;draftDue=d.dueDate;draftSupply=d.supplyDate==null||d.supplyDate.isEmpty()?d.issueDate:d.supplyDate;draftNote=d.notes;
+            draftIssue=d.issueDate;draftDue=d.dueDate;
+            draftSupply=d.supplyDate==null||d.supplyDate.isEmpty()?d.issueDate:d.supplyDate;
+            draftNote=d.notes;draftQuoteTitle=d.quoteTitle==null?"":d.quoteTitle;
             draftItems.clear();draftItems.addAll(d.items);
             saveWorkingDraft();editDocumentScreen();
         }catch(Exception e){error(e);}
@@ -1463,7 +1493,12 @@ public final class MainActivity extends Activity {
         for(Store.Client c:db.clients())if(c.id==editClientId)client=c.name;
         summary.addView(label("Klijent: "+client,13,ink(),true));gap(summary,6);
         summary.addView(label("Datum: "+draftIssue+"  •  Do: "+draftDue,11,sub(),false));
-        summary.addView(label("Isporuka / usluga: "+draftSupply,11,sub(),false));gap(summary,16);
+        if(Store.QUOTE.equals(editType)&&!draftQuoteTitle.trim().isEmpty()){
+            gap(summary,6);
+            summary.addView(label("Naslov ponude: "+draftQuoteTitle.trim(),12,ink(),true));
+        }
+        summary.addView(label(Store.QUOTE.equals(editType)?"Rok izvedbe: "+draftSupply:
+            "Isporuka / usluga: "+draftSupply,11,sub(),false));gap(summary,16);
         for(Store.Item i:draftItems){summary.addView(label(i.name+"  ·  "+Money.euros(i.net()+i.tax()),12,ink(),false));gap(summary,8);}
         long net=0,tax=0;for(Store.Item i:draftItems){net+=i.net();tax+=i.tax();}
         gap(summary,15);summary.addView(label("Osnovica: "+Money.euros(net),12,sub(),false));
@@ -1479,9 +1514,11 @@ public final class MainActivity extends Activity {
             long id;
             if(editingDraftId>0){
                 id=editingDraftId;
-                db.updateDraft(id,editClientId,draftIssue,draftDue,draftSupply,draftNote,draftItems);
+                db.updateDraft(id,editClientId,draftIssue,draftDue,draftSupply,
+                    draftNote,draftQuoteTitle,draftItems);
             }else {
-                id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftSupply,draftNote,draftItems);
+                id=db.createDraft(editType,editClientId,draftIssue,draftDue,draftSupply,
+                    draftNote,draftQuoteTitle,draftItems);
                 editingDraftId=id;saveWorkingDraft();
             }
             if(confirm)db.confirm(id);
