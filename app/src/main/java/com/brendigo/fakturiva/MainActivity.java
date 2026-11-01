@@ -1451,111 +1451,225 @@ public final class MainActivity extends Activity {
             .setMessage("Dodijelit će se konačni broj dokumenta. Ova aplikacija ne provodi fiskalizaciju niti šalje eRačun. Potvrdite samo ako to odgovara vašem poslovnom procesu.")
             .setNegativeButton("Odustani",null).setPositiveButton("Potvrdi",(d,w)->yes.run()).show();
     }
+    /** Screen 08/11: actual persisted document, not a static design mockup. */
     private void showDocument(long id){
         currentDocumentId=id;
-        Store.Document d;
-        try{d=db.document(id);}catch(Exception e){error(e);navigate("home");return;}
+        Store.Document document;
+        try{document=db.document(id);}
+        catch(Exception e){error(e);navigate("home");return;}
+        final Store.Document d=document;
+        boolean invoice=Store.INVOICE.equals(d.type);
+        boolean draft=Store.DRAFT.equals(d.status);
+
         setup("detail",true);
-        toolbar(Store.INVOICE.equals(d.type)?"Pregled računa":"Pregled ponude","Provjerite podatke dokumenta",true);
+        pad(body,18,13);
+        toolbar(invoice?"Pregled računa":"Pregled ponude",
+            draft?"Provjerite podatke prije potvrde":"Pregled potvrđenog dokumenta",true);
         backupAlert();
 
-        LinearLayout identity=card();
-        LinearLayout header=horizontal();
-        ImageView glyph=icon(Store.INVOICE.equals(d.type)?R.drawable.ic_invoice:R.drawable.ic_quote,BLUE);
-        glyph.setPadding(dp(12),dp(12),dp(12),dp(12));
-        background(glyph,dark?0xff293c63:0xffe9edff,13);
-        header.addView(glyph,lp(48,48));
-        LinearLayout identityText=vertical();pad(identityText,12,0);
-        identityText.addView(label(d.number==null?"Nacrt #"+d.id:d.number,19,ink(),true));
-        identityText.addView(label(d.clientName,12,sub(),false));
-        header.addView(identityText,new LinearLayout.LayoutParams(0,-2,1));
-        place(identity,header);gap(identity,12);
-        TextView state=label(status(d.status),12,Store.PAID.equals(d.status)?TEAL:
-            Store.DRAFT.equals(d.status)?sub():BLUE,true);
-        place(identity,state);
-        gap(identity,12);
-        LinearLayout amounts=horizontal();
-        LinearLayout value=vertical();
-        value.addView(label("UKUPNO",10,sub(),true));
-        value.addView(label(Money.euros(d.totalCents),25,BLUE,true));
-        amounts.addView(value,new LinearLayout.LayoutParams(0,-2,1));
-        if(Store.INVOICE.equals(d.type)){
-            LinearLayout due=vertical();due.setGravity(Gravity.RIGHT);
-            due.addView(label("PREOSTALO",10,sub(),true));
-            due.addView(label(Money.euros(d.outstanding()),16,ink(),true));
-            amounts.addView(due);
-        }
-        place(identity,amounts);place(body,identity);
-        gap(body,14);
+        // Status, true persisted number and contextual actions match the
+        // reference hierarchy. Drafts must never display invented numbers.
+        LinearLayout statusBar=horizontal();
+        TextView statusLabel=label(DocumentStatus.label(d,DocumentStatus.today(),
+            DocumentStatus.inSevenDays()),11,draft?sub():ink(),true);
+        statusLabel.setGravity(Gravity.CENTER);
+        statusLabel.setPadding(dp(10),dp(6),dp(10),dp(6));
+        statusLabel.setBackground(shape(draft?(dark?0xff273953:0xffedf1f6):
+            badgeBackground(DocumentStatus.label(d,DocumentStatus.today(),
+                DocumentStatus.inSevenDays())),14));
+        statusBar.addView(statusLabel);
+        TextView number=label(d.number==null?"Broj nakon potvrde":d.number,
+            d.number==null?11:14,ink(),true);
+        number.setGravity(Gravity.CENTER);
+        statusBar.addView(number,new LinearLayout.LayoutParams(0,-2,1));
+        TextView options=label("•••",18,ink(),true);
+        options.setGravity(Gravity.CENTER);
+        options.setContentDescription("Opcije dokumenta");
+        options.setFocusable(true);
+        options.setBackground(shape(panel(),12));
+        statusBar.addView(options,lp(38,38));
+        options.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Dokument")
+            .setItems(new String[]{"Pregled stvarnog PDF-a","Spremi PDF","Podijeli PDF"},
+                (dialog,which)->{
+                    if(which==0)showActualPdfPreview(d);
+                    else if(which==1)savePdf(id);
+                    else sharePdf(id);
+                }).setNegativeButton("Zatvori",null).show());
+        place(body,statusBar);gap(body,12);
 
-        // Rendered from the same native PDF used by Save/Share.
-        LinearLayout previewCard=card();
-        LinearLayout previewHeader=horizontal();
-        previewHeader.addView(label("Pregled PDF dokumenta",14,ink(),true),
-            new LinearLayout.LayoutParams(0,-2,1));
-        previewHeader.addView(label("A4",11,sub(),true));
-        place(previewCard,previewHeader);gap(previewCard,12);
-        try{
-            View preview=DocumentPreview.firstPage(this,db,d);
-            previewCard.addView(preview);
-            gap(previewCard,7);
-            previewCard.addView(label("Prikazana je prva stranica; puni dokument otvara se izvozom PDF-a.",10,sub(),false));
-        }catch(Exception e){
-            previewCard.addView(label("Pregled nije dostupan. Podaci dokumenta su i dalje sačuvani.",12,sub(),false));
-        }
-        place(body,previewCard);gap(body,13);
-        button(body,"Spremi PDF",()->savePdf(id));gap(body,9);
-        secondary(body,"Podijeli PDF",()->sharePdf(id));
+        place(body,documentPaper(d));
+        gap(body,13);
 
-        section("Podaci dokumenta");
-        LinearLayout details=card();
-        details.addView(label("Izdavatelj: "+d.issuerName,12,ink(),true));gap(details,6);
-        details.addView(label("Klijent: "+d.clientName,12,ink(),false));
-        if(d.clientOib!=null&&!d.clientOib.isEmpty())details.addView(label("OIB: "+d.clientOib,11,sub(),false));
-        if(d.clientVatId!=null&&!d.clientVatId.isEmpty())details.addView(label("PDV ID: "+d.clientVatId,11,sub(),false));
-        if(d.clientAddress!=null&&!d.clientAddress.isEmpty())details.addView(label("Adresa: "+d.clientAddress,11,sub(),false));
-        gap(details,8);
-        details.addView(label("Datum izdavanja: "+d.issueDate,12,ink(),false));
-        details.addView(label("Rok dospijeća: "+d.dueDate,12,ink(),false));
-        if(d.supplyDate!=null&&!d.supplyDate.isEmpty())
-            details.addView(label("Datum usluge: "+d.supplyDate,12,ink(),false));
-        place(body,details);
+        LinearLayout actions=horizontal();
+        TextView save=action("↓  Preuzmi PDF",BLUE,false,()->savePdf(id));
+        save.setContentDescription("Spremi stvarni PDF dokument");
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(50),1);
+        left.rightMargin=dp(6);
+        actions.addView(save,left);
+        TextView share=action("➤  Pošalji",BLUE,true,()->sharePdf(id));
+        share.setContentDescription("Podijeli stvarni PDF dokument");
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(50),1);
+        right.leftMargin=dp(6);
+        actions.addView(share,right);
+        place(body,actions);gap(body,10);
 
-        section("Stavke i obračun");
-        LinearLayout list=card();
-        for(Store.Item item:d.items){
-            LinearLayout line=horizontal();
-            LinearLayout desc=vertical();
-            desc.addView(label(item.name,13,ink(),true));
-            desc.addView(label(Money.decimalQuantity(item.qtyMilli)+" × "+Money.euros(item.unitCents)+
-                " · PDV "+item.taxRate+"%",11,sub(),false));
-            line.addView(desc,new LinearLayout.LayoutParams(0,-2,1));
-            line.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),12,ink(),true));
-            place(list,line);gap(list,11);
-        }
-        list.addView(label("Osnovica: "+Money.euros(d.netCents),12,sub(),false));
-        list.addView(label("PDV: "+Money.euros(d.taxCents),12,sub(),false));
-        gap(list,8);list.addView(label("Ukupno: "+Money.euros(d.totalCents),19,BLUE,true));
-        place(body,list);gap(body,14);
-
-        if(Store.DRAFT.equals(d.status)){
-            secondary(body,"Uredi nacrt",()->resumeSavedDraft(id));gap(body,9);
-            secondary(body,"Potvrdi dokument",()->confirmWarning(()->{
-                try{db.confirm(id);showDocument(id);}catch(Exception e){error(e);}
-            }));
-        }
-        if(Store.INVOICE.equals(d.type)&&Store.ISSUED.equals(d.status)&&d.outstanding()>0){
-            gap(body,9);secondary(body,"Evidentiraj uplatu",()->payDialog(id));
-        }
-        if(Store.QUOTE.equals(d.type)&&Store.SENT.equals(d.status)){
-            gap(body,9);secondary(body,"Pretvori u račun",()->{
-                try{long invoice=db.quoteToInvoice(id);showDocument(invoice);
-                    toast("Stvoren je nacrt računa");}catch(Exception e){error(e);}
+        if(draft){
+            place(body,action(invoice?"Potvrdi račun":"Potvrdi ponudu",
+                0xff17b99a,true,()->confirmWarning(()->{
+                    try{db.confirm(id);showDocument(id);}
+                    catch(Exception e){error(e);}
+                })));
+            gap(body,9);
+            secondary(body,"Uredi nacrt",()->resumeSavedDraft(id));
+        }else if(invoice && Store.ISSUED.equals(d.status) && d.outstanding()>0){
+            place(body,action("Evidentiraj uplatu",0xff17b99a,true,
+                ()->payDialog(id)));
+        }else if(!invoice && Store.SENT.equals(d.status)){
+            secondary(body,"Pretvori ponudu u nacrt računa",()->{
+                try{
+                    long invoiceId=db.quoteToInvoice(id);
+                    showDocument(invoiceId);
+                    toast("Stvoren je nacrt računa");
+                }catch(Exception e){error(e);}
             });
         }
-        gap(body,18);
-        caption(body,"PDF nije strukturirani eRačun niti potvrda fiskalizacije.");
+        gap(body,12);
+        caption(body,"Potvrda nije fiskalizacija. PDF nije strukturirani eRačun.");
+        gap(body,24);
     }
+
+    /** Paper-like native preview with exactly the saved business data. */
+    private LinearLayout documentPaper(Store.Document d){
+        LinearLayout paper=vertical();
+        pad(paper,18,20);
+        paper.setBackground(outlined(WHITE));
+        paper.setMinimumHeight(dp(355));
+
+        LinearLayout masthead=horizontal();
+        ImageView brand=new ImageView(this);
+        brand.setImageResource(R.drawable.brand_mark);
+        masthead.addView(brand,lp(32,32));
+        TextView brandTitle=label("Fakturiva",18,NAVY,true);
+        LinearLayout.LayoutParams brandText=new LinearLayout.LayoutParams(0,-2,1);
+        brandText.leftMargin=dp(7);
+        masthead.addView(brandTitle,brandText);
+        LinearLayout docType=vertical();
+        docType.setGravity(Gravity.RIGHT);
+        TextView kind=label(Store.INVOICE.equals(d.type)?"RAČUN":"PONUDA",
+            11,0xff7185a2,false);
+        kind.setGravity(Gravity.RIGHT);
+        place(docType,kind);
+        TextView identifier=label(d.number==null?"NACRT":d.number,11,NAVY,true);
+        identifier.setGravity(Gravity.RIGHT);
+        place(docType,identifier);
+        masthead.addView(docType);
+        place(paper,masthead);gap(paper,6);
+
+        String issuer=d.issuerName==null||d.issuerName.trim().isEmpty()?
+            "Izdavatelj nije upisan":d.issuerName;
+        place(paper,label(issuer,11,0xff647b97,false));
+        if(d.issuerAddress!=null&&!d.issuerAddress.isEmpty())
+            place(paper,label(d.issuerAddress,10,0xff8798ad,false));
+        gap(paper,20);
+        paperRule(paper);gap(paper,17);
+
+        LinearLayout contacts=horizontal();
+        LinearLayout buyer=vertical();
+        buyer.addView(label("KUPAC",10,0xff899bb1,true));
+        gap(buyer,5);
+        buyer.addView(label(d.clientName==null?"":d.clientName,12,NAVY,true));
+        if(d.clientAddress!=null&&!d.clientAddress.isEmpty()){
+            gap(buyer,5);
+            buyer.addView(label(d.clientAddress,10,0xff8798ad,false));
+        }
+        contacts.addView(buyer,new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout dates=vertical();
+        dates.addView(label("IZDANO",10,0xff899bb1,true));
+        gap(dates,5);
+        dates.addView(label(readableDate(d.issueDate),12,NAVY,true));
+        gap(dates,5);
+        dates.addView(label("Dospijeće: "+readableDate(d.dueDate),
+            10,0xff8798ad,false));
+        LinearLayout.LayoutParams dateParams=new LinearLayout.LayoutParams(0,-2,1);
+        dateParams.leftMargin=dp(12);
+        contacts.addView(dates,dateParams);
+        place(paper,contacts);gap(paper,23);
+
+        LinearLayout columns=horizontal();
+        columns.setBackground(shape(0xffeef1fc,6));
+        columns.setPadding(dp(8),dp(10),dp(8),dp(10));
+        columns.addView(label("OPIS USLUGE",10,0xff475d7a,true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        columns.addView(label("IZNOS",10,NAVY,true));
+        place(paper,columns);
+
+        for(Store.Item item:d.items){
+            LinearLayout line=horizontal();
+            line.setPadding(dp(5),dp(12),dp(5),dp(10));
+            LinearLayout description=vertical();
+            description.addView(label(item.name,11,0xff586c87,false));
+            description.addView(label(Money.decimalQuantity(item.qtyMilli)+
+                " × "+Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",
+                9,0xff96a4b7,false));
+            line.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+            TextView amount=label(Money.euros(
+                Math.addExact(item.net(),item.tax())),11,NAVY,true);
+            amount.setGravity(Gravity.RIGHT);
+            LinearLayout.LayoutParams sum=new LinearLayout.LayoutParams(-2,-2);
+            sum.leftMargin=dp(10);
+            line.addView(amount,sum);
+            place(paper,line);
+            paperRule(paper);
+        }
+
+        gap(paper,16);
+        paperAmount(paper,"Osnovica",Money.euros(d.netCents),false);
+        gap(paper,9);
+        paperAmount(paper,"PDV",Money.euros(d.taxCents),false);
+        gap(paper,12);
+        paperRule(paper);gap(paper,12);
+        paperAmount(paper,"UKUPNO",Money.euros(d.totalCents),true);
+        if(Store.INVOICE.equals(d.type) && d.paidCents>0){
+            gap(paper,9);
+            paperAmount(paper,"Evidentirano plaćeno",Money.euros(d.paidCents),false);
+            gap(paper,7);
+            paperAmount(paper,"Preostalo",Money.euros(d.outstanding()),false);
+        }
+        gap(paper,19);paperRule(paper);gap(paper,12);
+        place(paper,label("Dokument za pregled • Nije fiskaliziran",
+            9,0xff9eacbe,false));
+        return paper;
+    }
+
+    private void paperRule(LinearLayout target){
+        View separator=new View(this);
+        separator.setBackgroundColor(0xffe7edf5);
+        target.addView(separator,new LinearLayout.LayoutParams(-1,dp(1)));
+    }
+
+    private void paperAmount(LinearLayout target,String label,String amount,boolean total){
+        LinearLayout row=horizontal();
+        LinearLayout.LayoutParams labelParams=new LinearLayout.LayoutParams(0,-2,1);
+        row.addView(label(label,total?12:11,total?NAVY:0xff8699b0,total),
+            labelParams);
+        TextView value=label(amount,total?17:11,total?BLUE:NAVY,true);
+        value.setGravity(Gravity.RIGHT);
+        row.addView(value);
+        place(target,row);
+    }
+
+    /** Original printable PDF remains available via Android PdfRenderer. */
+    private void showActualPdfPreview(Store.Document d){
+        try{
+            View preview=DocumentPreview.firstPage(this,db,d);
+            new AlertDialog.Builder(this)
+                .setTitle("Prva stranica stvarnog PDF-a")
+                .setView(preview)
+                .setPositiveButton("Zatvori",null).show();
+        }catch(Exception error){error(error);}
+    }
+
     private void payDialog(long id){
         Store.Document d;
         try{d=db.document(id);}catch(Exception e){error(e);return;}
