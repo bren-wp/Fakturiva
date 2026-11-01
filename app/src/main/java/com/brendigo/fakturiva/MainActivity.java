@@ -1573,7 +1573,8 @@ public final class MainActivity extends Activity {
         setup("detail",true);
         pad(body,18,13);
         toolbar(invoice?"Pregled računa":"Pregled ponude",
-            draft?"Provjerite podatke prije potvrde":"Pregled potvrđenog dokumenta",true);
+            draft?"Provjerite podatke prije potvrde":
+                (invoice?"Pregled potvrđenog dokumenta":"Ponuda pripremljena za dijeljenje"),true);
         backupAlert();
 
         // Status, true persisted number and contextual actions match the
@@ -1611,12 +1612,14 @@ public final class MainActivity extends Activity {
         gap(body,13);
 
         LinearLayout actions=horizontal();
-        TextView save=action("↓  Preuzmi PDF",BLUE,false,()->savePdf(id));
+        TextView save=action(invoice?"↓  Preuzmi PDF":"↓  PDF",
+            BLUE,false,()->savePdf(id));
         save.setContentDescription("Spremi stvarni PDF dokument");
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(50),1);
         left.rightMargin=dp(6);
         actions.addView(save,left);
-        TextView share=action("➤  Pošalji",BLUE,true,()->sharePdf(id));
+        TextView share=action(invoice?"➤  Pošalji":"➤  Podijeli ponudu",
+            BLUE,true,()->sharePdf(id));
         share.setContentDescription("Podijeli stvarni PDF dokument");
         LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(50),1);
         right.leftMargin=dp(6);
@@ -1635,16 +1638,18 @@ public final class MainActivity extends Activity {
             place(body,action("Evidentiraj uplatu",0xff17b99a,true,
                 ()->payDialog(id)));
         }else if(!invoice && Store.SENT.equals(d.status)){
-            secondary(body,"Pretvori ponudu u nacrt računa",()->{
+            place(body,action("Pretvori u nacrt računa",0xff17b99a,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
                     showDocument(invoiceId);
                     toast("Stvoren je nacrt računa");
                 }catch(Exception e){error(e);}
-            });
+            }));
         }
         gap(body,12);
-        caption(body,"Potvrda nije fiskalizacija. PDF nije strukturirani eRačun.");
+        caption(body,invoice?
+            "Potvrda nije fiskalizacija. PDF nije strukturirani eRačun.":
+            "Ponuda nije račun niti dokaz o plaćanju; dijeljenje ne potvrđuje primitak.");
         gap(body,24);
     }
 
@@ -1690,7 +1695,8 @@ public final class MainActivity extends Activity {
 
         LinearLayout contacts=horizontal();
         LinearLayout buyer=vertical();
-        buyer.addView(label("KUPAC",10,0xff899bb1,true));
+        buyer.addView(label(Store.QUOTE.equals(d.type)?"ZA KLIJENTA":"KUPAC",
+            10,0xff899bb1,true));
         gap(buyer,5);
         buyer.addView(label(d.clientName==null?"":d.clientName,12,NAVY,true));
         if(d.clientAddress!=null&&!d.clientAddress.isEmpty()){
@@ -1699,12 +1705,13 @@ public final class MainActivity extends Activity {
         }
         contacts.addView(buyer,new LinearLayout.LayoutParams(0,-2,1));
         LinearLayout dates=vertical();
-        dates.addView(label("IZDANO",10,0xff899bb1,true));
+        boolean offer=Store.QUOTE.equals(d.type);
+        dates.addView(label(offer?"VRIJEDI DO":"IZDANO",10,0xff899bb1,true));
         gap(dates,5);
-        dates.addView(label(readableDate(d.issueDate),12,NAVY,true));
+        dates.addView(label(readableDate(offer?d.dueDate:d.issueDate),12,NAVY,true));
         gap(dates,5);
-        dates.addView(label("Dospijeće: "+readableDate(d.dueDate),
-            10,0xff8798ad,false));
+        dates.addView(label(offer?"Izdano: "+readableDate(d.issueDate):
+            "Dospijeće: "+readableDate(d.dueDate),10,0xff8798ad,false));
         LinearLayout.LayoutParams dateParams=new LinearLayout.LayoutParams(0,-2,1);
         dateParams.leftMargin=dp(12);
         contacts.addView(dates,dateParams);
@@ -1751,8 +1758,9 @@ public final class MainActivity extends Activity {
             paperAmount(paper,"Preostalo",Money.euros(d.outstanding()),false);
         }
         gap(paper,19);paperRule(paper);gap(paper,12);
-        place(paper,label("Dokument za pregled • Nije fiskaliziran",
-            9,0xff9eacbe,false));
+        place(paper,label(Store.QUOTE.equals(d.type)?
+            "Ponuda nije račun niti dokaz o plaćanju.":
+            "Dokument za pregled • Nije fiskaliziran",9,0xff9eacbe,false));
         return paper;
     }
 
