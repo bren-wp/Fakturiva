@@ -179,9 +179,10 @@ public final class Store extends SQLiteOpenHelper {
         throw new IllegalArgumentException("Nepoznata vrsta stavke");
     }
     public static String normalizedUnit(String unit){
-        if(unit==null || !unit.matches("[\\p{L}0-9 ._-]{1,20}"))
+        String value=unit==null?"":unit.trim();
+        if(!value.matches("[\\p{L}0-9 ._-]{1,20}"))
             throw new IllegalArgumentException("Neispravna mjerna jedinica");
-        return unit.trim();
+        return value;
     }
     public long saveProduct(String name,long priceCents,int taxRate,String kind,String unit){
         if(name==null||name.trim().isEmpty()||priceCents<0)
