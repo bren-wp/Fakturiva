@@ -51,7 +51,7 @@ public final class MainActivity extends Activity {
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
     private int paymentFilter=0;
-    private String pendingPaymentsCsvMonth=null;
+    private String pendingPaymentsCsvMonth=null,pendingReportCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private String documentSearchQuery="";
@@ -78,6 +78,7 @@ public final class MainActivity extends Activity {
         if(b!=null){
             pendingPdfId=b.getLong("pendingPdfId",-1);
             pendingPaymentsCsvMonth=b.getString("pendingPaymentsCsvMonth");
+            pendingReportCsvMonth=b.getString("pendingReportCsvMonth");
             deviceAuthAction=b.getInt("deviceAuthAction",0);
             securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
@@ -95,6 +96,7 @@ public final class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle outState){
         outState.putLong("pendingPdfId",pendingPdfId);
         outState.putString("pendingPaymentsCsvMonth",pendingPaymentsCsvMonth);
+        outState.putString("pendingReportCsvMonth",pendingReportCsvMonth);
         outState.putInt("deviceAuthAction",deviceAuthAction);
         outState.putBoolean("securityFromSettings",securityFromSettings);
         // Never persist the backup password, even in the Android Bundle.
@@ -2509,64 +2511,136 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
 
+    /** Screen 15: reports are scoped to the selected accounting month. */
     private void reports(){
         setup("reports",true);
-        toolbar("Izvještaji","Statistika i analiza poslovanja",true);
-
-        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR")).format(reportMonth.getTime());
-        String yearMonth=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(reportMonth.getTime());
+        pad(body,18,15);
+        String yearMonth=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
+            .format(reportMonth.getTime());
+        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR"))
+            .format(reportMonth.getTime());
+        Calendar previous=(Calendar)reportMonth.clone();
+        previous.add(Calendar.MONTH,-1);
+        String previousKey=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
+            .format(previous.getTime());
         Calendar now=Calendar.getInstance();
-        boolean currentMonth=reportMonth.get(Calendar.YEAR)==now.get(Calendar.YEAR)&&
+        boolean currentMonth=reportMonth.get(Calendar.YEAR)==now.get(Calendar.YEAR) &&
             reportMonth.get(Calendar.MONTH)==now.get(Calendar.MONTH);
-        LinearLayout period=horizontal();
-        TextView picker=label("▣  "+month+"  ›",13,ink(),true);
-        pad(picker,13,11);picker.setBackground(outlined(panel()));
-        period.addView(picker,new LinearLayout.LayoutParams(0,-2,1));
-        picker.setOnClickListener(v->{
-            DatePickerDialog dialog=new DatePickerDialog(this,(view,year,m,day)->{
-                reportMonth.set(year,m,1);reports();
-            },reportMonth.get(Calendar.YEAR),reportMonth.get(Calendar.MONTH),1);
-            dialog.show();
+
+        List<Store.Document> invoices=db.documents(Store.INVOICE);
+        List<Store.Payment> payments=db.payments();
+        long[] totals=reportMetrics(invoices,payments,yearMonth);
+
+        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout titles=vertical();
+        titles.addView(label("Izvještaji",24,ink(),true));gap(titles,6);
+        titles.addView(label("Statistika i analiza poslovanja",12,sub(),false));
+        header.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
+        TextView download=label("↓",24,ink(),true);
+        download.setGravity(Gravity.CENTER);
+        download.setBackground(shape(panel(),12));
+        download.setContentDescription("Izvezi izvještaj u CSV");
+        header.addView(download,lp(44,44));
+        download.setOnClickListener(v->{
+            pendingReportCsvMonth=yearMonth;
+            createFile(106,"text/csv","Fakturiva-izvjestaj-"+yearMonth+".csv");
         });
-        TextView current=label(currentMonth?"Ovaj mjesec":"Odabrani",11,BLUE,true);
-        current.setGravity(Gravity.CENTER);current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
-        LinearLayout.LayoutParams selected=lp(102,40);selected.setMargins(dp(10),0,0,0);
-        period.addView(current,selected);
-        current.setOnClickListener(v->{reportMonth.setTimeInMillis(System.currentTimeMillis());reports();});
-        place(body,period);gap(body,14);
+        TextView options=label("☰",18,sub(),true);
+        options.setGravity(Gravity.CENTER);
+        options.setBackground(shape(panel(),12));
+        options.setContentDescription("Odabir razdoblja");
+        LinearLayout.LayoutParams optionsLp=lp(44,44);
+        optionsLp.leftMargin=dp(8);
+        header.addView(options,optionsLp);
+        options.setOnClickListener(v->reportPeriodPicker());
+        place(body,header);gap(body,22);
 
-        LinearLayout revenue=card();pad(revenue,18,18);
-        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,10);
-        revenue.addView(label(Money.euros(db.invoicedCentsMonth(yearMonth)),29,ink(),true));gap(revenue,8);
-        revenue.addView(label("Potvrđeni računi · bez nacrta",11,sub(),false));
-        place(body,revenue);gap(body,14);
+        LinearLayout period=horizontal();period.setGravity(Gravity.CENTER_VERTICAL);
+        TextView picker=label("▣  "+month+"   ›",13,ink(),true);
+        pad(picker,12,12);picker.setBackground(outlined(panel()));
+        period.addView(picker,new LinearLayout.LayoutParams(0,-2,1));
+        picker.setContentDescription("Odaberi mjesec izvještaja: "+month);
+        picker.setOnClickListener(v->reportPeriodPicker());
+        View spacer=new View(this);
+        period.addView(spacer,new LinearLayout.LayoutParams(0,dp(1),1));
+        TextView current=label(currentMonth?"Ovaj mjesec":"Na ovaj mjesec",11,BLUE,true);
+        current.setGravity(Gravity.CENTER);
+        current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
+        pad(current,8,12);
+        period.addView(current,lp(currentMonth?97:112,37));
+        current.setOnClickListener(v->{
+            reportMonth.setTimeInMillis(System.currentTimeMillis());
+            reports();
+        });
+        place(body,period);gap(body,15);
 
-        int invoiceCount=0,paid=0;
-        for(Store.Document d:db.documents(Store.INVOICE)){
-            if(Store.DRAFT.equals(d.status)||!d.issueDate.startsWith(yearMonth))continue;
-            invoiceCount++;
-            if(Store.PAID.equals(d.status))paid++;
+        LinearLayout revenue=card();pad(revenue,18,21);
+        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,12);
+        revenue.addView(label(Money.euros(totals[0]),30,ink(),true));gap(revenue,11);
+        long previousCents=db.invoicedCentsMonth(previousKey);
+        if(previousCents>0){
+            double pct=(totals[0]-previousCents)*100d/previousCents;
+            String trend=String.format(Locale.forLanguageTag("hr-HR"),
+                "%s%.1f %%",pct>0?"+":"",pct);
+            revenue.addView(label(trend+"  u odnosu na prethodni mjesec",11,
+                pct>=0?0xff13a884:RED,true));
+        }else{
+            revenue.addView(label("Bez usporedive osnovice za prethodni mjesec",
+                11,sub(),false));
         }
+        place(body,revenue);gap(body,13);
+
         LinearLayout metrics=horizontal();
-        reportMetric(metrics,"Izdani računi",String.valueOf(invoiceCount),"▤",BLUE,0);
-        reportMetric(metrics,"Plaćeni računi",String.valueOf(paid),"✓",TEAL,1);
+        reportMetric(metrics,"Izdani računi",String.valueOf(totals[1]),"▤",BLUE,0);
+        reportMetric(metrics,"Plaćeni računi",String.valueOf(totals[2]),"✓",TEAL,1);
         place(body,metrics);gap(body,14);
 
-        LinearLayout chart=card();pad(chart,18,17);
-        LinearLayout heading=horizontal();
-        heading.addView(label("Kretanje naplate",16,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
-        heading.addView(label("Posljednjih 6 mj.",10,sub(),false));
-        place(chart,heading);gap(chart,12);
-        chart.addView(new RevenueBars(this),lp(-1,194));place(body,chart);gap(body,14);
+        LinearLayout chart=card();pad(chart,17,17);
+        LinearLayout chartHeader=horizontal();
+        chartHeader.addView(label("Kretanje fakturiranja",16,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        chartHeader.addView(label("Posljednjih 6 mj.",10,sub(),false));
+        place(chart,chartHeader);gap(chart,19);
+        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,190));
+        place(body,chart);gap(body,14);
 
         LinearLayout payout=card();
-        title(payout,"Pregled naplate");gap(payout,18);
-        clientField(payout,"Naplaćeno",Money.euros(db.receivedCents()));
-        clientField(payout,"Nenaplaćeno",Money.euros(db.outstandingCents()));
-        place(body,payout);gap(body,12);
+        place(payout,label("Pregled naplate",16,ink(),true));gap(payout,19);
+        clientField(payout,"Naplaćeno u mjesecu",Money.euros(totals[3]));
+        clientField(payout,"Nenaplaćeno iz izdanih računa",Money.euros(totals[4]));
+        place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
-        gap(body,18);
+        gap(body,20);
+        caption(body,"Prikazuje samo stvarne potvrđene račune i evidentirane uplate. "+
+            "Fakturirano nije isto što i naplaćeno.");
     }
+    private void reportPeriodPicker(){
+        DatePickerDialog dialog=new DatePickerDialog(this,(view,year,month,day)->{
+            reportMonth.set(year,month,1);
+            reports();
+        },reportMonth.get(Calendar.YEAR),reportMonth.get(Calendar.MONTH),1);
+        dialog.show();
+    }
+    /** Invoiced, issued, settled, received this month, outstanding on issued this month. */
+    static long[] reportMetrics(List<Store.Document> invoices,
+                                List<Store.Payment> payments,String yearMonth){
+        long issued=0,settled=0,invoiced=0,open=0,received=0;
+        for(Store.Document d:invoices){
+            if(!Store.INVOICE.equals(d.type)||d.issueDate==null||
+                !d.issueDate.startsWith(yearMonth)||
+                Store.DRAFT.equals(d.status)||Store.VOID.equals(d.status))continue;
+            issued++;
+            invoiced=Math.addExact(invoiced,d.totalCents);
+            if(d.outstanding()==0)settled++;
+            open=Math.addExact(open,d.outstanding());
+        }
+        for(Store.Payment p:payments){
+            if(p.paidOn!=null&&p.paidOn.startsWith(yearMonth))
+                received=Math.addExact(received,p.amountCents);
+        }
+        return new long[]{invoiced,issued,settled,received,open};
+    }
+
     private void reportMetric(LinearLayout row,String caption,String value,String glyph,int accent,int index){
         LinearLayout c=card();
         TextView symbol=label(glyph,19,accent,true);
@@ -2576,7 +2650,7 @@ public final class MainActivity extends Activity {
         c.addView(symbol,lp(39,39));gap(c,9);
         c.addView(label(caption,11,sub(),false));gap(c,3);
         c.addView(label(value,25,ink(),true));
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(114),1);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(130),1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
     }
