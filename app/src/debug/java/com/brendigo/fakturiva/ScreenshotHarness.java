@@ -79,7 +79,22 @@ public final class ScreenshotHarness {
                 Store.Item item=new Store.Item();item.name="Dizajn web stranice";item.qtyMilli=1000;item.unitCents=100000;item.taxRate=25;
                 lines.add(item);
                 call(a,"editItemsScreen");break;
-            case "08":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.INVOICE).get(0).id);break;
+            case "08":{
+                // Screen 08's reference is an invoice *draft* with two lines.
+                // Use a realistic debug-only draft, never a fabricated issued
+                // number or a hardcoded screenshot in the release application.
+                Store.Item site=new Store.Item();
+                site.name="Izrada web stranice";
+                site.qtyMilli=1000;site.unitCents=60000;site.taxRate=25;
+                Store.Item seo=new Store.Item();
+                seo.name="SEO optimizacija";
+                seo.qtyMilli=1000;seo.unitCents=25000;seo.taxRate=25;
+                long invoiceDraft=db.createDraft(Store.INVOICE,db.clients().get(0).id,
+                    "2026-10-27","2026-11-10","Pregled prije potvrde",
+                    Arrays.asList(site,seo));
+                call(a,"showDocument",new Class<?>[]{long.class},invoiceDraft);
+                break;
+            }
             case "09":call(a,"documents",new Class<?>[]{String.class},Store.QUOTE);break;
             case "10":
                 call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);
