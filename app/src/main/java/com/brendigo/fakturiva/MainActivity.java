@@ -269,6 +269,9 @@ public final class MainActivity extends Activity {
         String active=screen;
         if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen)){
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
+        }else if("catalog".equals(screen)||"reports".equals(screen)||
+                  "payments".equals(screen)||"company".equals(screen)){
+            active="settings";
         }else if("client_detail".equals(screen)){
             active="clients";
         }else if("detail".equals(screen)&&currentDocumentId>0){
@@ -2273,80 +2276,239 @@ public final class MainActivity extends Activity {
             }));
         dialog.show();
     }
+    /** Screen 14: real catalog categories; no fake stock or activity status. */
     private void catalog(){
         setup("catalog",true);
-        toolbar("Artikli i usluge","Katalog proizvoda i usluga",true);
+        pad(body,18,15);
         List<Store.Item> products=db.products();
-        EditText search=field("Pretražite artikle ili usluge…","");
-        place(body,search);gap(body,13);
-        LinearLayout meta=horizontal();
-        meta.addView(label("Ukupno stavki: "+products.size(),12,sub(),false),
-            new LinearLayout.LayoutParams(0,-2,1));
-        place(body,meta);gap(body,9);
+        LinearLayout head=horizontal();head.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout heading=vertical();
+        heading.addView(label("Artikli i usluge",24,ink(),true));gap(heading,5);
+        heading.addView(label("Vaš katalog proizvoda i usluga",12,sub(),false));
+        head.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        ImageView focus=icon(R.drawable.ic_search,sub());
+        focus.setContentDescription("Pretraži artikle i usluge");
+        focus.setPadding(dp(10),dp(10),dp(10),dp(10));
+        focus.setBackground(shape(panel(),13));
+        head.addView(focus,lp(44,44));
+        TextView more=label("•••",18,sub(),true);
+        more.setGravity(Gravity.CENTER);more.setBackground(shape(panel(),13));
+        LinearLayout.LayoutParams moreLp=lp(44,44);moreLp.leftMargin=dp(8);
+        head.addView(more,moreLp);
+        more.setContentDescription("Opcije kataloga");
+        more.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Katalog")
+            .setItems(new String[]{"Dodaj artikl ili uslugu","Postavke"},
+                (dialog,which)->{if(which==0)editProduct(null);else settings();})
+            .show());
+        place(body,head);gap(body,21);
 
-        LinearLayout rows=vertical();place(body,rows);
-        for(Store.Item item:products){
-            LinearLayout c=card();
-            LinearLayout row=horizontal();
-            TextView symbol=label("▤",16,BLUE,true);symbol.setGravity(Gravity.CENTER);
-            symbol.setBackground(shape(dark?0xff253a5f:0xffeaf0ff,12));
-            row.addView(symbol,lp(42,42));
-            LinearLayout text=vertical();pad(text,11,0);
-            text.addView(label(item.name,13,ink(),true));
-            text.addView(label("Cijena bez PDV-a · "+item.taxRate+"% PDV",11,sub(),false));
-            row.addView(text,new LinearLayout.LayoutParams(0,-2,1));
-            row.addView(label(Money.euros(item.unitCents),12,ink(),true));
-            place(c,row);
-            LinearLayout.LayoutParams itemLp=new LinearLayout.LayoutParams(-1,-2);
-            itemLp.bottomMargin=dp(9);
-            rows.addView(c,itemLp);
-            c.setTag(item.name.toLowerCase(Locale.forLanguageTag("hr-HR")));
-            c.setOnClickListener(v->editProduct(item));
+        LinearLayout searchBar=horizontal();searchBar.setGravity(Gravity.CENTER_VERTICAL);
+        searchBar.setBackground(outlined(panel()));pad(searchBar,12,3);
+        searchBar.addView(icon(R.drawable.ic_search,sub()),lp(24,24));
+        EditText search=field("Pretraži artikle i usluge...","");
+        search.setBackgroundColor(Color.TRANSPARENT);
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(0,dp(45),1);
+        searchLp.leftMargin=dp(8);searchBar.addView(search,searchLp);
+        ImageView filterIcon=icon(R.drawable.ic_filter,sub());
+        filterIcon.setPadding(dp(5),dp(5),dp(5),dp(5));
+        filterIcon.setContentDescription("Filtriraj vrstu stavke");
+        searchBar.addView(filterIcon,lp(30,30));
+        place(body,searchBar);gap(body,15);
+
+        String[] categories={"Sve","Usluge","Proizvodi"};
+        final String[] selected={"Sve"};
+        LinearLayout tabs=horizontal();
+        tabs.setBackground(shape(dark?0xff273852:0xffe9eef5,13));
+        pad(tabs,4,4);
+        TextView[] buttons=new TextView[categories.length];
+        for(int i=0;i<categories.length;i++){
+            final String category=categories[i];
+            TextView tab=label(category,12,i==0?BLUE:sub(),i==0);
+            tab.setGravity(Gravity.CENTER);
+            if(i==0)tab.setBackground(shape(panel(),10));
+            tabs.addView(tab,new LinearLayout.LayoutParams(0,dp(39),1));
+            buttons[i]=tab;
         }
-        if(products.isEmpty())caption(body,"Katalog je prazan. Dodajte prvi artikl ili uslugu.");
-        search.addTextChangedListener(new android.text.TextWatcher(){
-            @Override public void beforeTextChanged(CharSequence text,int start,int count,int after){}
-            @Override public void onTextChanged(CharSequence text,int start,int before,int count){
-                String filter=text.toString().trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
-                for(int i=0;i<rows.getChildCount();i++){
-                    View item=rows.getChildAt(i);
-                    Object tag=item.getTag();
-                    if(tag instanceof String)item.setVisibility(((String)tag).contains(filter)?View.VISIBLE:View.GONE);
+        place(body,tabs);gap(body,15);
+
+        LinearLayout meta=horizontal();meta.setGravity(Gravity.CENTER_VERTICAL);
+        meta.addView(label("Ukupno stavki  ",11,sub(),false));
+        meta.addView(label(String.valueOf(products.size()),12,ink(),true));
+        View space=new View(this);meta.addView(space,new LinearLayout.LayoutParams(0,dp(1),1));
+        meta.addView(label("U katalogu  ",11,sub(),false));
+        meta.addView(label(String.valueOf(products.size()),12,ink(),true));
+        place(body,meta);gap(body,14);
+
+        LinearLayout grouped=vertical();grouped.setBackground(outlined(panel()));
+        for(int i=0;i<products.size();i++){
+            Store.Item item=products.get(i);
+            if(i>0){
+                View divider=new View(this);divider.setBackgroundColor(border());
+                grouped.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+            }
+            LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12),dp(17),dp(12),dp(17));
+            TextView symbol=label("⬡",26,i%3==0?BLUE:(i%3==1?TEAL:0xffeaa044),true);
+            symbol.setGravity(Gravity.CENTER);
+            symbol.setBackground(shape(dark?0xff273852:
+                (i%3==0?0xffeaf0ff:i%3==1?0xffdef8f4:0xfffff1e2),12));
+            row.addView(symbol,lp(41,41));
+            LinearLayout description=vertical();
+            LinearLayout.LayoutParams descriptionLp=new LinearLayout.LayoutParams(0,-2,1);
+            descriptionLp.leftMargin=dp(11);descriptionLp.rightMargin=dp(6);
+            row.addView(description,descriptionLp);
+            TextView name=label(item.name,13,ink(),true);
+            name.setSingleLine(true);name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            description.addView(name);gap(description,5);
+            String kind="SERVICE".equals(item.kind)?"Usluga":
+                "PRODUCT".equals(item.kind)?"Proizvod":"Nerazvrstano";
+            TextView hint=label(kind+" · 1 "+item.unit,11,sub(),false);
+            hint.setSingleLine(true);description.addView(hint);
+            TextView amount=label(Money.euros(item.unitCents),12,ink(),true);
+            amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+            row.addView(amount);
+            row.setTag(item);
+            row.setFocusable(true);row.setContentDescription(item.name+", "+kind+
+                ", "+Money.euros(item.unitCents)+", uredi stavku");
+            row.setOnClickListener(v->editProduct(item));
+            grouped.addView(row);
+        }
+        place(body,grouped);
+        TextView empty=label(products.isEmpty()?"Katalog je prazan. Dodajte prvu stavku.":
+            "Nema stavki za odabrani filtar.",12,sub(),false);
+        empty.setGravity(Gravity.CENTER);
+        gap(body,12);place(body,empty);
+        final Runnable refresh=()->{
+            int visible=0;boolean previousVisible=false;
+            for(int i=0;i<grouped.getChildCount();i++){
+                View row=grouped.getChildAt(i);
+                if(row.getTag() instanceof Store.Item){
+                    boolean matches=catalogMatches((Store.Item)row.getTag(),
+                        search.getText().toString(),selected[0]);
+                    row.setVisibility(matches?View.VISIBLE:View.GONE);
+                    if(matches)visible++;
+                    previousVisible=matches || previousVisible;
+                }else{
+                    row.setVisibility(View.GONE);
                 }
             }
-            @Override public void afterTextChanged(android.text.Editable edit){}
+            boolean hasPrevious=false;
+            for(int i=0;i<grouped.getChildCount();i++){
+                View view=grouped.getChildAt(i);
+                if(view.getTag() instanceof Store.Item){
+                    if(view.getVisibility()==View.VISIBLE)hasPrevious=true;
+                    continue;
+                }
+                boolean nextVisible=false;
+                for(int j=i+1;j<grouped.getChildCount();j++){
+                    if(grouped.getChildAt(j).getTag() instanceof Store.Item){
+                        nextVisible=grouped.getChildAt(j).getVisibility()==View.VISIBLE;
+                        break;
+                    }
+                }
+                view.setVisibility(hasPrevious&&nextVisible?View.VISIBLE:View.GONE);
+            }
+            grouped.setVisibility(visible>0?View.VISIBLE:View.GONE);
+            empty.setVisibility(visible==0?View.VISIBLE:View.GONE);
+            for(int i=0;i<buttons.length;i++){
+                boolean active=categories[i].equals(selected[0]);
+                buttons[i].setTextColor(active?BLUE:sub());
+                buttons[i].setTypeface(null,active?android.graphics.Typeface.BOLD:
+                    android.graphics.Typeface.NORMAL);
+                buttons[i].setBackground(active?shape(panel(),10):null);
+            }
+        };
+        for(int i=0;i<buttons.length;i++){
+            final String option=categories[i];
+            buttons[i].setOnClickListener(v->{selected[0]=option;refresh.run();});
+        }
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int st,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int st,int before,int count){
+                refresh.run();
+            }
+            @Override public void afterTextChanged(android.text.Editable s){}
         });
+        focus.setOnClickListener(v->{
+            search.requestFocus();
+            android.view.inputmethod.InputMethodManager ime=
+                (android.view.inputmethod.InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            if(ime!=null)ime.showSoftInput(search,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        });
+        filterIcon.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Vrsta stavke")
+            .setItems(new String[]{"Sve","Usluge","Proizvodi","Nerazvrstano"},
+                (dialog,index)->{
+                    selected[0]=new String[]{"Sve","Usluge","Proizvodi","Nerazvrstano"}[index];
+                    refresh.run();
+                }).show());
+        refresh.run();
         floatingAction("Dodaj artikl ili uslugu",()->editProduct(null));
     }
+
+    static boolean catalogMatches(Store.Item item,String search,String category){
+        String text=(item.name+" "+item.unit+" "+item.kind)
+            .toLowerCase(Locale.forLanguageTag("hr-HR"));
+        String term=search==null?"":search.trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
+        boolean kind="Sve".equals(category) ||
+            ("Usluge".equals(category)&&"SERVICE".equals(item.kind)) ||
+            ("Proizvodi".equals(category)&&"PRODUCT".equals(item.kind)) ||
+            ("Nerazvrstano".equals(category)&&"UNSPECIFIED".equals(item.kind));
+        return kind&&text.contains(term);
+    }
+
     private void addProduct(){editProduct(null);}
     private void editProduct(Store.Item current){
         boolean editing=current!=null;
         LinearLayout form=vertical();pad(form,18,5);
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
-        EditText price=field("Jedinična cijena (EUR)",editing?String.format(Locale.forLanguageTag("hr-HR"),"%.2f",current.unitCents/100.0):"0,00");
+        EditText price=field("Jedinična cijena (EUR)",editing?
+            String.format(Locale.forLanguageTag("hr-HR"),"%.2f",current.unitCents/100.0):"0,00");
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        String[] kinds={"Odaberite vrstu","Usluga","Proizvod","Nerazvrstano"};
+        Spinner kind=new Spinner(this);
+        kind.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,kinds));
+        if(editing)kind.setSelection("SERVICE".equals(current.kind)?1:
+            "PRODUCT".equals(current.kind)?2:3);
         String[] rates={"25%","13%","5%","0%"};
         Spinner vat=new Spinner(this);
         vat.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,rates));
-        if(editing)for(int i=0;i<rates.length;i++)if(rates[i].equals(current.taxRate+"%"))vat.setSelection(i);
-        fieldLabel(form,"Naziv",name);fieldLabel(form,"Cijena bez PDV-a",price);
-        gap(form,9);form.addView(label("Stopa PDV-a",12,ink(),true));place(form,vat);
+        if(editing)for(int i=0;i<rates.length;i++)
+            if(rates[i].equals(current.taxRate+"%"))vat.setSelection(i);
+        EditText unit=field("Mjerna jedinica (kom, sat, mj...)",
+            editing?current.unit:"kom");
+        fieldLabel(form,"Naziv",name);
+        gap(form,9);place(form,label("Vrsta",12,ink(),true));place(form,kind);
+        fieldLabel(form,"Jedinična cijena bez PDV-a",price);
+        fieldLabel(form,"Mjerna jedinica",unit);
+        gap(form,9);place(form,label("Stopa PDV-a",12,ink(),true));place(form,vat);
         AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi artikl ili uslugu":"Novi artikl ili usluga")
             .setView(form).setNegativeButton("Odustani",null)
             .setPositiveButton("Spremi",null).create();
         dialog.setOnShowListener(ignore->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             .setOnClickListener(button->{
-                try {
-                    int tax=Integer.parseInt(rates[vat.getSelectedItemPosition()].replace("%",""));
+                try{
+                    if(kind.getSelectedItemPosition()==0){
+                        toast("Odaberite vrstu stavke");return;
+                    }
+                    String value=new String[]{"","SERVICE","PRODUCT","UNSPECIFIED"}[
+                        kind.getSelectedItemPosition()];
+                    int rate=Integer.parseInt(rates[vat.getSelectedItemPosition()].replace("%",""));
                     long cents=Money.cents(price.getText().toString());
-                    if(editing)db.updateProduct(current.id,name.getText().toString(),cents,tax);
-                    else db.saveProduct(name.getText().toString(),cents,tax);
+                    String normalizedUnit=Store.normalizedUnit(unit.getText().toString().trim());
+                    if(editing)
+                        db.updateProduct(current.id,name.getText().toString(),cents,rate,
+                            value,normalizedUnit);
+                    else db.saveProduct(name.getText().toString(),cents,rate,value,normalizedUnit);
                     dialog.dismiss();catalog();
                 }catch(Exception e){error(e);}
             }));
         dialog.show();
     }
+
     private void reports(){
         setup("reports",true);
         toolbar("Izvještaji","Statistika i analiza poslovanja",true);
