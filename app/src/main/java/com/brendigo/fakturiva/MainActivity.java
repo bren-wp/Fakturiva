@@ -1825,60 +1825,218 @@ public final class MainActivity extends Activity {
             }));
         dialog.show();
     }
+    /** Screen 12: a genuine searchable client registry with compact grouped rows. */
     private void clients(){
         setup("clients",true);
-        toolbar("Klijenti","Kupci i poslovni partneri",false);
-        EditText search=field("Pretraži klijente…","");
-        place(body,search);gap(body,14);
-        List<Store.Client> clients=db.clients();
-        place(body,label("Ukupno klijenata: "+clients.size(),12,sub(),false));
-        gap(body,11);
-        LinearLayout results=vertical();place(body,results);
-        for(Store.Client client:clients){
-            LinearLayout card=card();
-            LinearLayout line=horizontal();
-            String initial=client.name.substring(0,Math.min(1,client.name.length()))
-                .toUpperCase(Locale.forLanguageTag("hr-HR"));
-            TextView icon=label(initial,19,BLUE,true);
-            icon.setGravity(Gravity.CENTER);
-            background(icon,dark?0xff293b63:0xffeaf0ff,11);
-            line.addView(icon,lp(43,43));
-            LinearLayout details=vertical();pad(details,12,0);
-            details.addView(label(client.name,13,ink(),true));gap(details,3);
-            String secondary=!client.oib.isEmpty()?"OIB: "+client.oib:
-                (!client.address.isEmpty()?client.address:client.email);
-            details.addView(label(secondary,11,sub(),false));
-            line.addView(details,new LinearLayout.LayoutParams(0,-2,1));
-            line.addView(label("›",25,sub(),false));
-            place(card,line);
-            LinearLayout.LayoutParams itemLp=new LinearLayout.LayoutParams(-1,-2);
-            itemLp.bottomMargin=dp(9);
-            results.addView(card,itemLp);
-            card.setTag((client.name+" "+client.oib+" "+client.address+" "+
-                client.email+" "+client.phone).toLowerCase(Locale.forLanguageTag("hr-HR")));
-            card.setOnClickListener(v->clientDetails(client));
-        }
-        TextView empty=label(clients.isEmpty()?"Još nemate klijenata.":"Nema podudarnih klijenata.",
-            12,sub(),false);
-        place(results,empty);empty.setVisibility(clients.isEmpty()?View.VISIBLE:View.GONE);
-        search.addTextChangedListener(new android.text.TextWatcher(){
-            @Override public void beforeTextChanged(CharSequence value,int start,int count,int after){}
-            @Override public void onTextChanged(CharSequence value,int start,int before,int count){
-                String query=value.toString().trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
-                int visible=0;
-                for(int i=0;i<results.getChildCount();i++){
-                    View row=results.getChildAt(i);
-                    if(!(row.getTag() instanceof String))continue;
-                    boolean match=((String)row.getTag()).contains(query);
-                    row.setVisibility(match?View.VISIBLE:View.GONE);
-                    if(match)visible++;
-                }
-                empty.setVisibility(visible==0?View.VISIBLE:View.GONE);
+        pad(body,18,15);
+        List<Store.Client> all=db.clients();
+
+        // A stored client has no independent active/inactive flag. Count clients
+        // with actual documents instead of inventing "active" records.
+        java.util.HashSet<Long> documented=new java.util.HashSet<>();
+        for(String type:new String[]{Store.INVOICE,Store.QUOTE})
+            for(Store.Document d:db.documents(type))documented.add(d.clientId);
+
+        LinearLayout header=horizontal();
+        LinearLayout heading=vertical();
+        heading.addView(label("Klijenti",24,ink(),true));gap(heading,5);
+        heading.addView(label("Kontakti i poslovni partneri",12,sub(),false));
+        header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        ImageView searchButton=icon(R.drawable.ic_search,sub());
+        searchButton.setBackground(shape(panel(),13));
+        searchButton.setPadding(dp(11),dp(11),dp(11),dp(11));
+        searchButton.setContentDescription("Pretraži klijente");
+        LinearLayout.LayoutParams searchButtonLp=lp(44,44);
+        searchButtonLp.rightMargin=dp(8);
+        header.addView(searchButton,searchButtonLp);
+        TextView more=label("•••",18,sub(),true);
+        more.setGravity(Gravity.CENTER);
+        more.setBackground(shape(panel(),13));
+        more.setContentDescription("Opcije klijenata");
+        header.addView(more,lp(44,44));
+        more.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Klijenti")
+            .setItems(new String[]{"Dodaj klijenta","Postavke"},
+                (dialog,which)->{if(which==0)addClient();else settings();})
+            .show());
+        place(body,header);gap(body,21);
+
+        LinearLayout searchRow=horizontal();
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        searchRow.setBackground(outlined(panel()));
+        searchRow.setPadding(dp(13),dp(2),dp(12),dp(2));
+        searchRow.addView(icon(R.drawable.ic_search,sub()),lp(22,22));
+        EditText search=field("Pretraži klijente...","");
+        search.setBackgroundColor(Color.TRANSPARENT);
+        search.setSingleLine(true);
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(0,dp(44),1);
+        searchLp.leftMargin=dp(8);
+        searchRow.addView(search,searchLp);
+        ImageView filterButton=icon(R.drawable.ic_filter,sub());
+        filterButton.setPadding(dp(4),dp(4),dp(4),dp(4));
+        filterButton.setContentDescription("Filtriraj klijente");
+        searchRow.addView(filterButton,lp(29,29));
+        place(body,searchRow);gap(body,14);
+
+        LinearLayout totals=horizontal();
+        totals.setGravity(Gravity.CENTER_VERTICAL);
+        totals.addView(label("Ukupno klijenata  ",11,sub(),false));
+        totals.addView(label(String.valueOf(all.size()),12,ink(),true));
+        View flexible=new View(this);
+        totals.addView(flexible,new LinearLayout.LayoutParams(0,dp(1),1));
+        totals.addView(label("S dokumentima  ",11,sub(),false));
+        totals.addView(label(String.valueOf(documented.size()),12,ink(),true));
+        place(body,totals);gap(body,13);
+
+        LinearLayout grouped=vertical();
+        grouped.setBackground(outlined(panel()));
+        int index=0;
+        for(Store.Client client:all){
+            if(index++>0){
+                View separator=new View(this);
+                separator.setBackgroundColor(border());
+                grouped.addView(separator,new LinearLayout.LayoutParams(-1,dp(1)));
             }
-            @Override public void afterTextChanged(android.text.Editable edit){}
+            LinearLayout row=horizontal();
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12),dp(17),dp(12),dp(17));
+            TextView avatar=label(clientInitials(client.name),14,BLUE,true);
+            avatar.setGravity(Gravity.CENTER);
+            avatar.setBackground(shape(dark?0xff293b63:0xffeaf0ff,12));
+            row.addView(avatar,lp(41,41));
+
+            LinearLayout info=vertical();
+            LinearLayout.LayoutParams infoLp=new LinearLayout.LayoutParams(0,-2,1);
+            infoLp.leftMargin=dp(12);
+            row.addView(info,infoLp);
+            TextView name=label(client.name,13,ink(),true);
+            name.setSingleLine(true);
+            name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            place(info,name);gap(info,5);
+            String location=clientCity(client.address);
+            String secondary=location.isEmpty()?"Klijent":location+" · Klijent";
+            TextView subline=label(secondary,11,sub(),false);
+            subline.setSingleLine(true);
+            subline.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            place(info,subline);
+            TextView chevron=label("›",25,sub(),false);
+            chevron.setGravity(Gravity.CENTER);
+            row.addView(chevron,lp(20,39));
+            row.setTag((client.name+" "+client.oib+" "+client.address+" "+
+                client.email+" "+client.phone).toLowerCase(Locale.forLanguageTag("hr-HR")));
+            row.setContentDescription("Otvori klijenta: "+client.name);
+            row.setFocusable(true);
+            row.setOnClickListener(v->clientDetails(client));
+            grouped.addView(row,new LinearLayout.LayoutParams(-1,-2));
+        }
+        place(body,grouped);
+        TextView empty=label(all.isEmpty()?"Još nemate klijenata.":
+            "Nema klijenata za odabranu pretragu.",12,sub(),false);
+        empty.setGravity(Gravity.CENTER);
+        gap(body,13);place(body,empty);
+        TextView tip=label("ⓘ  Dodajte klijente kako biste brže izrađivali dokumente.",
+            11,sub(),false);
+        gap(body,16);place(body,tip);
+
+        final String[] filter={"Svi"};
+        final Runnable apply=()->{
+            String term=search.getText().toString().trim()
+                .toLowerCase(Locale.forLanguageTag("hr-HR"));
+            int visible=0;
+            for(int i=0;i<grouped.getChildCount();i++){
+                View row=grouped.getChildAt(i);
+                if(!(row.getTag() instanceof String))continue;
+                // Each client row is followed or preceded by a separator.
+                // The preceding separator will be hidden for the first visible row.
+                String text=(String)row.getTag();
+                int matchingIndex=-1;
+                for(int j=0;j<all.size();j++){
+                    Store.Client candidate=all.get(j);
+                    String key=(candidate.name+" "+candidate.oib+" "+candidate.address+
+                        " "+candidate.email+" "+candidate.phone)
+                        .toLowerCase(Locale.forLanguageTag("hr-HR"));
+                    if(key.equals(text)){matchingIndex=j;break;}
+                }
+                boolean has=matchingIndex>=0 && documented.contains(all.get(matchingIndex).id);
+                boolean match=text.contains(term) &&
+                    ("Svi".equals(filter[0]) ||
+                        ("S dokumentima".equals(filter[0])&&has) ||
+                        ("Bez dokumenata".equals(filter[0])&&!has));
+                row.setVisibility(match?View.VISIBLE:View.GONE);
+                if(match)visible++;
+            }
+            // Group dividers should separate visible rows, never leave blanks.
+            boolean first=true;
+            for(int i=0;i<grouped.getChildCount();i++){
+                View child=grouped.getChildAt(i);
+                if(child.getTag() instanceof String){
+                    if(child.getVisibility()!=View.VISIBLE)continue;
+                    first=false;
+                }else{
+                    boolean nextVisible=false;
+                    for(int j=i+1;j<grouped.getChildCount();j++){
+                        if(grouped.getChildAt(j).getTag() instanceof String){
+                            nextVisible=grouped.getChildAt(j).getVisibility()==View.VISIBLE;
+                            break;
+                        }
+                    }
+                    child.setVisibility(!first && nextVisible?View.VISIBLE:View.GONE);
+                }
+            }
+            grouped.setVisibility(visible==0?View.GONE:View.VISIBLE);
+            empty.setVisibility(visible==0?View.VISIBLE:View.GONE);
+        };
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int st,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int st,int before,int count){
+                apply.run();
+            }
+            @Override public void afterTextChanged(android.text.Editable e){}
         });
+        searchButton.setOnClickListener(v->{
+            search.requestFocus();
+            android.view.inputmethod.InputMethodManager keyboard=
+                (android.view.inputmethod.InputMethodManager)
+                    getSystemService(Context.INPUT_METHOD_SERVICE);
+            if(keyboard!=null)keyboard.showSoftInput(search,
+                android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        });
+        filterButton.setOnClickListener(v->{
+            String[] filters={"Svi","S dokumentima","Bez dokumenata"};
+            new AlertDialog.Builder(this)
+                .setTitle("Prikaz klijenata")
+                .setSingleChoiceItems(filters,java.util.Arrays.asList(filters)
+                    .indexOf(filter[0]),(dialog,choice)->{
+                        filter[0]=filters[choice];
+                        dialog.dismiss();apply.run();
+                    }).setNegativeButton("Odustani",null).show();
+        });
+        apply.run();
         floatingAction("Dodaj klijenta",this::addClient);
     }
+
+    /** Two-letter initials, safe for empty strings and short client names. */
+    static String clientInitials(String name){
+        if(name==null||name.trim().isEmpty())return "K";
+        String[] parts=name.trim().split("\\s+");
+        StringBuilder result=new StringBuilder();
+        for(String part:parts){
+            if(part.isEmpty())continue;
+            int cp=part.codePointAt(0);
+            result.appendCodePoint(Character.toUpperCase(cp));
+            if(result.codePointCount(0,result.length())>=2)break;
+        }
+        return result.toString();
+    }
+
+    /** A city can be shown only when present in the stored address. */
+    static String clientCity(String address){
+        if(address==null||address.trim().isEmpty())return "";
+        String[] parts=address.split(",");
+        return parts[parts.length-1].trim();
+    }
+
     private void clientDetails(Store.Client c){
         setup("client_detail",true);
         toolbar("Detalji klijenta","Profil i povijest poslovanja",true);
