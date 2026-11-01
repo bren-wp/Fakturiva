@@ -82,8 +82,9 @@ public final class MainActivity extends Activity {
                 if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
                     throw new IllegalStateException("Neuspjela provjera baze");
             }
-            if(!prefs.getBoolean("welcomed",false)) splash(true);
-            else { navigate("home");offerWorkingDraftRecovery(); }
+            // Show the branded launch screen on every cold start. New users
+            // continue to onboarding; returning users go to their live home.
+            splash(true);
         }catch(Exception openError){damagedDatabase(openError);}
     }
     @Override protected void onSaveInstanceState(Bundle outState){
@@ -337,14 +338,17 @@ public final class MainActivity extends Activity {
         frame.addView(rings,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout center=vertical();center.setGravity(Gravity.CENTER);
         ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.brand_mark);
-        LinearLayout.LayoutParams logo=lp(104,104);logo.gravity=Gravity.CENTER_HORIZONTAL;
+        LinearLayout.LayoutParams logo=lp(108,108);logo.gravity=Gravity.CENTER_HORIZONTAL;
         center.addView(mark,logo);gap(center,28);
-        TextView name=label("Fakturiva",42,WHITE,true);name.setGravity(Gravity.CENTER);
-        place(center,name);gap(center,13);
-        TextView subtitle=label("Računi i ponude, jednostavno.",14,0xffbdcde1,false);
+        TextView name=label("Fakturiva",44,WHITE,true);name.setGravity(Gravity.CENTER);
+        place(center,name);gap(center,17);
+        TextView subtitle=label("Računi i ponude, jednostavno.",13,0xffbdcde1,false);
         subtitle.setGravity(Gravity.CENTER);place(center,subtitle);
         FrameLayout.LayoutParams middle=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
         middle.leftMargin=dp(18);middle.rightMargin=dp(18);frame.addView(center,middle);
+        // The reference groups the icon and typography above screen center.
+        // Move the real native views, never the source screenshot.
+        center.setTranslationY(-dp(40));
         LinearLayout bottom=vertical();bottom.setGravity(Gravity.CENTER);
         FrameLayout progress=new FrameLayout(this);background(progress,0xff36516c,4);
         View completed=new View(this);background(completed,0xff2fd2c5,4);
@@ -357,8 +361,19 @@ public final class MainActivity extends Activity {
         FrameLayout.LayoutParams down=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
         down.bottomMargin=dp(53);frame.addView(bottom,down);
         if(animate){
-            frame.setOnClickListener(v->welcome());
-            frame.postDelayed(()->{if("splash".equals(screen)&&!isFinishing())welcome();},850);
+            frame.setContentDescription("Fakturiva — učitavanje aplikacije");
+            frame.setOnClickListener(v->finishSplash());
+            frame.postDelayed(this::finishSplash,1150);
+        }
+    }
+    /** Launch navigation respects first-run state and never invents a cloud login. */
+    private void finishSplash(){
+        if(!"splash".equals(screen)||isFinishing()||isDestroyed())return;
+        if(prefs.getBoolean("welcomed",false)){
+            navigate("home");
+            offerWorkingDraftRecovery();
+        }else{
+            welcome();
         }
     }
     private void welcome(){
