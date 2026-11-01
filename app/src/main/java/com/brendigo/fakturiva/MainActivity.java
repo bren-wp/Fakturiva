@@ -970,6 +970,15 @@ public final class MainActivity extends Activity {
         gap(target,12);target.addView(label(name,12,ink(),true));gap(target,6);place(target,field);
     }
     private void dateInput(EditText edit){
+        // Real platform DatePicker, with a local vector calendar affordance.
+        android.graphics.drawable.Drawable calendar=getDrawable(R.drawable.ic_calendar);
+        if(calendar!=null){
+            calendar.mutate().setTint(sub());
+            calendar.setBounds(0,0,dp(18),dp(18));
+            edit.setCompoundDrawables(null,null,calendar,null);
+            edit.setCompoundDrawablePadding(dp(9));
+        }
+        edit.setContentDescription(edit.getHint()+", otvori kalendar");
         edit.setFocusable(false);
         edit.setOnClickListener(v->{Calendar c=Calendar.getInstance();
             try{c.setTime(dateFormat.parse(edit.getText().toString()));}catch(Exception ignored){}
@@ -1116,13 +1125,14 @@ public final class MainActivity extends Activity {
     }
     private void editDocumentScreen(){
         setup("new_doc",true);
+        pad(body,15,14);
         toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda",
             "Izradite novi dokument",true);
         wizardSteps(1);
         List<Store.Client> clients=db.clients();
 
         LinearLayout basics=card();
-        title(basics,"Osnovni podaci");gap(basics,12);
+        place(basics,label("Osnovni podaci",18,ink(),true));gap(basics,12);
         String typeName=Store.INVOICE.equals(editType)?"računa":"ponude";
         basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
         TextView sequence=label(editingDraftId>0?
@@ -1135,10 +1145,12 @@ public final class MainActivity extends Activity {
             gap(basics,12);button(basics,"＋ Dodaj klijenta",this::addClient);
             place(body,basics);return;
         }
-        String[] names=new String[clients.size()];int current=0;
+        // A new invoice must never silently select the first client.
+        String[] names=new String[clients.size()+1];int current=0;
+        names[0]="Odaberite klijenta";
         for(int i=0;i<clients.size();i++){
-            names[i]=clients.get(i).name;
-            if(clients.get(i).id==editClientId)current=i;
+            names[i+1]=clients.get(i).name;
+            if(clients.get(i).id==editClientId)current=i+1;
         }
         gap(basics,13);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
         LinearLayout choose=horizontal();choose.setGravity(Gravity.CENTER_VERTICAL);
@@ -1147,19 +1159,22 @@ public final class MainActivity extends Activity {
         ArrayAdapter<String> adapter=new ArrayAdapter<>(
             this,android.R.layout.simple_spinner_dropdown_item,names);
         selector.setAdapter(adapter);selector.setSelection(current);
+        // Remove the duplicate platform arrow; use the custom chevron.
+        selector.setBackgroundColor(Color.TRANSPARENT);
         choose.addView(selector,new LinearLayout.LayoutParams(0,dp(42),1));
         choose.addView(label("›",23,sub(),false));
         place(basics,choose);
         selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
             @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int pos,long id){
-                editClientId=clients.get(pos).id;saveWorkingDraft();
+                editClientId=pos==0?-1:clients.get(pos-1).id;
+                saveWorkingDraft();
             }
         });
         EditText issued=field("Datum izdavanja",draftIssue);
         dateInput(issued);fieldLabel(basics,"Datum izdavanja",issued);
         EditText due=field("Datum dospijeća / valjanosti",draftDue);
-        dateInput(due);fieldLabel(basics,"Dospijeće / vrijedi do",due);
+        dateInput(due);fieldLabel(basics,Store.INVOICE.equals(editType)?"Datum dospijeća":"Valjanost do",due);
         String method=db.setting("payment_method").trim();
         gap(basics,13);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
         LinearLayout paying=horizontal();paying.setGravity(Gravity.CENTER_VERTICAL);
@@ -1188,7 +1203,12 @@ public final class MainActivity extends Activity {
         watchDraft(supply,()->draftSupply=supply.getText().toString());
         watchDraft(notes,()->draftNote=notes.getText().toString());
         stickyPrimary("Nastavi na stavke  ›",()->{
-            editClientId=clients.get(selector.getSelectedItemPosition()).id;
+            int chosen=selector.getSelectedItemPosition();
+            if(chosen<=0){
+                toast("Odaberite klijenta prije nastavka");
+                return;
+            }
+            editClientId=clients.get(chosen-1).id;
             draftIssue=issued.getText().toString();
             draftDue=due.getText().toString();
             draftSupply=supply.getText().toString();
