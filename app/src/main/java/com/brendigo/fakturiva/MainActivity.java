@@ -3037,6 +3037,7 @@ public final class MainActivity extends Activity {
         if(result!=RESULT_OK||data==null||data.getData()==null){
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
             if(code==104)pendingPaymentsCsvMonth=null;
+            if(code==106)pendingReportCsvMonth=null;
             return;
         }
         Uri uri=data.getData();
@@ -3059,6 +3060,16 @@ public final class MainActivity extends Activity {
                     PaymentsCsv.write(PaymentsCsv.forMonth(db.payments(),pendingPaymentsCsvMonth),out);
                 }
                 toast("CSV evidencija uplata spremljena");
+            }else if(code==106){
+                if(pendingReportCsvMonth==null)
+                    throw new IllegalStateException("Mjesec izvještaja nije poznat. Ponovite izvoz.");
+                long[] summary=reportMetrics(db.documents(Store.INVOICE),
+                    db.payments(),pendingReportCsvMonth);
+                try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
+                    if(out==null)throw new IllegalStateException("Datoteka nije dostupna");
+                    ReportCsv.write(pendingReportCsvMonth,summary,out);
+                }
+                toast("Mjesečni izvještaj uspješno spremljen");
             }else if(code==BACKUP_EXPORT){
                 byte[] dataBytes=db.backup().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 byte[] secure=SecureBackup.encrypt(dataBytes,pendingPassword);
@@ -3084,6 +3095,7 @@ public final class MainActivity extends Activity {
         finally{
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
             if(code==104)pendingPaymentsCsvMonth=null;
+            if(code==106)pendingReportCsvMonth=null;
         }
     }
     private void clearPass(){if(pendingPassword!=null){Arrays.fill(pendingPassword,'\0');pendingPassword=null;}}
@@ -3104,34 +3116,44 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed(){
         handleBack();
     }
+    /** Native six-month confirmed-invoice chart tied to the chosen month. */
     private final class RevenueBars extends View{
-        final android.graphics.Paint p=new android.graphics.Paint(3);
-        RevenueBars(Context ctx){super(ctx);}
+        final android.graphics.Paint paint=new android.graphics.Paint(3);
+        private final Calendar ending;
+        RevenueBars(Context context,Calendar month){
+            super(context);
+            ending=(Calendar)month.clone();
+            ending.set(Calendar.DAY_OF_MONTH,1);
+        }
         @Override protected void onDraw(android.graphics.Canvas canvas){
             super.onDraw(canvas);
-            long[] totals=db.monthlyReceipts();
-            long top=1;
-            for(int i=6;i<12;i++)top=Math.max(top,totals[i]);
-            float w=getWidth(),h=getHeight(),labelH=dp(22),plotH=h-labelH;
-            p.setColor(border());p.setStrokeWidth(dp(1));
-            canvas.drawLine(0,plotH,w,plotH,p);
-            java.util.Calendar now=java.util.Calendar.getInstance();
-            now.add(java.util.Calendar.MONTH,-5);
-            String[] months={"Sij","Velj","Ožu","Tra","Svi","Lip","Srp","Kol","Ruj","Lis","Stu","Pro"};
-            p.setTextSize(dp(10));p.setTextAlign(android.graphics.Paint.Align.CENTER);
+            long[] values=new long[6];
+            Calendar cursor=(Calendar)ending.clone();
+            cursor.add(Calendar.MONTH,-5);
+            String[] names={"Sij","Velj","Ožu","Tra","Svi","Lip","Srp","Kol","Ruj","Lis","Stu","Pro"};
+            String[] labels=new String[6];
+            SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM",Locale.ROOT);
+            long max=1;
             for(int i=0;i<6;i++){
-                float slot=w/6f;
-                float x=i*slot+slot*.14f,barW=slot*.72f;
-                float fraction=(float)totals[i+6]/top;
-                float barH=Math.max(dp(3),plotH*.86f*fraction);
-                p.setStyle(android.graphics.Paint.Style.FILL);
-                p.setColor(i==5?TEAL:0xff6879ec);
-                canvas.drawRoundRect(x,plotH-barH,x+barW,plotH,dp(7),dp(7),p);
-                p.setColor(sub());
-                canvas.drawText(months[now.get(java.util.Calendar.MONTH)],x+barW/2,h-dp(3),p);
-                now.add(java.util.Calendar.MONTH,1);
+                values[i]=db.invoicedCentsMonth(fmt.format(cursor.getTime()));
+                max=Math.max(max,values[i]);
+                labels[i]=names[cursor.get(Calendar.MONTH)];
+                cursor.add(Calendar.MONTH,1);
             }
-            p.setTextAlign(android.graphics.Paint.Align.LEFT);
+            float width=getWidth(),height=getHeight(),labelH=dp(26),base=height-labelH;
+            paint.setColor(border());paint.setStrokeWidth(dp(1));
+            canvas.drawLine(0,base,width,base,paint);
+            paint.setTextSize(dp(10));
+            paint.setTextAlign(android.graphics.Paint.Align.CENTER);
+            for(int i=0;i<6;i++){
+                float cell=width/6f,barWidth=cell*.72f,x=i*cell+cell*.14f;
+                float barHeight=values[i]==0?dp(2):(base-dp(14))*values[i]/(float)max;
+                paint.setColor(i==5?TEAL:0xff7385f2);
+                canvas.drawRoundRect(x,base-barHeight,x+barWidth,base,dp(7),dp(7),paint);
+                paint.setColor(sub());
+                canvas.drawText(labels[i],i*cell+cell/2f,height-dp(3),paint);
+            }
+            paint.setTextAlign(android.graphics.Paint.Align.LEFT);
         }
     }
     private final class RevenueLine extends View{
