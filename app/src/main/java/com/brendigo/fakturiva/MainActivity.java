@@ -821,18 +821,11 @@ public final class MainActivity extends Activity {
 
         List<Store.Document> all=db.documents(type);
         if(!invoice){
-            // Real persisted quotes only. A draft is not an active proposal.
-            int active=0;
-            long value=0;
-            for(Store.Document quote:all){
-                if(Store.SENT.equals(quote.status)){
-                    active++;
-                    value=Math.addExact(value,quote.totalCents);
-                }
-            }
+            // Active = confirmed quote whose validity has not expired.
+            long[] overviewValues=activeQuoteTotals(all,DocumentStatus.today());
             LinearLayout overview=horizontal();
-            quoteSummary(overview,"Aktivne ponude",String.valueOf(active));
-            quoteSummary(overview,"Vrijednost ponuda",Money.euros(value));
+            quoteSummary(overview,"Aktivne ponude",String.valueOf(overviewValues[0]));
+            quoteSummary(overview,"Vrijednost ponuda",Money.euros(overviewValues[1]));
             place(body,overview);
             gap(body,14);
         }
@@ -876,10 +869,23 @@ public final class MainActivity extends Activity {
         floatingAction(invoice?"Dodaj novi račun":"Dodaj novu ponudu",()->newDocument(type));
     }
 
+    /** Returns {count, gross euro cents} of non-expired confirmed quotes. */
+    static long[] activeQuoteTotals(List<Store.Document> documents,String today){
+        long count=0,value=0;
+        for(Store.Document quote:documents){
+            if(Store.QUOTE.equals(quote.type) && Store.SENT.equals(quote.status)
+                && quote.dueDate!=null && quote.dueDate.compareTo(today)>=0){
+                count=Math.addExact(count,1);
+                value=Math.addExact(value,quote.totalCents);
+            }
+        }
+        return new long[]{count,value};
+    }
+
     /** Compact real-value metric cards for the quote list (screen 09). */
     private void quoteSummary(LinearLayout row,String title,String amount){
         LinearLayout panelView=card();
-        pad(panelView,14,14);
+        pad(panelView,14,10);
         TextView descriptor=label(title,11,sub(),false);
         place(panelView,descriptor);
         gap(panelView,9);
