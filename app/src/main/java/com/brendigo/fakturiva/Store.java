@@ -16,7 +16,7 @@ import java.util.Calendar;
 /** Single-device storage. All document state transitions are transactional. */
 public final class Store extends SQLiteOpenHelper {
     private static final String DB_NAME = "fakturiva.db";
-    public static final int VERSION = 4;
+    public static final int VERSION = 5;
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
     private final Context appContext;
@@ -48,7 +48,7 @@ public final class Store extends SQLiteOpenHelper {
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE company (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, oib TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '')");
-        db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'UNSPECIFIED', unit TEXT NOT NULL DEFAULT 'kom')");
         db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', client_address TEXT NOT NULL DEFAULT '', client_oib TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', issuer_address TEXT NOT NULL DEFAULT '', issuer_oib TEXT NOT NULL DEFAULT '', issuer_email TEXT NOT NULL DEFAULT '', issuer_iban TEXT NOT NULL DEFAULT '', issuer_tax_note TEXT NOT NULL DEFAULT '', client_email TEXT NOT NULL DEFAULT '', client_phone TEXT NOT NULL DEFAULT '', client_vat_id TEXT NOT NULL DEFAULT '', issuer_phone TEXT NOT NULL DEFAULT '', issuer_vat_id TEXT NOT NULL DEFAULT '', issuer_postal_code TEXT NOT NULL DEFAULT '', issuer_city TEXT NOT NULL DEFAULT '', issuer_country TEXT NOT NULL DEFAULT '', issuer_website TEXT NOT NULL DEFAULT '', issuer_bank_name TEXT NOT NULL DEFAULT '', issuer_swift TEXT NOT NULL DEFAULT '', issuer_registry TEXT NOT NULL DEFAULT '', issuer_business_unit TEXT NOT NULL DEFAULT '', issuer_operator TEXT NOT NULL DEFAULT '', issuer_payment_method TEXT NOT NULL DEFAULT '', issuer_payment_reference TEXT NOT NULL DEFAULT '', supply_date TEXT NOT NULL DEFAULT '', quote_title TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE lines (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), name TEXT NOT NULL, qty_milli INTEGER NOT NULL CHECK(qty_milli>0), unit_cents INTEGER NOT NULL CHECK(unit_cents>=0), tax_rate INTEGER NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), paid_on TEXT NOT NULL)");
@@ -62,7 +62,7 @@ public final class Store extends SQLiteOpenHelper {
         }
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldV,int newV) {
-        if(oldV<1||oldV>4||newV!=VERSION)throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
+        if(oldV<1||oldV>5||newV!=VERSION)throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
         if(oldV==1) {
             for(String column:new String[]{"client_name","client_address","client_oib","issuer_name","issuer_address","issuer_oib","issuer_email","issuer_iban","issuer_tax_note"})
                 db.execSQL("ALTER TABLE documents ADD COLUMN "+column+" TEXT NOT NULL DEFAULT ''");
@@ -84,12 +84,17 @@ public final class Store extends SQLiteOpenHelper {
         if(oldV<=3){
             db.execSQL("ALTER TABLE documents ADD COLUMN quote_title TEXT NOT NULL DEFAULT ''");
         }
+        if(oldV<=4){
+            db.execSQL("ALTER TABLE catalog ADD COLUMN kind TEXT NOT NULL DEFAULT 'UNSPECIFIED'");
+            db.execSQL("ALTER TABLE catalog ADD COLUMN unit TEXT NOT NULL DEFAULT 'kom'");
+        }
     }
     public static final class Client {
         public long id; public String name, oib, address, email, phone, vatId;
     }
     public static final class Item {
-        public long id; public String name; public long qtyMilli = 1000, unitCents;
+        public long id; public String name,kind="UNSPECIFIED",unit="kom";
+        public long qtyMilli = 1000, unitCents;
         public int taxRate=25;
         public long net() { return Money.subtotal(qtyMilli, unitCents); }
         public long tax() { return Money.tax(net(),taxRate); }
@@ -164,15 +169,31 @@ public final class Store extends SQLiteOpenHelper {
         }
         return out;
     }
-    public long saveProduct(String name,long priceCents,int taxRate) {
-        if(name.trim().isEmpty() || priceCents<0) throw new IllegalArgumentException("Neispravna usluga");
+    /** Older catalog entries remain UNCLASSIFIED until explicitly categorized. */
+    public long saveProduct(String name,long priceCents,int taxRate){
+        return saveProduct(name,priceCents,taxRate,"UNSPECIFIED","kom");
+    }
+    public static String normalizedKind(String kind){
+        if("SERVICE".equals(kind)||"PRODUCT".equals(kind)||"UNSPECIFIED".equals(kind))
+            return kind;
+        throw new IllegalArgumentException("Nepoznata vrsta stavke");
+    }
+    public static String normalizedUnit(String unit){
+        if(unit==null || !unit.matches("[\\p{L}0-9 ._-]{1,20}"))
+            throw new IllegalArgumentException("Neispravna mjerna jedinica");
+        return unit.trim();
+    }
+    public long saveProduct(String name,long priceCents,int taxRate,String kind,String unit){
+        if(name==null||name.trim().isEmpty()||priceCents<0)
+            throw new IllegalArgumentException("Neispravan naziv ili cijena");
         Money.tax(0,taxRate);
         ContentValues v=new ContentValues();
         v.put("name",name.trim());v.put("price_cents",priceCents);v.put("tax_rate",taxRate);
+        v.put("kind",normalizedKind(kind));v.put("unit",normalizedUnit(unit));
         long id=getWritableDatabase().insertOrThrow("catalog",null,v);
         snapshotAfterWrite();return id;
     }
-    /** Update a catalog entry without changing historical invoice/quote line snapshots. */
+    /** Editing a catalog entry never modifies already issued document line snapshots. */
     public void updateProduct(long id,String name,long priceCents,int taxRate){
         if(name==null||name.trim().isEmpty()||priceCents<0)
             throw new IllegalArgumentException("Neispravan naziv ili cijena artikla");
@@ -183,10 +204,27 @@ public final class Store extends SQLiteOpenHelper {
             throw new IllegalArgumentException("Artikl ne postoji");
         snapshotAfterWrite();
     }
-    public List<Item> products() {
+    public void updateProduct(long id,String name,long priceCents,int taxRate,String kind,String unit){
+        if(name==null||name.trim().isEmpty()||priceCents<0)
+            throw new IllegalArgumentException("Neispravan naziv ili cijena artikla");
+        Money.tax(0,taxRate);
+        ContentValues v=new ContentValues();
+        v.put("name",name.trim());v.put("price_cents",priceCents);v.put("tax_rate",taxRate);
+        v.put("kind",normalizedKind(kind));v.put("unit",normalizedUnit(unit));
+        if(getWritableDatabase().update("catalog",v,"id=?",new String[]{Long.toString(id)})!=1)
+            throw new IllegalArgumentException("Artikl ne postoji");
+        snapshotAfterWrite();
+    }
+    public List<Item> products(){
         ArrayList<Item> out=new ArrayList<>();
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT id,name,price_cents,tax_rate FROM catalog ORDER BY name COLLATE NOCASE",null)) {
-            while(c.moveToNext()) { Item x=new Item();x.id=c.getLong(0);x.name=c.getString(1);x.unitCents=c.getLong(2);x.taxRate=c.getInt(3);out.add(x); }
+        try(Cursor c=getReadableDatabase().rawQuery(
+            "SELECT id,name,price_cents,tax_rate,kind,unit FROM catalog ORDER BY name COLLATE NOCASE",null)){
+            while(c.moveToNext()){
+                Item x=new Item();
+                x.id=c.getLong(0);x.name=c.getString(1);x.unitCents=c.getLong(2);
+                x.taxRate=c.getInt(3);x.kind=c.getString(4);x.unit=c.getString(5);
+                out.add(x);
+            }
         }
         return out;
     }
