@@ -48,21 +48,9 @@ jobs:
           ram-size: 3072M
           disk-size: 4096M
           disable-animations: true
-          script: |
-            # The action's shell must not hide a failed Gradle command behind
-            # a succeeding screenshot command.
-            set +e
-            gradle :app:connectedDebugAndroidTest --rerun-tasks --stacktrace
-            test_status=$?
-            set -e
-            mkdir -p build
-            adb logcat -d -v time > build/instrumentation.log || true
-            if [ "$test_status" -ne 0 ]; then
-              echo "::error::Android instrumentation Gradle task failed"
-              exit "$test_status"
-            fi
-            python3 ci/verify_instrumentation.py
-            bash ci/capture_screenshots.sh
+          # Runner treats each YAML line as an independent sh command.
+          # A single Bash entrypoint is required for reliable exit handling.
+          script: bash ci/run_android_qa.sh
       - name: Upload real screenshots and instrumentation results
         if: always()
         uses: actions/upload-artifact@v4
