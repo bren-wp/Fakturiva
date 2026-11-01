@@ -1222,6 +1222,7 @@ public final class MainActivity extends Activity {
     }
     private void editItemsScreen(){
         setup("edit_items",true);
+        pad(body,15,14);
         toolbar(Store.INVOICE.equals(editType)?"Stavke računa":"Stavke ponude",
             "2. korak od 3",true);
         wizardSteps(2);
@@ -1243,11 +1244,11 @@ public final class MainActivity extends Activity {
                 Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
             gap(c,10);
             LinearLayout bottom=horizontal();
-            bottom.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),
-                16,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
             TextView delete=label("Ukloni",11,RED,true);
             delete.setContentDescription("Ukloni stavku "+item.name);
-            bottom.addView(delete);
+            bottom.addView(delete,new LinearLayout.LayoutParams(0,-2,1));
+            bottom.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),
+                16,ink(),true));
             delete.setOnClickListener(v->new AlertDialog.Builder(this)
                 .setTitle("Ukloniti stavku?")
                 .setMessage(item.name+" bit će uklonjena samo iz radnog nacrta.")
@@ -1271,15 +1272,21 @@ public final class MainActivity extends Activity {
         place(body,add);gap(body,14);
 
         long net=0,tax=0;
+        Integer commonRate=null;
+        boolean mixedRates=false;
         for(Store.Item item:draftItems){
             net=Math.addExact(net,item.net());tax=Math.addExact(tax,item.tax());
+            if(commonRate==null)commonRate=item.taxRate;
+            else if(commonRate!=item.taxRate)mixedRates=true;
         }
         LinearLayout summary=card();
         title(summary,Store.INVOICE.equals(editType)?"Sažetak računa":"Sažetak ponude");
         gap(summary,14);
         amountRow(summary,"Osnovica",Money.euros(net),false);
         gap(summary,12);
-        amountRow(summary,"PDV",Money.euros(tax),false);
+        String taxCaption=commonRate==null||mixedRates?"PDV":
+            "PDV ("+commonRate+" %)";
+        amountRow(summary,taxCaption,Money.euros(tax),false);
         gap(summary,12);
         View line=new View(this);line.setBackgroundColor(border());
         summary.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
