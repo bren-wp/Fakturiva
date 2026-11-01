@@ -141,11 +141,11 @@ public final class MainActivity extends Activity {
         if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
         db.close();super.onDestroy();
     }
-    private int bg(){return dark?0xff0d1728:BG;}
+    private int bg(){return dark?0xff0d182a:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
     private int ink(){return dark?WHITE:TEXT;}
-    private int sub(){return dark?0xff9aaac2:MUTED;}
-    private int border(){return dark?0xff283b56:LINE;}
+    private int sub(){return dark?0xffa3b2c9:MUTED;}
+    private int border(){return dark?0xff2a3c56:LINE;}
     private int dp(float value){return Math.round(getResources().getDisplayMetrics().density*value);}
     private GradientDrawable shape(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
     private GradientDrawable outlined(int color){GradientDrawable d=shape(color,17);d.setStroke(dp(1),border());return d;}
@@ -272,7 +272,8 @@ public final class MainActivity extends Activity {
         if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen)){
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
         }else if("catalog".equals(screen)||"reports".equals(screen)||
-                  "payments".equals(screen)||"company".equals(screen)){
+                  "payments".equals(screen)||"company".equals(screen)||
+                  "eracun".equals(screen)||"backup".equals(screen)){
             active="settings";
         }else if("client_detail".equals(screen)){
             active="clients";
@@ -654,7 +655,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout hero=vertical();pad(hero,19,19);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            new int[]{0xff143354,0xff243584});
+            dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
         long[] monthly=db.monthlyReceipts();
         LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
@@ -734,7 +735,9 @@ public final class MainActivity extends Activity {
         LinearLayout c=card();pad(c,14,13);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
-        image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
+        image.setBackground(shape(dark?
+            (accent==TEAL?0xff1f524e:0xff2b3f78):
+            (accent==TEAL?0xffdff8f4:0xffe8edff),12));
         c.addView(image,lp(38,38));gap(c,7);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
@@ -750,7 +753,9 @@ public final class MainActivity extends Activity {
         int tint=quote?TEAL:client?0xffeb963c:BLUE;
         ImageView image=icon(figureIcon(glyph),tint);
         image.setPadding(dp(10),dp(10),dp(10),dp(10));
-        image.setBackground(shape(quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
+        image.setBackground(shape(dark?
+            (quote?0xff1f534b:client?0xff62452e:0xff303c72):
+            (quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff),12));
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
