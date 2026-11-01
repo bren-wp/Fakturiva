@@ -266,8 +266,16 @@ public final class MainActivity extends Activity {
         String[] pages={"home","invoices","quotes","clients","settings"};
         String[] names={"Početna","Računi","Ponude","Klijenti","Više"};
         int[] icons={R.drawable.ic_home,R.drawable.ic_invoice,R.drawable.ic_quote,R.drawable.ic_clients,R.drawable.ic_settings};
+        String active=screen;
+        if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen)){
+            active=Store.QUOTE.equals(editType)?"quotes":"invoices";
+        }else if("detail".equals(screen)&&currentDocumentId>0){
+            try{
+                active=Store.QUOTE.equals(db.document(currentDocumentId).type)?"quotes":"invoices";
+            }catch(Exception ignored){active="home";}
+        }
         for(int i=0;i<pages.length;i++){final String destination=pages[i];
-            boolean selected=screen.equals(destination);
+            boolean selected=active.equals(destination);
             LinearLayout tab=vertical();tab.setGravity(Gravity.CENTER);
             LinearLayout badge=vertical();badge.setGravity(Gravity.CENTER);
             if(selected)background(badge,dark?0xff273D66:0xffECEEFF,12);
