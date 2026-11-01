@@ -269,6 +269,8 @@ public final class MainActivity extends Activity {
         String active=screen;
         if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen)){
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
+        }else if("client_detail".equals(screen)){
+            active="clients";
         }else if("detail".equals(screen)&&currentDocumentId>0){
             try{
                 active=Store.QUOTE.equals(db.document(currentDocumentId).type)?"quotes":"invoices";
@@ -2033,72 +2035,130 @@ public final class MainActivity extends Activity {
         return last;
     }
 
+    /** Screen 13: the real client profile and actual billing history. */
     private void clientDetails(Store.Client c){
         setup("client_detail",true);
-        toolbar("Detalji klijenta","Profil i povijest poslovanja",true);
-        String initials="";
-        for(String part:c.name.trim().split("\\s+")){
-            if(!part.isEmpty()&&initials.length()<2)initials+=part.substring(0,1).toUpperCase(Locale.forLanguageTag("hr-HR"));
-        }
-        LinearLayout identity=vertical();identity.setGravity(Gravity.CENTER);
-        TextView logo=label(initials.isEmpty()?"K":initials,25,BLUE,true);
-        logo.setGravity(Gravity.CENTER);logo.setBackground(shape(dark?0xff263759:0xffe8edff,21));
-        LinearLayout.LayoutParams logoLp=lp(70,70);logoLp.gravity=Gravity.CENTER;
-        identity.addView(logo,logoLp);gap(identity,13);
-        TextView companyName=label(c.name,20,ink(),true);companyName.setGravity(Gravity.CENTER);
-        place(identity,companyName);gap(identity,5);
-        TextView caption=label("Poslovni partner · "+(c.address.isEmpty()?"Hrvatska":c.address),11,sub(),false);
-        caption.setGravity(Gravity.CENTER);caption.setMaxLines(2);place(identity,caption);gap(identity,12);
-        TextView active=label("Aktivan",11,0xff15996d,true);
-        active.setGravity(Gravity.CENTER);
-        active.setBackground(shape(dark?0xff204737:0xffdcf7eb,15));pad(active,11,6);
-        LinearLayout.LayoutParams activeLp=lp(-2,-2);activeLp.gravity=Gravity.CENTER;
-        identity.addView(active,activeLp);
-        place(body,identity);gap(body,23);
+        pad(body,18,13);
 
-        long paid=0;int invoiceCount=0;
+        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView back=icon(R.drawable.ic_back,sub());
+        back.setPadding(dp(8),dp(8),dp(8),dp(8));
+        back.setContentDescription("Natrag na klijente");
+        back.setOnClickListener(v->clients());
+        header.addView(back,lp(42,46));
+        LinearLayout headings=vertical();
+        LinearLayout.LayoutParams headingParams=new LinearLayout.LayoutParams(0,-2,1);
+        headingParams.leftMargin=dp(5);
+        header.addView(headings,headingParams);
+        headings.addView(label("Detalji klijenta",23,ink(),true));gap(headings,5);
+        headings.addView(label("Profil i povijest poslovanja",11,sub(),false));
+        ImageView edit=icon(R.drawable.ic_edit,sub());
+        edit.setPadding(dp(11),dp(11),dp(11),dp(11));
+        edit.setBackground(shape(panel(),12));
+        edit.setContentDescription("Uredi klijenta "+c.name);
+        header.addView(edit,lp(44,44));
+        edit.setOnClickListener(v->showClientEditor(c));
+        place(body,header);gap(body,33);
+
+        LinearLayout identity=vertical();identity.setGravity(Gravity.CENTER);
+        TextView avatar=label(clientInitials(c.name),25,BLUE,true);
+        avatar.setGravity(Gravity.CENTER);
+        avatar.setBackground(shape(dark?0xff263759:0xffe8edff,20));
+        LinearLayout.LayoutParams logoLp=lp(70,70);
+        logoLp.gravity=Gravity.CENTER;
+        identity.addView(avatar,logoLp);gap(identity,14);
+        TextView name=label(c.name,20,ink(),true);
+        name.setGravity(Gravity.CENTER);
+        place(identity,name);gap(identity,5);
+        String location=clientCity(c.address);
+        TextView meta=label("Poslovni partner"+
+            (location.isEmpty()?"":" · "+location),11,sub(),false);
+        meta.setGravity(Gravity.CENTER);meta.setMaxLines(2);
+        place(identity,meta);gap(identity,14);
+        // There is no active/inactive field in SQLite; do not fabricate status.
+        TextView recorded=label("U evidenciji",11,0xff15996d,true);
+        recorded.setGravity(Gravity.CENTER);
+        recorded.setBackground(shape(dark?0xff204737:0xffdcf7eb,15));
+        pad(recorded,12,6);
+        LinearLayout.LayoutParams badgeLp=lp(-2,-2);
+        badgeLp.gravity=Gravity.CENTER;
+        identity.addView(recorded,badgeLp);
+        place(body,identity);gap(body,24);
+
+        long paid=0;
+        int yearInvoices=0;
         List<Store.Document> history=new ArrayList<>();
-        for(String t:new String[]{Store.INVOICE,Store.QUOTE}){
-            for(Store.Document d:db.documents(t)){
-                if(d.clientId!=c.id)continue;
-                history.add(d);
-                if(Store.INVOICE.equals(t)){
-                    invoiceCount++;
-                    paid=Math.addExact(paid,d.paidCents);
+        String currentYear=String.valueOf(Calendar.getInstance().get(Calendar.YEAR));
+        for(String type:new String[]{Store.INVOICE,Store.QUOTE}){
+            for(Store.Document doc:db.documents(type)){
+                if(doc.clientId!=c.id)continue;
+                history.add(doc);
+                if(Store.INVOICE.equals(type)){
+                    if(doc.issueDate!=null&&doc.issueDate.startsWith(currentYear) &&
+                        !Store.DRAFT.equals(doc.status)&&!Store.VOID.equals(doc.status))
+                        yearInvoices++;
+                    paid=Math.addExact(paid,doc.paidCents);
                 }
             }
         }
-        LinearLayout indicators=horizontal();
-        LinearLayout invoices=clientIndicator("Računi",String.valueOf(invoiceCount),"▤","Ukupno",BLUE);
-        LinearLayout receipt=clientIndicator("Naplaćeno",Money.euros(paid),"✓","Ukupno",TEAL);
-        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(132),1);
-        left.setMargins(0,0,dp(6),0);indicators.addView(invoices,left);
-        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(132),1);
-        right.setMargins(dp(6),0,0,0);indicators.addView(receipt,right);
-        place(body,indicators);
-        section("Podaci o klijentu");
-        LinearLayout details=card();
-        clientField(details,"Naziv",c.name);
-        clientField(details,"Adresa",c.address);
-        clientField(details,"OIB",c.oib);
-        clientField(details,"PDV ID",c.vatId);
-        clientField(details,"E-pošta",c.email);
-        clientField(details,"Telefon",c.phone);
-        place(body,details);
-        section("Posljednji dokumenti");
+
+        LinearLayout statistics=horizontal();
+        LinearLayout invoices=clientIndicator("Računi",String.valueOf(yearInvoices),
+            "▤","U ovoj godini",BLUE);
+        LinearLayout revenue=clientIndicator("Naplaćeno",Money.euros(paid),
+            "▣","Ukupno",TEAL);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(128),1);
+        left.rightMargin=dp(6);
+        statistics.addView(invoices,left);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(128),1);
+        right.leftMargin=dp(6);
+        statistics.addView(revenue,right);
+        place(body,statistics);gap(body,18);
+
+        LinearLayout data=card();
+        place(data,label("Podaci o klijentu",16,ink(),true));gap(data,15);
+        clientField(data,"Naziv",c.name);
+        clientField(data,"Adresa",c.address);
+        clientField(data,"OIB",c.oib);
+        clientField(data,"PDV ID",c.vatId);
+        clientField(data,"E-pošta",c.email);
+        clientField(data,"Telefon",c.phone);
+        place(body,data);gap(body,19);
+
+        LinearLayout recent=horizontal();
+        recent.addView(label("Posljednji dokumenti",16,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        TextView open=label("›",21,BLUE,true);
+        open.setContentDescription("Prikaži dokumente klijenta");
+        recent.addView(open);
+        open.setOnClickListener(v->{
+            String[] numbers=new String[history.size()];
+            for(int i=0;i<history.size();i++){
+                Store.Document d=history.get(i);
+                numbers[i]=(d.number==null?"Nacrt #"+d.id:d.number)+
+                    "  ·  "+Money.euros(d.totalCents);
+            }
+            if(history.isEmpty()){
+                toast("Klijent još nema dokumenata");
+                return;
+            }
+            new AlertDialog.Builder(this).setTitle("Dokumenti klijenta")
+                .setItems(numbers,(dialog,index)->showDocument(history.get(index).id))
+                .setNegativeButton("Zatvori",null).show();
+        });
+        place(body,recent);gap(body,11);
         history.sort((a,b)->Long.compare(b.id,a.id));
         int count=0;
-        for(Store.Document document:history){
+        for(Store.Document doc:history){
             if(count++>=3)break;
-            documentRow(document);
+            documentRow(doc);
         }
-        if(count==0)caption(body,"Još nema dokumenata za ovog klijenta.");
-        gap(body,12);
-        secondary(body,"Uredi podatke klijenta",()->showClientEditor(c));
-        gap(body,8);
-        button(body,"＋ Izradi račun za klijenta",()->newDocumentForClient(c.id));
-        gap(body,18);
+        if(history.isEmpty())caption(body,"Još nema dokumenata za ovog klijenta.");
+        gap(body,22);
+        // A fixed call to action stays visible above bottom navigation.
+        stickyPrimary("＋ Izradi račun za klijenta",()->newDocumentForClient(c.id));
     }
+
     private LinearLayout clientIndicator(String name,String value,String symbol,String qualifier,int color){
         LinearLayout c=card();
         TextView icon=label(symbol,17,color,true);icon.setGravity(Gravity.CENTER);
@@ -2110,16 +2170,28 @@ public final class MainActivity extends Activity {
         c.addView(label(qualifier,10,sub(),false));
         return c;
     }
-    private void clientField(LinearLayout target,String label,String value){
+    private void clientField(LinearLayout target,String title,String value){
         if(value==null||value.isEmpty())return;
-        LinearLayout row=horizontal();
-        TextView name=label(label,11,sub(),false);
-        row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
-        TextView current=label(value,11,ink(),true);
-        current.setMaxLines(3);
-        current.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
-        row.addView(current,new LinearLayout.LayoutParams(0,-2,1.7f));
-        place(target,row);gap(target,12);
+        // Header is the first child. Draw thin dividers only between data rows.
+        if(target.getChildCount()>2){
+            View rule=new View(this);rule.setBackgroundColor(border());
+            target.addView(rule,new LinearLayout.LayoutParams(-1,dp(1)));
+            gap(target,10);
+        }
+        LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
+        TextView key=label(title,11,sub(),false);
+        row.addView(key,new LinearLayout.LayoutParams(0,-2,1));
+        boolean oib="OIB".equals(title);
+        TextView text=label(oib?"•••••••••••":value,11,ink(),true);
+        text.setMaxLines(3);text.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        row.addView(text,new LinearLayout.LayoutParams(0,-2,1.7f));
+        if(oib){
+            text.setContentDescription("OIB je skriven. Dodirnite za prikaz.");
+            text.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setTitle("OIB klijenta").setMessage(value)
+                .setPositiveButton("Zatvori",null).show());
+        }
+        place(target,row);gap(target,10);
     }
     private void newDocumentForClient(long id){
         if(RecoveryVault.hasWorkingDraft(this)){
