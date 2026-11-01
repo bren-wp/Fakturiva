@@ -751,8 +751,8 @@ public final class MainActivity extends Activity {
         LinearLayout heading=vertical();
         heading.addView(label(invoice?"Računi":"Ponude",23,ink(),true));
         gap(heading,5);
-        heading.addView(label(invoice?"Svi vaši izdani računi":"Sve vaše ponude",
-            12,sub(),false));
+        heading.addView(label(invoice?"Svi vaši izdani računi":
+            "Profesionalne ponude na jednom mjestu",12,sub(),false));
         header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
         ImageView searchAction=icon(R.drawable.ic_search,sub());
         searchAction.setPadding(dp(10),dp(10),dp(10),dp(10));
@@ -820,6 +820,22 @@ public final class MainActivity extends Activity {
         place(body,chips);gap(body,12);
 
         List<Store.Document> all=db.documents(type);
+        if(!invoice){
+            // Real persisted quotes only. A draft is not an active proposal.
+            int active=0;
+            long value=0;
+            for(Store.Document quote:all){
+                if(Store.SENT.equals(quote.status)){
+                    active++;
+                    value=Math.addExact(value,quote.totalCents);
+                }
+            }
+            LinearLayout overview=horizontal();
+            quoteSummary(overview,"Aktivne ponude",String.valueOf(active));
+            quoteSummary(overview,"Vrijednost ponuda",Money.euros(value));
+            place(body,overview);
+            gap(body,14);
+        }
         LinearLayout totals=horizontal();
         TextView total=label("Ukupno "+(invoice?"računa":"ponuda")+"  "+all.size(),
             11,sub(),false);
@@ -833,7 +849,10 @@ public final class MainActivity extends Activity {
             remaining.setSingleLine(true);
             totals.addView(remaining);
         }
-        place(body,totals);gap(body,10);
+        if(invoice){
+            place(body,totals);
+            gap(body,10);
+        }
 
         LinearLayout group=vertical();
         group.setBackground(outlined(panel()));
@@ -855,6 +874,24 @@ public final class MainActivity extends Activity {
         filterDocumentRows(group,documentSearchQuery,empty);
         body.setFocusableInTouchMode(true);body.requestFocus();
         floatingAction(invoice?"Dodaj novi račun":"Dodaj novu ponudu",()->newDocument(type));
+    }
+
+    /** Compact real-value metric cards for the quote list (screen 09). */
+    private void quoteSummary(LinearLayout row,String title,String amount){
+        LinearLayout panelView=card();
+        pad(panelView,14,14);
+        TextView descriptor=label(title,11,sub(),false);
+        place(panelView,descriptor);
+        gap(panelView,9);
+        TextView figure=label(amount,20,ink(),true);
+        figure.setSingleLine(true);
+        figure.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        place(panelView,figure);
+        panelView.setContentDescription(title+": "+amount);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(72),1);
+        params.leftMargin=dp(3);
+        params.rightMargin=dp(3);
+        row.addView(panelView,params);
     }
 
     private void documentRowGrouped(LinearLayout target,Store.Document document){
