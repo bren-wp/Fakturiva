@@ -1216,15 +1216,17 @@ public final class MainActivity extends Activity {
         place(body,steps);gap(body,17);
     }
     private void editDocumentScreen(){
+        boolean quote=Store.QUOTE.equals(editType);
         setup("new_doc",true);
-        pad(body,15,14);
-        toolbar(Store.INVOICE.equals(editType)?"Novi račun":"Nova ponuda",
-            "Izradite novi dokument",true);
+        pad(body,quote?18:15,quote?17:14);
+        toolbar(quote?"Nova ponuda":"Novi račun",
+            quote?"Sastavite novu poslovnu ponudu":"Izradite novi dokument",true);
         wizardSteps(1);
         List<Store.Client> clients=db.clients();
 
         LinearLayout basics=card();
-        place(basics,label("Osnovni podaci",18,ink(),true));gap(basics,12);
+        place(basics,label(quote?"Nova ponuda":"Osnovni podaci",
+            18,ink(),true));gap(basics,quote?16:12);
         String typeName=Store.INVOICE.equals(editType)?"računa":"ponude";
         basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
         TextView sequence=label(editingDraftId>0?
@@ -1263,37 +1265,55 @@ public final class MainActivity extends Activity {
                 saveWorkingDraft();
             }
         });
-        EditText issued=field("Datum izdavanja",draftIssue);
-        dateInput(issued);fieldLabel(basics,"Datum izdavanja",issued);
-        EditText due=field("Datum dospijeća / valjanosti",draftDue);
-        dateInput(due);fieldLabel(basics,Store.INVOICE.equals(editType)?"Datum dospijeća":"Valjanost do",due);
-        String method=db.setting("payment_method").trim();
-        gap(basics,13);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
-        LinearLayout paying=horizontal();paying.setGravity(Gravity.CENTER_VERTICAL);
-        paying.setBackground(outlined(panel()));paying.setPadding(dp(13),dp(14),dp(13),dp(14));
-        paying.addView(label(method.isEmpty()?"Odaberite u profilu tvrtke":method,13,ink(),false),
-            new LinearLayout.LayoutParams(0,-2,1));
-        paying.addView(label("›",20,sub(),false));
-        paying.setContentDescription("Uredi način plaćanja u profilu tvrtke");
-        paying.setOnClickListener(v->{
-            saveWorkingDraft();company();
-        });
-        place(basics,paying);
-        place(body,basics);gap(body,13);
+        EditText issued=field("Datum izdavanja",
+            quote?quoteDateForDisplay(draftIssue):draftIssue);
+        dateInput(issued,quote);fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued);
+        EditText due=field("Datum dospijeća / valjanosti",
+            quote?quoteDateForDisplay(draftDue):draftDue);
+        dateInput(due,quote);fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due);
+        final EditText quoteTitle=quote?field("Npr. Usluge digitalnog marketinga",
+            draftQuoteTitle):null;
+        if(quote){
+            fieldLabel(basics,"Naslov ponude",quoteTitle);
+            quoteTitle.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(200)
+            });
+        }else{
+            String method=db.setting("payment_method").trim();
+            gap(basics,13);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
+            LinearLayout paying=horizontal();paying.setGravity(Gravity.CENTER_VERTICAL);
+            paying.setBackground(outlined(panel()));
+            paying.setPadding(dp(13),dp(14),dp(13),dp(14));
+            paying.addView(label(method.isEmpty()?"Odaberite u profilu tvrtke":method,
+                13,ink(),false),new LinearLayout.LayoutParams(0,-2,1));
+            paying.addView(label("›",20,sub(),false));
+            paying.setContentDescription("Uredi način plaćanja u profilu tvrtke");
+            paying.setOnClickListener(v->{saveWorkingDraft();company();});
+            place(basics,paying);
+        }
+        place(body,basics);gap(body,quote?15:13);
 
         LinearLayout additional=card();
-        title(additional,"Dodatne informacije");
-        EditText supply=field("Datum isporuke ili obavljene usluge",draftSupply);
-        dateInput(supply);
-        fieldLabel(additional,"Datum isporuke / usluge",supply);
+        place(additional,label(quote?"Uvjeti ponude":"Dodatne informacije",18,ink(),true));
+        EditText supply=field(quote?"Rok izvedbe":"Datum isporuke ili obavljene usluge",
+            quote?quoteDateForDisplay(draftSupply):draftSupply);
+        dateInput(supply,quote);
+        fieldLabel(additional,quote?"Rok izvedbe":"Datum isporuke / usluge",supply);
         EditText notes=field("Neobavezna napomena",draftNote);
+        if(quote){
+            notes.setSingleLine(false);
+            notes.setMinLines(2);
+            notes.setInputType(InputType.TYPE_CLASS_TEXT|
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        }
         fieldLabel(additional,"Napomena",notes);
         place(body,additional);gap(body,18);
 
-        watchDraft(issued,()->draftIssue=issued.getText().toString());
-        watchDraft(due,()->draftDue=due.getText().toString());
-        watchDraft(supply,()->draftSupply=supply.getText().toString());
+        watchDraft(issued,()->draftIssue=quoteDateToIso(issued.getText().toString()));
+        watchDraft(due,()->draftDue=quoteDateToIso(due.getText().toString()));
+        watchDraft(supply,()->draftSupply=quoteDateToIso(supply.getText().toString()));
         watchDraft(notes,()->draftNote=notes.getText().toString());
+        if(quote)watchDraft(quoteTitle,()->draftQuoteTitle=quoteTitle.getText().toString());
         stickyPrimary("Nastavi na stavke  ›",()->{
             int chosen=selector.getSelectedItemPosition();
             if(chosen<=0){
@@ -1301,10 +1321,11 @@ public final class MainActivity extends Activity {
                 return;
             }
             editClientId=clients.get(chosen-1).id;
-            draftIssue=issued.getText().toString();
-            draftDue=due.getText().toString();
-            draftSupply=supply.getText().toString();
+            draftIssue=quoteDateToIso(issued.getText().toString());
+            draftDue=quoteDateToIso(due.getText().toString());
+            draftSupply=quoteDateToIso(supply.getText().toString());
             draftNote=notes.getText().toString();
+            if(quote)draftQuoteTitle=quoteTitle.getText().toString().trim();
             try{IsoDates.validate(draftIssue,draftDue);
                 if(!IsoDates.valid(draftSupply))throw new IllegalArgumentException(
                     "Neispravan datum isporuke / usluge");
