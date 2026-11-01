@@ -83,6 +83,11 @@ public final class ScreenshotHarness {
             case "09":call(a,"documents",new Class<?>[]{String.class},Store.QUOTE);break;
             case "10":
                 call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);
+                // Stable, fictitious values matching the dated design reference,
+                // restricted to this debug-only emulator harness.
+                set(a,"draftIssue","2026-10-27");
+                set(a,"draftDue","2026-11-10");
+                set(a,"draftSupply","2026-11-15");
                 set(a,"draftQuoteTitle","Usluge digitalnog marketinga");
                 call(a,"editDocumentScreen");
                 break;
