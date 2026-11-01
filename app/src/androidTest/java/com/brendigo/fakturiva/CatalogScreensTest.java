@@ -106,5 +106,7 @@ public final class CatalogScreensTest extends AndroidTestCase {
         try{Store.normalizedUnit("");fail("Empty unit");}
         catch(IllegalArgumentException expected){}
         assertEquals("sat",Store.normalizedUnit("sat"));
+        try{Store.normalizedUnit("   ");fail("Whitespace-only unit");}
+        catch(IllegalArgumentException expected){}
     }
 }
