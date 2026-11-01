@@ -110,7 +110,19 @@ public final class MainActivity extends Activity {
         if(!"com.brendigo.fakturiva.SCREENSHOT".equals(getIntent().getAction()))return false;
         if((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0)return false;
         String fingerprint=android.os.Build.FINGERPRINT.toLowerCase(java.util.Locale.ROOT);
-        if(!fingerprint.contains("generic")&&!fingerprint.contains("ranchu"))return false;
+        String hardware=android.os.Build.HARDWARE.toLowerCase(java.util.Locale.ROOT);
+        String product=android.os.Build.PRODUCT.toLowerCase(java.util.Locale.ROOT);
+        // Google APIs API-36 virtual devices may not contain "generic" in their
+        // fingerprint. The debug-only harness must still run on ranchu/goldfish
+        // hardware and sdk_gphone emulator products, but never on a real phone.
+        boolean emulator=fingerprint.contains("generic") ||
+            fingerprint.contains("ranchu") ||
+            hardware.contains("ranchu") || hardware.contains("goldfish") ||
+            product.startsWith("sdk_") || product.contains("emulator");
+        if(!emulator){
+            android.util.Log.e("FakturivaQA","QA_SCREEN_REJECTED_NOT_EMULATOR");
+            return false;
+        }
         try{
             Class<?> harness=Class.forName("com.brendigo.fakturiva.ScreenshotHarness");
             harness.getMethod("show",MainActivity.class,String.class)
@@ -425,7 +437,14 @@ public final class MainActivity extends Activity {
     private void securityScreen(boolean locked,boolean fromSettings){
         securityFromSettings=fromSettings;
         setup(locked?"security_unlock":"security_setup",false);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        // Protect real credentials and financial content. Permit screenshots
+        // only for emulator-only debug QA, never for production or regular UI.
+        if((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0
+            || !"com.brendigo.fakturiva.SCREENSHOT".equals(getIntent().getAction())){
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        }else{
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        }
         root.setBackgroundColor(WHITE);
         body.setBackgroundColor(WHITE);
         pad(body,25,49);
