@@ -2656,21 +2656,50 @@ public final class MainActivity extends Activity {
     }
     private void payments(){
         setup("payments",true);
-        toolbar("Naplata","Evidencija uplata i potraživanja",true);
+        pad(body,18,15);
+        LinearLayout top=horizontal();top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout heading=vertical();
+        heading.addView(label("Naplata",24,ink(),true));gap(heading,6);
+        heading.addView(label("Evidencija uplata i potraživanja",12,sub(),false));
+        top.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        TextView filterAction=label("☰",19,sub(),true);
+        filterAction.setGravity(Gravity.CENTER);
+        filterAction.setContentDescription("Filtriraj uplate");
+        filterAction.setBackground(shape(panel(),12));
+        top.addView(filterAction,lp(44,44));
+        TextView exportAction=label("↓",24,ink(),true);
+        exportAction.setGravity(Gravity.CENTER);
+        exportAction.setContentDescription("Izvezi uplate kao CSV");
+        exportAction.setBackground(shape(panel(),12));
+        LinearLayout.LayoutParams exportLp=lp(44,44);exportLp.leftMargin=dp(8);
+        top.addView(exportAction,exportLp);
+        exportAction.setOnClickListener(v->{
+            pendingPaymentsCsvMonth=paymentFilter==1?
+                new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date()):null;
+            createFile(104,"text/csv","Fakturiva-uplate-"+
+                (pendingPaymentsCsvMonth==null?"sve":pendingPaymentsCsvMonth)+".csv");
+        });
+        filterAction.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Prikaz naplate")
+            .setSingleChoiceItems(new String[]{"Sve uplate","Ovaj mjesec","Za naplatu"},
+                paymentFilter,(dialog,which)->{
+                    paymentFilter=which;dialog.dismiss();payments();
+                }).setNegativeButton("Zatvori",null).show());
+        place(body,top);gap(body,21);
         List<Store.Payment> history=db.payments();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
         int monthlyCount=0;long monthlyAmount=0;
         for(Store.Payment p:history)if(p.paidOn.startsWith(month)){
             monthlyCount++;monthlyAmount=Math.addExact(monthlyAmount,p.amountCents);
         }
-        LinearLayout hero=vertical();pad(hero,19,18);
+        LinearLayout hero=vertical();pad(hero,19,22);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             new int[]{0xff173b69,0xff102844});
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
         hero.addView(label(Money.euros(db.receivedCents()),29,WHITE,true));gap(hero,13);
-        hero.addView(label("✓  "+monthlyCount+" uplata ovaj mjesec · "+Money.euros(monthlyAmount),
-            11,0xff73dfd0,false));
+        hero.addView(label("✓  "+monthlyCount+" evidentiranih uplata ovaj mjesec · "+
+            Money.euros(monthlyAmount),11,0xff73dfd0,false));
         place(body,hero);gap(body,15);
 
         LinearLayout filters=horizontal();
@@ -2688,19 +2717,14 @@ public final class MainActivity extends Activity {
             tab.setOnClickListener(v->{paymentFilter=selected;payments();});
         }
         place(body,filters);gap(body,17);
-        LinearLayout heading=horizontal();
-        heading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",17,ink(),true),
-            new LinearLayout.LayoutParams(0,-2,1));
-        if(paymentFilter!=2){
-            TextView export=label("Izvoz CSV",11,BLUE,true);
-            heading.addView(export);
-            export.setOnClickListener(v->{
-                pendingPaymentsCsvMonth=paymentFilter==1?month:null;
-                String suffix=pendingPaymentsCsvMonth==null?"sve":pendingPaymentsCsvMonth;
-                createFile(104,"text/csv","Fakturiva-uplate-"+suffix+".csv");
-            });
-        }
-        place(body,heading);gap(body,11);
+        LinearLayout listHeading=horizontal();
+        listHeading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",
+            17,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView viewAll=label("›",21,BLUE,true);
+        viewAll.setContentDescription("Prikaži sve uplate");
+        listHeading.addView(viewAll);
+        viewAll.setOnClickListener(v->{paymentFilter=0;payments();});
+        place(body,listHeading);gap(body,11);
 
         LinearLayout card=card();pad(card,0,0);
         if(paymentFilter==2){
@@ -2731,7 +2755,8 @@ public final class MainActivity extends Activity {
                 row.addView(check,lp(42,42));
                 LinearLayout description=vertical();pad(description,10,0);
                 description.addView(label(p.clientName,13,ink(),true));
-                description.addView(label(p.invoiceNumber+" · "+p.paidOn,11,sub(),false));
+                description.addView(label(p.invoiceNumber+" · "+readableDate(p.paidOn),
+                    11,sub(),false));
                 row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
                 row.addView(label("+"+Money.euros(p.amountCents),12,TEAL,true));
                 place(card,row);
@@ -2742,7 +2767,7 @@ public final class MainActivity extends Activity {
                 12,sub(),false));}
         }
         place(body,card);gap(body,15);
-        caption(body,"Naplate se prikazuju prema stvarno evidentiranim uplatama.");
+        caption(body,"Uplate se prikazuju samo kada su stvarno evidentirane u aplikaciji.");
         gap(body,20);
     }
     private void paymentDivider(LinearLayout card){
