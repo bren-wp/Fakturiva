@@ -2781,8 +2781,26 @@ public final class MainActivity extends Activity {
     }
     private void settings(){
         setup("settings",true);
-        toolbar("Postavke","Upravljajte svojom aplikacijom",false);
-        LinearLayout brand=horizontal();pad(brand,15,15);
+        pad(body,16,14);
+        LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout titles=vertical();
+        titles.addView(label("Postavke",24,ink(),true));
+        gap(titles,5);
+        titles.addView(label("Upravljajte svojom aplikacijom",11,sub(),false));
+        heading.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
+        TextView help=label("?",17,sub(),true);
+        help.setGravity(Gravity.CENTER);
+        help.setBackground(shape(panel(),12));
+        help.setContentDescription("Informacije o aplikaciji");
+        help.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Fakturiva "+getPackageVersion())
+            .setMessage("Računi, ponude i klijenti pohranjuju se lokalno. " +
+                "Prije promjene uređaja spremite šifriranu sigurnosnu kopiju. " +
+                "Elektroničko slanje eRačuna i fiskalizacija nisu povezani.")
+            .setPositiveButton("Zatvori",null).show());
+        heading.addView(help,lp(43,43));
+        place(body,heading);gap(body,18);
+        LinearLayout brand=horizontal();pad(brand,13,12);
         brand.setBackground(shape(NAVY,19));
         ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.brand_mark);
         brand.addView(mark,lp(57,57));
@@ -2791,22 +2809,64 @@ public final class MainActivity extends Activity {
         brandText.addView(label("Postavke aplikacije",12,0xffb6cbe2,false));
         brand.addView(brandText,new LinearLayout.LayoutParams(0,-2,1));
         brand.addView(label("›",23,0xffb6cbe2,true));
+        brand.setContentDescription("Fakturiva, informacije o aplikaciji");
+        brand.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Fakturiva "+getPackageVersion())
+            .setMessage("Nativna Android aplikacija za lokalno upravljanje računima i ponudama.")
+            .setPositiveButton("U redu",null).show());
         place(body,brand);gap(body,14);
 
         LinearLayout options=card();pad(options,0,2);
         place(body,options);
         settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa, OIB, IBAN",this::company);
-        settingRow(options,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
-        settingRow(options,"▥","Izvještaji","Analitika računa i naplate",this::reports);
-        settingRow(options,"⇄","eRačuni i fiskalizacija","Trenutačno stanje integracije",this::eracun);
-        settingRow(options,"♢","Izvoz i sigurnosne kopije","Zaštita i oporavak dokumenata",this::backupScreen);
-        settingRow(options,"◈","Zaštita pri otvaranju",prefs.getBoolean("device_lock",false)?"Aktivna zaštita uređajem":"Nije uključena",()->securityScreen(false,true));
-        settingRow(options,"☼","Izgled aplikacije",dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
-            dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
-        });
+        settingRow(options,"▣","Numeracija dokumenata",
+            "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
+        settingRow(options,"▥","PDV i porezne postavke",
+            "Porezni status i napomene u profilu tvrtke",this::company);
+        settingRow(options,"▣","Načini plaćanja",
+            "IBAN, banka i uvjeti plaćanja",this::company);
+        settingRow(options,"✎","Podaci na dokumentima",
+            "Profil izdavatelja za nove PDF dokumente",this::company);
+        settingRow(options,"⇄","eRačuni i fiskalizacija",
+            "Stanje integracije i preduvjeti",this::eracun);
+        settingRow(options,"◈","Sigurnost",
+            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"PIN i privatnost",
+            ()->securityScreen(false,true));
+        settingRow(options,"♢","Izvoz i sigurnosne kopije",
+            "Lokalni podaci i dokumenti",this::backupScreen);
+        settingRow(options,"☼","Izgled aplikacije",
+            dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
+                dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
+            });
+        gap(body,14);
+        place(body,label("POSLOVNI ALATI",11,sub(),true));gap(body,8);
+        LinearLayout tools=card();pad(tools,0,2);
+        settingRow(tools,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
+        settingRow(tools,"▥","Izvještaji","Analitika računa i naplate",this::reports);
+        place(body,tools);
         gap(body,17);
         caption(body,"Fakturiva "+getPackageVersion()+" · Brendigo");
         gap(body,19);
+    }
+    /** Read-only numbering status; no unsafe editing of confirmed sequences. */
+    private void numberingInfo(){
+        StringBuilder numbers=new StringBuilder();
+        for(String type:new String[]{Store.INVOICE,Store.QUOTE}){
+            String latest="";
+            for(Store.Document d:db.documents(type)){
+                if(d.number!=null&&!d.number.trim().isEmpty()){
+                    latest=d.number;
+                    break;
+                }
+            }
+            numbers.append(Store.INVOICE.equals(type)?"Računi: ":"Ponude: ")
+                .append(latest.isEmpty()?"Još nema potvrđenih dokumenata":latest)
+                .append("\n");
+        }
+        numbers.append("\nNovi se broj dodjeljuje pri potvrdi dokumenta. " +
+            "Ne postoji ručno mijenjanje prethodno izdanih brojeva.");
+        new AlertDialog.Builder(this).setTitle("Numeracija dokumenata")
+            .setMessage(numbers.toString()).setPositiveButton("Zatvori",null).show();
     }
     private void settingRow(LinearLayout target,String symbol,String name,String subtitle,Runnable action){
         if(target.getChildCount()>0){
