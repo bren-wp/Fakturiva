@@ -2837,7 +2837,7 @@ public final class MainActivity extends Activity {
     }
     private void settings(){
         setup("settings",true);
-        pad(body,16,14);
+        pad(body,16,21);
         LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titles=vertical();
         titles.addView(label("Postavke",24,ink(),true));
@@ -2927,18 +2927,32 @@ public final class MainActivity extends Activity {
     private void settingRow(LinearLayout target,String symbol,String name,String subtitle,Runnable action){
         if(target.getChildCount()>0){
             View divider=new View(this);divider.setBackgroundColor(border());
-            LinearLayout.LayoutParams dividerLp=lp(-1,1);dividerLp.setMargins(dp(12),0,dp(12),0);
+            LinearLayout.LayoutParams dividerLp=lp(-1,1);
+            dividerLp.setMargins(dp(12),0,dp(12),0);
             target.addView(divider,dividerLp);
         }
-        LinearLayout row=horizontal();pad(row,13,13);
+        // The reference fits all nine primary settings above the navigation:
+        // reduce vertical inset without dropping any functional destinations.
+        LinearLayout row=horizontal();pad(row,13,10);
+        row.setGravity(Gravity.CENTER_VERTICAL);
         TextView mark=label(symbol,19,BLUE,true);
-        mark.setGravity(Gravity.CENTER);mark.setBackground(shape(dark?0xff293a60:0xffecf0ff,12));
+        mark.setGravity(Gravity.CENTER);
+        mark.setBackground(shape(dark?0xff293a60:0xffecf0ff,12));
         row.addView(mark,lp(38,38));
         LinearLayout info=vertical();pad(info,12,0);
-        info.addView(label(name,13,ink(),true));gap(info,3);
-        info.addView(label(subtitle,11,sub(),false));
+        TextView heading=label(name,13,ink(),true);
+        heading.setSingleLine(true);
+        heading.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        info.addView(heading);
+        gap(info,3);
+        TextView summary=label(subtitle,11,sub(),false);
+        summary.setSingleLine(true);
+        summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        info.addView(summary);
         row.addView(info,new LinearLayout.LayoutParams(0,-2,1));
         row.addView(label("›",22,sub(),false));
+        row.setContentDescription(name+". "+subtitle);
+        row.setFocusable(true);
         place(target,row);
         row.setOnClickListener(v->action.run());
     }
