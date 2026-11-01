@@ -2880,8 +2880,22 @@ public final class MainActivity extends Activity {
     }
     private void eracun(){
         setup("eracun",true);
-        toolbar("eRačuni","Integracije i status usluge",true);
-        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,22);
+        pad(body,15,15);
+        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView back=icon(R.drawable.ic_back,sub());
+        back.setPadding(dp(8),dp(8),dp(8),dp(8));
+        back.setContentDescription("Natrag u postavke");
+        header.addView(back,lp(40,46));back.setOnClickListener(v->settings());
+        LinearLayout title=vertical();
+        title.addView(label("eRačuni",24,ink(),true));gap(title,5);
+        title.addView(label("Integracije i status usluge",11,sub(),false));
+        header.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        TextView help=label("?",17,sub(),true);
+        help.setGravity(Gravity.CENTER);help.setBackground(shape(panel(),13));
+        help.setContentDescription("Važno o eRačunu i fiskalizaciji");
+        help.setOnClickListener(v->showIntegrationRequirements());
+        header.addView(help,lp(43,43));place(body,header);gap(body,20);
+        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,20);
         hero.setBackground(shape(dark?0xff243252:0xffecefff,21));
         TextView symbol=label("⇄",31,BLUE,true);
         symbol.setGravity(Gravity.CENTER);symbol.setBackground(shape(panel(),17));
@@ -2896,9 +2910,10 @@ public final class MainActivity extends Activity {
         pad(state,12,6);
         LinearLayout.LayoutParams stateLp=lp(-2,-2);stateLp.gravity=Gravity.CENTER;
         hero.addView(state,stateLp);
-        place(body,hero);gap(body,15);
+        place(body,hero);gap(body,13);
 
-        LinearLayout phases=card();title(phases,"Status integracije");gap(phases,12);
+        LinearLayout phases=card();
+        place(phases,label("Status integracije",16,ink(),true));gap(phases,10);
         boolean hasCompany=!db.setting("name").trim().isEmpty()&&
             Oib.valid(db.setting("oib"))&&!db.setting("address").trim().isEmpty();
         integrationStep(phases,hasCompany?"✓":"1","Profil tvrtke",
@@ -2908,19 +2923,21 @@ public final class MainActivity extends Activity {
             "Pružatelj nije povezan",false,()->showIntegrationRequirements());
         integrationStep(phases,"3","Ovlaštenja i testiranje",
             "Nisu dostupni u ovoj verziji",false,()->showIntegrationRequirements());
-        place(body,phases);gap(body,15);
+        place(body,phases);gap(body,12);
 
         LinearLayout info=card();info.setBackground(shape(dark?0xff24314d:0xffedf1ff,17));
         info.addView(label("Važno za eRačun",14,ink(),true));gap(info,8);
         info.addView(label("PDF datoteka nije strukturirani eRačun ni potvrda fiskalizacije. Za razmjenu i slanje potrebna je stvarna autorizirana integracija.",12,sub(),false));
-        place(body,info);gap(body,14);
-        button(body,"Informacije o integraciji",this::showIntegrationRequirements);
-        gap(body,15);
+        place(body,info);gap(body,20);
+        // A persistent CTA matches the reference without pretending a network
+        // provider or fiscalization service has actually been connected.
+        stickyPrimary("Postavke integracije",this::integrationOptions);
+        gap(body,75);
     }
     private void integrationStep(LinearLayout parent,String number,String heading,
             String description,boolean ok,Runnable action){
-        LinearLayout row=horizontal();pad(row,1,12);
-        TextView badge=label(number,17,ok?TEAL:sub(),true);
+        LinearLayout row=horizontal();pad(row,1,11);
+        TextView badge=label(number,16,ok?TEAL:sub(),true);
         badge.setGravity(Gravity.CENTER);badge.setBackground(shape(ok?
             (dark?0xff20483f:0xffddf8ec):(dark?0xff27354e:0xffeff1f8),14));
         row.addView(badge,lp(39,39));
@@ -2932,6 +2949,19 @@ public final class MainActivity extends Activity {
         place(parent,row);
         row.setOnClickListener(v->action.run());
         gap(parent,5);
+    }
+    /** Honest options: no network integration is available in this release. */
+    private void integrationOptions(){
+        new AlertDialog.Builder(this)
+            .setTitle("Postavke integracije")
+            .setMessage("Fakturiva trenutno nema spojenog informacijskog posrednika, " +
+                "sustav slanja eRačuna ni fiskalizacijsku autorizaciju. " +
+                "Možete urediti profil tvrtke ili pregledati preduvjete.")
+            .setItems(new String[]{"Uredi profil tvrtke","Provjeri preduvjete"},
+                (dialog,which)->{
+                    if(which==0)company();else showIntegrationRequirements();
+                })
+            .setNegativeButton("Zatvori",null).show();
     }
     private void showIntegrationRequirements(){
         new AlertDialog.Builder(this).setTitle("eRačuni i fiskalizacija")
