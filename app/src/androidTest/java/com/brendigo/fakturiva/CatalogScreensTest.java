@@ -1,13 +1,56 @@
 package com.brendigo.fakturiva;
 
 import android.test.AndroidTestCase;
-import android.test.IsolatedContext;
+import android.content.Context;
+import android.content.ContextWrapper;
+import android.database.DatabaseErrorHandler;
+import android.database.sqlite.SQLiteDatabase;
+import java.io.File;
 import java.util.List;
 import org.json.JSONObject;
 
 /** Screen 14 regression: persisted category/unit and safe legacy migrations. */
 @SuppressWarnings("deprecation")
 public final class CatalogScreensTest extends AndroidTestCase {
+    /** Mirrors the repository's existing per-test SQLite isolation. */
+    private static final class IsolatedContext extends ContextWrapper {
+        final File dir;
+        IsolatedContext(Context base){
+            super(base);
+            dir=new File(base.getCacheDir(),"isolated-catalog-"+System.nanoTime());
+            if(!dir.mkdirs())throw new IllegalStateException("Cannot create catalog test dir");
+        }
+        @Override public Context getApplicationContext(){return this;}
+        @Override public File getFilesDir(){
+            File f=new File(dir,"files");
+            if(!f.exists()&&!f.mkdirs())throw new IllegalStateException("files");
+            return f;
+        }
+        @Override public File getDatabasePath(String name){
+            File f=new File(dir,"databases/"+name);
+            if(!f.getParentFile().exists()&&!f.getParentFile().mkdirs())
+                throw new IllegalStateException("database dir");
+            return f;
+        }
+        @Override public SQLiteDatabase openOrCreateDatabase(String name,int mode,
+                SQLiteDatabase.CursorFactory factory){
+            return SQLiteDatabase.openOrCreateDatabase(getDatabasePath(name),factory);
+        }
+        @Override public SQLiteDatabase openOrCreateDatabase(String name,int mode,
+                SQLiteDatabase.CursorFactory factory,DatabaseErrorHandler handler){
+            return SQLiteDatabase.openOrCreateDatabase(
+                getDatabasePath(name).getAbsolutePath(),factory,handler);
+        }
+        void clean(){remove(dir);}
+        private static void remove(File f){
+            if(f.isDirectory()){
+                File[] files=f.listFiles();
+                if(files!=null)for(File child:files)remove(child);
+            }
+            if(!f.delete())android.util.Log.w("FakturivaQA","Test cleanup: "+f);
+        }
+    }
+
     public void testCatalogCategoriesAndUnitsPersistInBackup()throws Exception {
         IsolatedContext context=new IsolatedContext(getContext());
         Store first=null,restored=null;
