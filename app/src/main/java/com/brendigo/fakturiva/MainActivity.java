@@ -727,6 +727,7 @@ public final class MainActivity extends Activity {
     private void documents(String type){
         boolean invoice=Store.INVOICE.equals(type);
         setup(invoice?"invoices":"quotes",true);
+        pad(body,15,14);
         LinearLayout header=horizontal();
         LinearLayout heading=vertical();
         heading.addView(label(invoice?"Računi":"Ponude",23,ink(),true));
@@ -745,18 +746,18 @@ public final class MainActivity extends Activity {
         filtersAction.setBackground(shape(panel(),13));
         filtersAction.setContentDescription("Odaberi prikaz dokumenata");
         header.addView(filtersAction,lp(42,42));
-        place(body,header);gap(body,18);
+        place(body,header);gap(body,16);
 
         LinearLayout searchBar=horizontal();
         searchBar.setBackground(outlined(panel()));
-        searchBar.setPadding(dp(12),dp(4),dp(12),dp(4));
+        searchBar.setPadding(dp(12),dp(2),dp(12),dp(2));
         searchBar.addView(icon(R.drawable.ic_search,sub()),lp(25,25));
         EditText search=field(invoice?"Pretraži račune...":"Pretraži ponude...",
             documentSearchQuery);
         search.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         search.setSingleLine(true);
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        LinearLayout.LayoutParams inputLp=new LinearLayout.LayoutParams(0,dp(45),1);
+        LinearLayout.LayoutParams inputLp=new LinearLayout.LayoutParams(0,dp(42),1);
         inputLp.leftMargin=dp(8);searchBar.addView(search,inputLp);
         ImageView searchFilter=icon(R.drawable.ic_filter,sub());
         searchFilter.setContentDescription("Otvori filtre");
@@ -782,9 +783,9 @@ public final class MainActivity extends Activity {
             .setNegativeButton("Odustani",null).show();
         filtersAction.setOnClickListener(v->chooseFilter.run());
         searchFilter.setOnClickListener(v->chooseFilter.run());
-        place(body,searchBar);gap(body,15);
+        place(body,searchBar);gap(body,13);
 
-        LinearLayout chips=horizontal();pad(chips,4,4);
+        LinearLayout chips=horizontal();pad(chips,3,3);
         chips.setBackground(shape(dark?0xff1d2a40:0xffe9edf4,15));
         for(String state:states){
             boolean selected=filter.equals(state);
@@ -797,7 +798,7 @@ public final class MainActivity extends Activity {
             chips.addView(chip,item);
             chip.setOnClickListener(v->{filter=state;documents(type);});
         }
-        place(body,chips);gap(body,14);
+        place(body,chips);gap(body,12);
 
         List<Store.Document> all=db.documents(type);
         LinearLayout totals=horizontal();
@@ -813,7 +814,7 @@ public final class MainActivity extends Activity {
             remaining.setSingleLine(true);
             totals.addView(remaining);
         }
-        place(body,totals);gap(body,12);
+        place(body,totals);gap(body,10);
 
         LinearLayout group=vertical();
         group.setBackground(outlined(panel()));
@@ -841,17 +842,17 @@ public final class MainActivity extends Activity {
         LinearLayout item=vertical();item.setTag(document);
         View divider=new View(this);divider.setBackgroundColor(border());
         item.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-        LinearLayout row=horizontal();pad(row,12,15);
+        LinearLayout row=horizontal();pad(row,10,9);
         ImageView symbol=icon(Store.INVOICE.equals(document.type)?
             R.drawable.ic_invoice:R.drawable.ic_quote,
             Store.INVOICE.equals(document.type)?BLUE:TEAL);
         symbol.setPadding(dp(9),dp(9),dp(9),dp(9));
         symbol.setBackground(shape(Store.INVOICE.equals(document.type)?
             0xffe8edff:0xffdcf8f4,12));
-        row.addView(symbol,lp(42,42));
+        row.addView(symbol,lp(36,36));
         LinearLayout description=vertical();
         LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(0,-2,1);
-        descLp.leftMargin=dp(10);
+        descLp.leftMargin=dp(8);
         row.addView(description,descLp);
         String number=document.number==null?"Nacrt #"+document.id:document.number;
         TextView documentNumber=label(number,13,ink(),true);
@@ -932,10 +933,15 @@ public final class MainActivity extends Activity {
         return dark?0xff273953:0xffe9eef7;
     }
 
-    private boolean matches(Store.Document d,String f){
+    static boolean matches(Store.Document d,String f){
         if("Skice".equals(f))return Store.DRAFT.equals(d.status);
-        if("Plaćeni".equals(f))return Store.PAID.equals(d.status);
-        if("Neplaćeni".equals(f))return Store.ISSUED.equals(d.status);
+        if("Plaćeni".equals(f))
+            return Store.INVOICE.equals(d.type) && !Store.DRAFT.equals(d.status)
+                && !Store.VOID.equals(d.status) &&
+                (Store.PAID.equals(d.status) || d.outstanding()==0);
+        if("Neplaćeni".equals(f))
+            return Store.INVOICE.equals(d.type) && !Store.DRAFT.equals(d.status)
+                && !Store.VOID.equals(d.status) && d.outstanding()>0;
         if("Potvrđene".equals(f)||"Poslane".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
