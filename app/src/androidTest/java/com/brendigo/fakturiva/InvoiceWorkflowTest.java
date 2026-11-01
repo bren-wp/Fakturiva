@@ -295,4 +295,48 @@ public final class InvoiceWorkflowTest extends AndroidTestCase {
         }finally{context.clean();}
     }
 
+    public void testQuoteTitlePersistsThroughEditingBackupAndLegacyRestore()throws Exception{
+        IsolatedContext origin=new IsolatedContext(getContext());
+        Store first=null;
+        try{
+            first=new Store(origin);
+            first.setting("name","Testni izdavatelj");
+            long client=first.saveClient("Testni klijent","","Rijeka","");
+            Store.Item item=new Store.Item();
+            item.name="Marketing";item.unitCents=20000;item.qtyMilli=1000;item.taxRate=25;
+            long id=first.createDraft(Store.QUOTE,client,"2026-11-01","2026-11-30",
+                "2026-11-15","Uvjeti isporuke","Digitalni marketing",Arrays.asList(item));
+            assertEquals("Digitalni marketing",first.document(id).quoteTitle);
+            first.updateDraft(id,client,"2026-11-01","2026-11-30",
+                "2026-11-20","Napomena","Marketing za studeni",Arrays.asList(item));
+            assertEquals("Marketing za studeni",first.document(id).quoteTitle);
+            assertEquals("2026-11-20",first.document(id).supplyDate);
+            JSONObject backup=first.backup();
+            assertEquals(4,backup.getInt("schema"));
+            IsolatedContext second=new IsolatedContext(getContext());
+            Store restored=null;
+            try{
+                restored=new Store(second);
+                restored.restore(backup);
+                assertEquals("Marketing za studeni",restored.document(id).quoteTitle);
+                assertEquals("Napomena",restored.document(id).notes);
+                JSONObject legacy=new JSONObject(backup.toString());
+                legacy.put("schema",3);
+                org.json.JSONArray documents=legacy.getJSONArray("documents");
+                for(int index=0;index<documents.length();index++)
+                    documents.getJSONObject(index).remove("quote_title");
+                restored.restore(legacy);
+                assertEquals("",restored.document(id).quoteTitle);
+                assertEquals(25000L,restored.document(id).totalCents);
+            }finally{if(restored!=null)restored.close();second.clean();}
+        }finally{if(first!=null)first.close();origin.clean();}
+    }
+
+    public void testQuoteDatesDisplayAndRoundTripWithoutChangingStorageFormat(){
+        assertEquals("2. 11. 2026.",MainActivity.quoteDateForDisplay("2026-11-02"));
+        assertEquals("2026-11-02",MainActivity.quoteDateToIso("2. 11. 2026."));
+        assertEquals("2026-11-02",MainActivity.quoteDateToIso("2026-11-02"));
+        assertFalse(IsoDates.valid(MainActivity.quoteDateToIso("32. 11. 2026.")));
+    }
+
 }
