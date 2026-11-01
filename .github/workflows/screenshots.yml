@@ -49,7 +49,19 @@ jobs:
           disk-size: 4096M
           disable-animations: true
           script: |
-            gradle :app:connectedDebugAndroidTest --stacktrace
+            # The action's shell must not hide a failed Gradle command behind
+            # a succeeding screenshot command.
+            set +e
+            gradle :app:connectedDebugAndroidTest --rerun-tasks --stacktrace
+            test_status=$?
+            set -e
+            mkdir -p build
+            adb logcat -d -v time > build/instrumentation.log || true
+            if [ "$test_status" -ne 0 ]; then
+              echo "::error::Android instrumentation Gradle task failed"
+              exit "$test_status"
+            fi
+            python3 ci/verify_instrumentation.py
             bash ci/capture_screenshots.sh
       - name: Upload real screenshots and instrumentation results
         if: always()
@@ -59,6 +71,8 @@ jobs:
           path: |
             docs/screenshots/*.png
             build/screenshot-errors.log
+            build/instrumentation.log
+            app/build/outputs/androidTest-results/connected/**
             app/build/reports/androidTests/connected/**
           if-no-files-found: warn
       # Original 20 reference PNGs are private user-supplied assets and are
