@@ -565,11 +565,14 @@ public final class MainActivity extends Activity {
     }
     private void home(){
         setup("home",true);
+        // The reference dashboard uses a 22 dp gutter on 393 dp phones.
+        // Keep all dashboard figures sourced from the local SQLite database.
+        pad(body,22,16);
         backupAlert();
         LinearLayout bar=horizontal();
         LinearLayout brand=vertical();
-        brand.addView(label("Fakturiva",23,ink(),true));
-        brand.addView(label("Upravljanje poslovanjem",11,sub(),false));
+        brand.addView(label("Fakturiva",24,ink(),true));
+        brand.addView(label("Upravljanje poslovanjem",12,sub(),false));
         bar.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
         ImageView search=icon(R.drawable.ic_search,ink());
         search.setBackground(shape(panel(),12));search.setPadding(dp(9),dp(9),dp(9),dp(9));
@@ -581,7 +584,7 @@ public final class MainActivity extends Activity {
         alerts.setBackground(shape(panel(),12));alerts.setPadding(dp(9),dp(9),dp(9),dp(9));
         alerts.setContentDescription("Obavijesti o neplaćenim računima");
         bar.addView(alerts,lp(42,42));alerts.setOnClickListener(v->showNotifications());
-        place(body,bar);gap(body,21);
+        place(body,bar);gap(body,25);
 
         if(RecoveryVault.hasWorkingDraft(this)){
             LinearLayout resume=card();
@@ -613,7 +616,7 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,15);
+        place(body,welcome);gap(body,18);
 
         LinearLayout hero=vertical();pad(hero,19,19);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -635,25 +638,27 @@ public final class MainActivity extends Activity {
             }
         }
         place(hero,heading);gap(hero,13);
-        hero.addView(label(Money.euros(monthly[11]),30,WHITE,true));gap(hero,4);
+        hero.addView(label(Money.euros(monthly[11]),31,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
         hero.addView(new RevenueLine(this),lp(-1,57));
-        place(body,hero);gap(body,13);
+        place(body,hero);gap(body,16);
 
         LinearLayout stats=horizontal();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
-        section("Brze radnje");
+        gap(body,18);
+        place(body,label("Brze radnje",18,ink(),true));
+        gap(body,11);
         LinearLayout fast=horizontal();
         quick(fast,"＋","Novi račun",()->newDocument(Store.INVOICE));
         quick(fast,"▣","Nova ponuda",()->newDocument(Store.QUOTE));
         quick(fast,"♧","Novi klijent",this::addClient);
         place(body,fast);
 
-        gap(body,17);
+        gap(body,19);
         LinearLayout recentHeading=horizontal();
         recentHeading.setGravity(Gravity.CENTER_VERTICAL);
         recentHeading.addView(label("Nedavni dokumenti",18,ink(),true),
@@ -700,6 +705,9 @@ public final class MainActivity extends Activity {
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
+        c.setContentDescription(label+": "+value+" ovaj mjesec, otvori popis");
+        c.setFocusable(true);
+        c.setOnClickListener(v->documents("Računi".equals(label)?Store.INVOICE:Store.QUOTE));
     }
     private void quick(LinearLayout row,String glyph,String label,Runnable action){
         // Compact quick-action cards must leave enough room for the full caption.
@@ -712,7 +720,9 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
-        p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);c.setOnClickListener(v->action.run());
+        p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
+        c.setContentDescription(label);c.setFocusable(true);
+        c.setOnClickListener(v->action.run());
     }
     private void documents(String type){
         boolean invoice=Store.INVOICE.equals(type);
