@@ -368,15 +368,15 @@ public final class MainActivity extends Activity {
             // *relative* elliptical geometry on all portrait devices.
             canvas.save();
             canvas.scale(1f,height/width);
+            // Transparent SRC_OVER avoids the GPU-dependent PorterDuff ADD
+            // mode, which can stall headless emulator framebuffer capture.
+            // Keep the same geometric bloom using a translucent blue overlay.
             paint.setShader(new android.graphics.RadialGradient(
                 width*.865f,width*.075f,width*.60f,
-                new int[]{0xff0d2344,0xb40d2344,0x6e0d2344,0x2f0d2344,0x000d2344},
+                new int[]{0xa8245183,0x78245183,0x38245183,0x14245183,0x00245183},
                 new float[]{0,.25f,.5f,.75f,1f},
                 android.graphics.Shader.TileMode.CLAMP));
-            paint.setXfermode(new android.graphics.PorterDuffXfermode(
-                android.graphics.PorterDuff.Mode.ADD));
             canvas.drawRect(0,0,width,width,paint);
-            paint.setXfermode(null);
             paint.setShader(null);
             canvas.restore();
         }
