@@ -1853,7 +1853,6 @@ public final class MainActivity extends Activity {
         // scaled fonts let the value wrap onto an additional line.
         value.setSingleLine(false);
         value.setMaxLines(3);
-        value.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
         value.setContentDescription(title+": "+amount);
         row.addView(value,lp(110,-2));
         place(target,row);
