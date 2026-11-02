@@ -597,7 +597,9 @@ public final class MainActivity extends Activity {
                 android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRoundRect(0,0,340,340,37,37,p);p.setShader(null);
             p.setColor(0xffdae5fa);canvas.drawCircle(170,164,115,p);
-            canvas.save();canvas.rotate(-5,170,174);
+            // Raise the invoice sheet ~6 design units to match the owner's
+            // reference without changing the original illustration bitmap.
+            canvas.save();canvas.translate(0,-6);canvas.rotate(-5,170,174);
             p.setColor(0x330f2e72);p.setShadowLayer(19,0,16,0x330f2e72);
             canvas.drawRoundRect(72,63,270,288,20,20,p);p.clearShadowLayer();
             p.setColor(Color.WHITE);canvas.drawRoundRect(72,63,270,288,20,20,p);
@@ -624,13 +626,13 @@ public final class MainActivity extends Activity {
             p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
             p.setColor(0xff15beb1);p.setShadowLayer(12,0,10,0x5515beb1);
-            canvas.drawRoundRect(246,243,315,308,23,23,p);p.clearShadowLayer();
+            canvas.drawRoundRect(246,234,315,299,23,23,p);p.clearShadowLayer();
             p.setColor(Color.WHITE);p.setStrokeWidth(2.6f);
             p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
             p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
             p.setStyle(android.graphics.Paint.Style.STROKE);
             android.graphics.Path check=new android.graphics.Path();
-            check.moveTo(274,272);check.lineTo(281,279);check.lineTo(292,265);
+            check.moveTo(274,263);check.lineTo(281,270);check.lineTo(292,256);
             canvas.drawPath(check,p);p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
         }
