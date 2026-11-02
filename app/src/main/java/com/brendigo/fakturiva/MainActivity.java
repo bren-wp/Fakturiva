@@ -805,7 +805,9 @@ public final class MainActivity extends Activity {
             quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
+        // Quick actions can grow with 150% font scaling.
+        c.setMinimumHeight(dp(93));
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
         p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
         c.setContentDescription(label);c.setFocusable(true);
         c.setOnClickListener(v->action.run());
@@ -1847,8 +1849,11 @@ public final class MainActivity extends Activity {
         row.addView(caption,lp(92,-2));
         TextView value=label(amount,total?17:11,total?BLUE:NAVY,true);
         value.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
-        value.setSingleLine(true);
-        value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        // Never ellipsize financial figures: on 280–320dp viewports and
+        // scaled fonts let the value wrap onto an additional line.
+        value.setSingleLine(false);
+        value.setMaxLines(3);
+        value.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
         value.setContentDescription(title+": "+amount);
         row.addView(value,lp(110,-2));
         place(target,row);
@@ -2185,10 +2190,14 @@ public final class MainActivity extends Activity {
             "▤","U ovoj godini",BLUE);
         LinearLayout revenue=clientIndicator("Naplaćeno",Money.euros(paid),
             "▣","Ukupno",TEAL);
-        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(128),1);
+        // Two columns expand vertically for large system font sizes. Fixed
+        // 128dp cards previously clipped monetary values on small phones.
+        invoices.setMinimumHeight(dp(128));
+        revenue.setMinimumHeight(dp(128));
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,-2,1);
         left.rightMargin=dp(6);
         statistics.addView(invoices,left);
-        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(128),1);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,-2,1);
         right.leftMargin=dp(6);
         statistics.addView(revenue,right);
         place(body,statistics);gap(body,18);
@@ -2663,9 +2672,13 @@ public final class MainActivity extends Activity {
 
         LinearLayout chart=card();pad(chart,17,17);
         LinearLayout chartHeader=horizontal();
-        chartHeader.addView(label("Kretanje fakturiranja",16,ink(),true),
-            new LinearLayout.LayoutParams(0,-2,1));
-        chartHeader.addView(label("Posljednjih 6 mj.",10,sub(),false));
+        TextView chartName=label("Kretanje fakturiranja",16,ink(),true);
+        chartName.setMaxLines(2);
+        chartHeader.addView(chartName,new LinearLayout.LayoutParams(0,-2,1));
+        TextView interval=label("Posljednjih 6 mj.",10,sub(),false);
+        interval.setMaxLines(2);
+        interval.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        chartHeader.addView(interval,lp(92,-2));
         place(chart,chartHeader);gap(chart,19);
         chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,190));
         place(body,chart);gap(body,14);
@@ -2716,7 +2729,9 @@ public final class MainActivity extends Activity {
         c.addView(symbol,lp(39,39));gap(c,9);
         c.addView(label(caption,11,sub(),false));gap(c,3);
         c.addView(label(value,25,ink(),true));
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(130),1);
+        // WRAP_CONTENT prevents clipping at Android font scale 1.3–1.5.
+        c.setMinimumHeight(dp(130));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
     }
