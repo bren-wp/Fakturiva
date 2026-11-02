@@ -700,7 +700,7 @@ public final class MainActivity extends Activity {
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
         place(body,welcome);gap(body,18);
 
-        LinearLayout hero=vertical();pad(hero,19,19);
+        LinearLayout hero=vertical();pad(hero,19,dark?13:19);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
@@ -724,14 +724,14 @@ public final class MainActivity extends Activity {
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
         hero.addView(new RevenueLine(this),lp(-1,57));
-        place(body,hero);gap(body,16);
+        place(body,hero);gap(body,dark?10:16);
 
         LinearLayout stats=horizontal();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
-        gap(body,18);
+        gap(body,dark?14:18);
         place(body,label("Brze radnje",18,ink(),true));
         gap(body,11);
         LinearLayout fast=horizontal();
@@ -740,7 +740,7 @@ public final class MainActivity extends Activity {
         quick(fast,"♧","Novi klijent",this::addClient);
         place(body,fast);
 
-        gap(body,19);
+        gap(body,dark?14:19);
         LinearLayout recentHeading=horizontal();
         recentHeading.setGravity(Gravity.CENTER_VERTICAL);
         recentHeading.addView(label("Nedavni dokumenti",18,ink(),true),
@@ -779,12 +779,11 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();pad(c,14,13);
+        LinearLayout c=card();pad(c,14,dark?10:13);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
-        image.setBackground(shape(dark?
-            (accent==TEAL?0xff1f524e:0xff2b3f78):
-            (accent==TEAL?0xffdff8f4:0xffe8edff),12));
+        // Reference uses readable pastel icon tiles on both themes.
+        image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
         c.addView(image,lp(38,38));gap(c,7);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
@@ -800,9 +799,8 @@ public final class MainActivity extends Activity {
         int tint=quote?TEAL:client?0xffeb963c:BLUE;
         ImageView image=icon(figureIcon(glyph),tint);
         image.setPadding(dp(10),dp(10),dp(10),dp(10));
-        image.setBackground(shape(dark?
-            (quote?0xff1f534b:client?0xff62452e:0xff303c72):
-            (quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff),12));
+        image.setBackground(shape(
+            quote?0xffdcf8f4:client?0xfffff0e3:0xffe8edff,12));
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(93),1);
