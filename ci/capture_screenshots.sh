@@ -14,29 +14,41 @@ names=(
   ponude nova_ponuda pregled_ponude klijenti detalji_klijenta artikli_usluge izvjestaji
   naplata eracun_integracija postavke profil_tvrtke tamna_tema
 )
+capture_failure(){
+  local reason="$1"
+  echo "::error::$reason"
+  # Keep the crash or ANR report even when one adb request times out.
+  timeout 8s adb logcat -d -v time -t 500 > build/screenshot-errors.log || true
+  exit 1
+}
 for index in "${!names[@]}"; do
   number=$(printf '%02d' $((index+1)))
-  adb logcat -c
-  adb shell am force-stop "$APP"
-  adb shell am start -W -n "$APP/.MainActivity" -a "$APP.SCREENSHOT" --es screen "$number"
-  # A completed Activity launch is NOT proof that the requested screen was
-  # rendered. The debug-only harness announces the exact screen when ready.
+  timeout 10s adb logcat -c || capture_failure "ADB logcat unavailable for screen $number"
+  timeout 12s adb shell am force-stop "$APP" ||
+    capture_failure "Cannot stop previous screen $number"
+  # -W blocks until Activity.onCreate returns. That can deadlock the emulator
+  # on API 36; launch asynchronously and wait for our own screen-ready log.
+  timeout 20s adb shell am start -n "$APP/.MainActivity" -a "$APP.SCREENSHOT" --es screen "$number" ||
+    capture_failure "Android failed to launch requested screen $number"
   ready=false
-  for attempt in $(seq 1 15); do
-    if adb logcat -d -s FakturivaQA:I '*:S' | grep -Fq "QA_SCREEN_READY $number"; then
+  for attempt in $(seq 1 25); do
+    if timeout 5s adb logcat -d -s FakturivaQA:I '*:S' |
+       grep -Fq "QA_SCREEN_READY $number"; then
       ready=true
       break
     fi
     sleep 1
   done
   if [ "$ready" != true ]; then
-    echo "::error::Screenshot harness did not render requested screen $number"
-    adb logcat -d -t 300 > build/screenshot-errors.log
-    exit 1
+    capture_failure "Screenshot harness did not render requested screen $number"
   fi
+  # Let the view hierarchy finish one real frame after rendering the page.
+  sleep 0.4
   output="docs/screenshots/${number}_${names[$index]}.png"
-  adb exec-out screencap -p > "$output"
-  test "$(stat -c%s "$output")" -gt 14000
+  timeout 15s adb exec-out screencap -p > "$output" ||
+    capture_failure "Screen capture timed out on screen $number"
+  test "$(stat -c%s "$output")" -gt 14000 ||
+    capture_failure "Truncated screenshot for screen $number"
   echo "Captured $output"
 done
 # A successful run must have twenty distinct rendered screens. Previous runs
