@@ -36,7 +36,8 @@ capture_failure(){
 }
 for index in "${!names[@]}"; do
   number=$(printf '%02d' $((index+1)))
-  timeout 10s adb logcat -c || capture_failure "ADB logcat unavailable for screen $number"
+  timeout 8s adb shell run-as "$APP" rm -f files/qa-screen-ready.txt ||
+    capture_failure "Cannot reset screen-ready marker $number"
   timeout 12s adb shell am force-stop "$APP" ||
     capture_failure "Cannot stop previous screen $number"
   # -W blocks until Activity.onCreate returns. That can deadlock the emulator
@@ -44,11 +45,11 @@ for index in "${!names[@]}"; do
   timeout 20s adb shell am start -n "$APP/.MainActivity" -a "$APP.SCREENSHOT" --es screen "$number" ||
     capture_failure "Android failed to launch requested screen $number"
   ready=false
-  for attempt in $(seq 1 25); do
-    # Do not combine grep -q with a pipe under pipefail: grep may close
-    # stdout early and cause adb to return SIGPIPE despite a correct match.
-    recent_log="$(timeout 5s adb logcat -d -s FakturivaQA:I '*:S' || true)"
-    if grep -Fq "QA_SCREEN_READY $number" <<< "$recent_log"; then
+  for attempt in $(seq 1 20); do
+    # A debug-only file is much cheaper and safer than repeatedly dumping
+    # full logcat buffers, especially on constrained GitHub emulators.
+    signaled="$(timeout 4s adb shell run-as "$APP" cat files/qa-screen-ready.txt 2>/dev/null || true)"
+    if [ "$signaled" = "$number" ]; then
       ready=true
       break
     fi

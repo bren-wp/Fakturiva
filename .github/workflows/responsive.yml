@@ -17,7 +17,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 2
       matrix:
         include:
           # Physical resolution, Android dpi and resulting logical dp sizes.
@@ -46,6 +46,8 @@ jobs:
           "$MANAGER" "platforms;android-36" "build-tools;36.0.0"
       - name: Build actual debug APK
         run: gradle :app:assembleDebug --stacktrace
+      - name: Stop Gradle daemon before emulator
+        run: gradle --stop
       - name: Enable emulator hardware acceleration
         run: |
           if [ -e /dev/kvm ]; then

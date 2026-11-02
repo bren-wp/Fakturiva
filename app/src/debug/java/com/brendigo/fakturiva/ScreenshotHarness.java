@@ -121,6 +121,12 @@ public final class ScreenshotHarness {
             case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }
+        // A lightweight readiness marker avoids polling megabytes of logcat
+        // on small and memory-constrained Android emulators.
+        try(java.io.FileOutputStream signal=a.openFileOutput(
+                "qa-screen-ready.txt",android.content.Context.MODE_PRIVATE)){
+            signal.write(page.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
         Log.i("FakturivaQA","QA_SCREEN_READY "+page);
     }
 }
