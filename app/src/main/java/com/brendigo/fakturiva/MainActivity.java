@@ -612,15 +612,25 @@ public final class MainActivity extends Activity {
             canvas.drawText("Ukupno",90,260,p);
             p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
             p.setTextSize(16);canvas.drawText("1.250,00 €",192,261,p);
+            // Small native verified stamp at the sheet's upper-right edge.
+            p.setColor(0xff15beb1);p.setStrokeWidth(1.6f);
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            canvas.drawCircle(246,88,6.1f,p);
+            android.graphics.Path seal=new android.graphics.Path();
+            seal.moveTo(242.5f,88);
+            seal.lineTo(245.6f,91);
+            seal.lineTo(250.5f,84.5f);
+            canvas.drawPath(seal,p);
+            p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
             p.setColor(0xff15beb1);p.setShadowLayer(12,0,10,0x5515beb1);
             canvas.drawRoundRect(246,243,315,308,23,23,p);p.clearShadowLayer();
-            p.setColor(Color.WHITE);p.setStrokeWidth(4.8f);
+            p.setColor(Color.WHITE);p.setStrokeWidth(2.6f);
             p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
             p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
             p.setStyle(android.graphics.Paint.Style.STROKE);
             android.graphics.Path check=new android.graphics.Path();
-            check.moveTo(264,272);check.lineTo(275,283);check.lineTo(296,258);
+            check.moveTo(274,272);check.lineTo(281,279);check.lineTo(292,265);
             canvas.drawPath(check,p);p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
         }
