@@ -2957,7 +2957,9 @@ public final class MainActivity extends Activity {
         }
         // The reference fits all nine primary settings above the navigation:
         // reduce vertical inset without dropping any functional destinations.
-        LinearLayout row=horizontal();pad(row,13,10);
+        // Settings reference fits all nine rows above the bottom navigation
+        // at 393x852dp. Preserve a >=54dp hit target, but reduce blank padding.
+        LinearLayout row=horizontal();pad(row,13,8);
         row.setGravity(Gravity.CENTER_VERTICAL);
         TextView mark=label(symbol,19,BLUE,true);
         mark.setGravity(Gravity.CENTER);
