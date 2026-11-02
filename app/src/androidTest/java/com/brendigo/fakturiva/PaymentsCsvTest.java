@@ -1,13 +1,17 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /** Verifies locally exported payment rows are lossless and safe for spreadsheets. */
 @SuppressWarnings("deprecation")
-public final class PaymentsCsvTest extends AndroidTestCase {
+public final class PaymentsCsvTest extends FakturivaTestCase {
+    @Test
     public void testCsvContainsRealAmountsAndEscapedNames() throws Exception{
         Store.Payment row=new Store.Payment();
         row.invoiceNumber="R-2026-0002";
@@ -26,6 +30,7 @@ public final class PaymentsCsvTest extends AndroidTestCase {
         assertTrue(csv.contains("Kupac \"\"Primjer\"\"; =2+2"));
         assertTrue(csv.contains("2026-10-29"));
     }
+    @Test
     public void testSpreadsheetFormulaInjectionIsEscaped() {
         assertEquals("\"'=1+1\"",PaymentsCsv.cell("=1+1"));
         assertEquals("\"'@SUM(1)\"",PaymentsCsv.cell("@SUM(1)"));
@@ -33,6 +38,7 @@ public final class PaymentsCsvTest extends AndroidTestCase {
         assertEquals("\"'\t+2+2\"",PaymentsCsv.cell("\t+2+2"));
         assertEquals("\"plain text\"",PaymentsCsv.cell("plain text"));
     }
+    @Test
     public void testSelectedMonthExportContainsOnlyVisiblePayments()throws Exception{
         Store.Payment october=new Store.Payment();
         october.invoiceNumber="R-10";october.clientName="Listopadski kupac";

@@ -1,16 +1,20 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+
 import java.util.Arrays;
 import java.util.Collections;
 
 /** Real-payment chart aggregation must never invent sales or shift months. */
 @SuppressWarnings("deprecation")
-public final class ReceiptsChartTest extends AndroidTestCase {
+public final class ReceiptsChartTest extends FakturivaTestCase {
     private Store.Payment payment(String date,long cents){
         Store.Payment result=new Store.Payment();
         result.paidOn=date;result.amountCents=cents;return result;
     }
+    @Test
     public void testCumulativeReceiptsKeepTotalsAndDoNotLeakMonths(){
         long[] series=ReceiptsChart.cumulative(Arrays.asList(
             payment("2026-10-01",1000),payment("2026-10-22",5000),
@@ -22,6 +26,7 @@ public final class ReceiptsChartTest extends AndroidTestCase {
         for(int i=1;i<series.length;i++)assertTrue(series[i]>=series[i-1]);
         assertEquals(0L,ReceiptsChart.cumulative(Collections.emptyList(),"2026-10",31)[11]);
     }
+    @Test
     public void testInvalidMonthsAndPaymentsDoNotChangeChart(){
         long[] series=ReceiptsChart.cumulative(Arrays.asList(
             payment("2026-10-00",600),payment("2026-10-35",700),
