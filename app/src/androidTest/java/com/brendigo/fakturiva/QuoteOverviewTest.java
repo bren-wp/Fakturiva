@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -13,6 +16,7 @@ public final class QuoteOverviewTest extends FakturivaTestCase {
         d.totalCents=cents; return d;
     }
 
+    @Test
     public void testOnlyValidConfirmedQuotesCountAndSum(){
         long[] totals=MainActivity.activeQuoteTotals(Arrays.asList(
             quote(Store.QUOTE,Store.SENT,"2026-11-15",240000),
@@ -26,6 +30,7 @@ public final class QuoteOverviewTest extends FakturivaTestCase {
         assertEquals(365000L,totals[1]);
     }
 
+    @Test
     public void testNoQuotesProducesZeroValues(){
         long[] totals=MainActivity.activeQuoteTotals(Collections.emptyList(),"2026-11-01");
         assertEquals(0L,totals[0]);

@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 
 /** Regression checks for native client list/detail presentation. */
@@ -12,6 +15,7 @@ public final class ClientScreensTest extends FakturivaTestCase {
         return c;
     }
 
+    @Test
     public void testInitialsFromTwoWordsAndSafeFallback(){
         assertEquals("SS",MainActivity.clientInitials("Studio Sjever d.o.o."));
         assertEquals("MK",MainActivity.clientInitials("Marin Kovač"));
@@ -20,6 +24,7 @@ public final class ClientScreensTest extends FakturivaTestCase {
         assertEquals("K",MainActivity.clientInitials(null));
     }
 
+    @Test
     public void testCityIsNeverInventedFromStreetOnly(){
         assertEquals("Rijeka",MainActivity.clientCity("Trg Primjera 8, Rijeka"));
         assertEquals("Zagreb",MainActivity.clientCity("Zagreb, Hrvatska"));
@@ -28,6 +33,7 @@ public final class ClientScreensTest extends FakturivaTestCase {
         assertEquals("Pula",MainActivity.clientCity("Pula"));
     }
 
+    @Test
     public void testClientFiltersUseRealDocumentMembership(){
         Store.Client a=client(1,"Studio Sjever","Zagreb","12345678903");
         Store.Client b=client(2,"Studio Sjever","Zagreb","12345678903");

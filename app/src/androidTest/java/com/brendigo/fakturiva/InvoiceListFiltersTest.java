@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 
 /** UI filter regression tests for the real invoice balances in screen 05. */
@@ -13,16 +16,19 @@ public final class InvoiceListFiltersTest extends FakturivaTestCase {
         d.paidCents=paid;
         return d;
     }
+    @Test
     public void testFullyPaidInvoiceWithIssuedFlagAppearsPaid(){
         Store.Document d=doc(Store.INVOICE,Store.ISSUED,12500,12500);
         assertTrue(MainActivity.matches(d,"Plaćeni"));
         assertFalse(MainActivity.matches(d,"Neplaćeni"));
     }
+    @Test
     public void testPartialPaymentRemainsInUnpaid(){
         Store.Document d=doc(Store.INVOICE,Store.ISSUED,12500,5000);
         assertTrue(MainActivity.matches(d,"Neplaćeni"));
         assertFalse(MainActivity.matches(d,"Plaćeni"));
     }
+    @Test
     public void testVoidedAndDraftInvoicesExcludedFromOpenBalance(){
         for(String status:new String[]{Store.VOID,Store.DRAFT}){
             Store.Document d=doc(Store.INVOICE,status,12500,0);
@@ -30,6 +36,7 @@ public final class InvoiceListFiltersTest extends FakturivaTestCase {
             assertFalse(MainActivity.matches(d,"Plaćeni"));
         }
     }
+    @Test
     public void testQuotesNeverAppearInInvoicePaymentFilters(){
         Store.Document quote=doc(Store.QUOTE,Store.SENT,12500,0);
         assertTrue(MainActivity.matches(quote,"Potvrđene"));

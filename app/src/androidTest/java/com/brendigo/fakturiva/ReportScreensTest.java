@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +21,7 @@ public final class ReportScreensTest extends FakturivaTestCase{
         Store.Payment p=new Store.Payment();
         p.paidOn=date;p.amountCents=cents;return p;
     }
+    @Test
     public void testMonthlySummaryDoesNotMixInvoicesAndPayments(){
         long[] report=MainActivity.reportMetrics(Arrays.asList(
             invoice(Store.INVOICE,Store.ISSUED,"2026-10-13",12500,0),
@@ -39,6 +43,7 @@ public final class ReportScreensTest extends FakturivaTestCase{
         assertEquals(32500L,report[4]);
     }
 
+    @Test
     public void testCsvIsRealTypedDataAndRejectsInvalidMonth()throws Exception{
         ByteArrayOutputStream out=new ByteArrayOutputStream();
         ReportCsv.write("2026-10",new long[]{67500,3,1,35000,32500},out);

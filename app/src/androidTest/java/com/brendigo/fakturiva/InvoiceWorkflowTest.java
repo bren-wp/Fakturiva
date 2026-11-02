@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.database.DatabaseErrorHandler;
@@ -48,6 +51,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }
     }
 
+    @Test
     public void testPersistHistoricalIssuerCustomerAndPayment()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());
         Store db=null,restored=null;
@@ -89,6 +93,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{if(db!=null)db.close();context.clean();}
     }
 
+    @Test
     public void testRejectedInvalidTransactionKeepsDraft()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());
         Store db=null;
@@ -108,6 +113,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
             assertEquals(1,db.documents(Store.QUOTE).size());
         }finally{if(db!=null)db.close();context.clean();}
     }
+    @Test
     public void testInvalidBackupRollsBackWithoutLosingInvoices()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{
@@ -135,6 +141,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{if(db!=null)db.close();context.clean();}
     }
 
+    @Test
     public void testInterruptedAtomicRecoveryAndDatabaseReopen()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{
@@ -158,6 +165,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{if(db!=null)db.close();context.clean();}
     }
 
+    @Test
     public void testNumberingOverpaymentAndDuplicateConfirmation()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{
@@ -182,6 +190,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{if(db!=null)db.close();context.clean();}
     }
 
+    @Test
     public void testLongPdfHasMultiplePages()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{
@@ -206,6 +215,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
             }
         }finally{if(db!=null)db.close();context.clean();}
     }
+    @Test
     public void testCatalogEditingDoesNotRewriteIssuedDocument() throws Exception {
         IsolatedContext context=new IsolatedContext(getContext());
         Store db=null;
@@ -234,6 +244,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }
     }
 
+    @Test
     public void testReportsAreScopedToActualIssuingMonth() throws Exception {
         IsolatedContext context=new IsolatedContext(getContext()); Store db=null;
         try {
@@ -258,6 +269,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }
     }
 
+    @Test
     public void testWorkingDraftSurvivesReopenAndTamperingIsRejected()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());
         try{
@@ -295,6 +307,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{context.clean();}
     }
 
+    @Test
     public void testQuoteTitlePersistsThroughEditingBackupAndLegacyRestore()throws Exception{
         IsolatedContext origin=new IsolatedContext(getContext());
         Store first=null;
@@ -332,6 +345,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{if(first!=null)first.close();origin.clean();}
     }
 
+    @Test
     public void testQuoteDatesDisplayAndRoundTripWithoutChangingStorageFormat(){
         assertEquals("2. 11. 2026.",MainActivity.quoteDateForDisplay("2026-11-02"));
         assertEquals("2026-11-02",MainActivity.quoteDateToIso("2. 11. 2026."));

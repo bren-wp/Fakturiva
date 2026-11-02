@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -51,6 +54,7 @@ public final class CatalogScreensTest extends FakturivaTestCase {
         }
     }
 
+    @Test
     public void testCatalogCategoriesAndUnitsPersistInBackup()throws Exception {
         IsolatedContext context=new IsolatedContext(getContext());
         Store first=null,restored=null;
@@ -100,6 +104,7 @@ public final class CatalogScreensTest extends FakturivaTestCase {
         for(Store.Item item:all)if(item.id==id)return item;
         throw new AssertionError("Missing "+id);
     }
+    @Test
     public void testInvalidKindsAndUnitsAreRejected(){
         try{Store.normalizedKind("MYSTERY");fail("Unknown kind");}
         catch(IllegalArgumentException expected){}

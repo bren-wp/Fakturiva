@@ -1,5 +1,8 @@
 package com.brendigo.fakturiva;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 
 /** Payment badges match actual status, outstanding balance and due date. */
@@ -15,6 +18,7 @@ public final class DocumentStatusTest extends FakturivaTestCase {
         return DocumentStatus.label(d,"2026-10-29","2026-11-05");
     }
 
+    @Test
     public void testOutstandingAndDueDateClassification(){
         assertEquals("Plaćen",label(document(Store.INVOICE,Store.PAID,10000,10000,"2026-10-01")));
         assertEquals("Dospio",label(document(Store.INVOICE,Store.ISSUED,10000,0,"2026-10-28")));
@@ -23,6 +27,7 @@ public final class DocumentStatusTest extends FakturivaTestCase {
         assertEquals("Djelomično plaćen",label(document(Store.INVOICE,Store.ISSUED,10000,3000,"2026-10-01")));
     }
 
+    @Test
     public void testDraftQuoteAndVoidedStatus(){
         assertEquals("Skica",label(document(Store.INVOICE,Store.DRAFT,0,0,"2026-11-02")));
         assertEquals("Potvrđena",label(document(Store.QUOTE,Store.SENT,5000,0,"2026-12-01")));
