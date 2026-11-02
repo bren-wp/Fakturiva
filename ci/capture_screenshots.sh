@@ -58,14 +58,36 @@ for index in "${!names[@]}"; do
   if [ "$ready" != true ]; then
     capture_failure "Screenshot harness did not render requested screen $number"
   fi
-  # Let the view hierarchy finish one real frame after rendering the page.
-  sleep 0.4
+  # The readiness marker is written AFTER Activity pre-draw, but Android
+  # SplashScreen can still remain in the compositor for a short time.
+  # An identical frame for a different screen is never accepted as evidence.
   output="$QA_OUTPUT_DIR/${number}_${names[$index]}.png"
-  timeout 15s adb exec-out screencap -p > "$output" ||
-    capture_failure "Screen capture timed out on screen $number"
-  test "$(stat -c%s "$output")" -gt 14000 ||
-    capture_failure "Truncated screenshot for screen $number"
-  echo "Captured $output"
+  unique=false
+  for retry in 1 2 3 4; do
+    sleep 1
+    timeout 18s adb exec-out screencap -p > "$output" ||
+      capture_failure "Screen capture timed out on screen $number (attempt $retry)"
+    test "$(stat -c%s "$output")" -gt 14000 ||
+      capture_failure "Truncated screenshot for screen $number"
+    repeated=false
+    for previous in "$QA_OUTPUT_DIR"/*.png; do
+      [ -f "$previous" ] || continue
+      [ "$previous" = "$output" ] && continue
+      if cmp -s "$previous" "$output"; then
+        repeated=true
+        break
+      fi
+    done
+    if [ "$repeated" = false ]; then
+      unique=true
+      break
+    fi
+    echo "Screen $number still displays a prior frame (attempt $retry); waiting for actual rendering"
+  done
+  if [ "$unique" != true ]; then
+    capture_failure "Screen $number never rendered a distinct frame after four captures"
+  fi
+  echo "Captured distinct $output"
   # For the responsive matrix also collect the *actual accessibility tree*.
   # Screenshot dimensions alone cannot reveal clipped or missing controls.
   if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
