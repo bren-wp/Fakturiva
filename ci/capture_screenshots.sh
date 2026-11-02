@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 APP="com.brendigo.fakturiva"
-adb wait-for-device
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+timeout 90s adb wait-for-device ||
+  { echo "::error::Android emulator did not become available"; exit 1; }
+timeout 90s adb install -r app/build/outputs/apk/debug/app-debug.apk ||
+  { echo "::error::APK installation failed"; exit 1; }
 adb shell wm size 1179x2556
 adb shell wm density 480
 adb shell settings put global window_animation_scale 0
@@ -32,8 +34,10 @@ for index in "${!names[@]}"; do
     capture_failure "Android failed to launch requested screen $number"
   ready=false
   for attempt in $(seq 1 25); do
-    if timeout 5s adb logcat -d -s FakturivaQA:I '*:S' |
-       grep -Fq "QA_SCREEN_READY $number"; then
+    # Do not combine grep -q with a pipe under pipefail: grep may close
+    # stdout early and cause adb to return SIGPIPE despite a correct match.
+    recent_log="$(timeout 5s adb logcat -d -s FakturivaQA:I '*:S' || true)"
+    if grep -Fq "QA_SCREEN_READY $number" <<< "$recent_log"; then
       ready=true
       break
     fi
