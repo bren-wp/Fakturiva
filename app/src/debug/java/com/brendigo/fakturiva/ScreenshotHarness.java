@@ -121,12 +121,37 @@ public final class ScreenshotHarness {
             case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }
-        // A lightweight readiness marker avoids polling megabytes of logcat
-        // on small and memory-constrained Android emulators.
-        try(java.io.FileOutputStream signal=a.openFileOutput(
-                "qa-screen-ready.txt",android.content.Context.MODE_PRIVATE)){
-            signal.write(page.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        }
-        Log.i("FakturivaQA","QA_SCREEN_READY "+page);
+        // Calling setContentView is not the same as a framebuffer draw.
+        // On Android 15/16 the system SplashScreen may still cover the Activity
+        // for several frames, even though the layout methods have finished.
+        // Emit the readiness file only AFTER the requested view has actually
+        // entered the draw pipeline, and allow the system splash to clear.
+        final android.view.View decor=a.getWindow().getDecorView();
+        final android.view.ViewTreeObserver tree=decor.getViewTreeObserver();
+        tree.addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener(){
+            private boolean scheduled=false;
+            @Override public boolean onPreDraw(){
+                if(!scheduled){
+                    scheduled=true;
+                    decor.getViewTreeObserver().removeOnPreDrawListener(this);
+                    decor.postDelayed(()->{
+                        // Ignore a now-destroyed Activity; never signal that
+                        // a stale screen belongs to the next screenshot.
+                        if(a.isFinishing()||a.isDestroyed()||!decor.isShown())return;
+                        try(java.io.FileOutputStream signal=a.openFileOutput(
+                                "qa-screen-ready.txt",
+                                android.content.Context.MODE_PRIVATE)){
+                            signal.write(page.getBytes(
+                                java.nio.charset.StandardCharsets.UTF_8));
+                            signal.flush();
+                            Log.i("FakturivaQA","QA_SCREEN_READY "+page);
+                        }catch(java.io.IOException e){
+                            Log.e("FakturivaQA","QA readiness marker failed "+page,e);
+                        }
+                    },1000);
+                }
+                return true;
+            }
+        });
     }
 }
