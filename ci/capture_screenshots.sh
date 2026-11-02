@@ -89,7 +89,7 @@ if any(n.get("resource-id") == "android:id/immersive_cling_title"
     for node in nodes:
         if node.get("resource-id") == "android:id/ok":
             match = re.fullmatch(
-                r"\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]",
+                r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]",
                 node.get("bounds", ""),
             )
             if match:
