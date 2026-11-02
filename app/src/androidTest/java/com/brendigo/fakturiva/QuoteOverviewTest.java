@@ -1,12 +1,12 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 import java.util.Arrays;
 import java.util.Collections;
 
 /** Active quote cards are computed from local business records, never fixture totals. */
 @SuppressWarnings("deprecation")
-public final class QuoteOverviewTest extends AndroidTestCase {
+public final class QuoteOverviewTest extends FakturivaTestCase {
     private Store.Document quote(String type,String status,String validUntil,long cents) {
         Store.Document d=new Store.Document();
         d.type=type; d.status=status; d.dueDate=validUntil;

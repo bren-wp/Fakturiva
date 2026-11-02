@@ -1,6 +1,6 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.database.DatabaseErrorHandler;
@@ -11,7 +11,7 @@ import org.json.JSONObject;
 
 /** Screen 14 regression: persisted category/unit and safe legacy migrations. */
 @SuppressWarnings("deprecation")
-public final class CatalogScreensTest extends AndroidTestCase {
+public final class CatalogScreensTest extends FakturivaTestCase {
     /** Mirrors the repository's existing per-test SQLite isolation. */
     private static final class IsolatedContext extends ContextWrapper {
         final File dir;

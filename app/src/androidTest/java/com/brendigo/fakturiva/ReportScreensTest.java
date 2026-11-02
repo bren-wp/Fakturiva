@@ -1,13 +1,13 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /** Report screen must calculate all month figures from actual records. */
 @SuppressWarnings("deprecation")
-public final class ReportScreensTest extends AndroidTestCase{
+public final class ReportScreensTest extends FakturivaTestCase{
     private Store.Document invoice(String type,String status,String issue,long total,long paid){
         Store.Document d=new Store.Document();
         d.type=type;d.status=status;d.issueDate=issue;

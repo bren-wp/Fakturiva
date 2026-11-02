@@ -1,10 +1,10 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 
 /** Regression checks for native client list/detail presentation. */
 @SuppressWarnings("deprecation")
-public final class ClientScreensTest extends AndroidTestCase {
+public final class ClientScreensTest extends FakturivaTestCase {
     private Store.Client client(long id,String name,String address,String oib){
         Store.Client c=new Store.Client();
         c.id=id;c.name=name;c.address=address;c.oib=oib;

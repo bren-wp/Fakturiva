@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
-import android.test.AndroidTestCase;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.Arrays;
@@ -12,7 +12,7 @@ import org.json.JSONObject;
 
 /** Android framework-only instrumented regression tests on isolated storage. */
 @SuppressWarnings("deprecation")
-public final class InvoiceWorkflowTest extends AndroidTestCase {
+public final class InvoiceWorkflowTest extends FakturivaTestCase {
     private static final class IsolatedContext extends ContextWrapper {
         final File dir;
         IsolatedContext(Context base) {

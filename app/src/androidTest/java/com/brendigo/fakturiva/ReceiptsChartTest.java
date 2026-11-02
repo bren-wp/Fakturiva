@@ -1,12 +1,12 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 import java.util.Arrays;
 import java.util.Collections;
 
 /** Real-payment chart aggregation must never invent sales or shift months. */
 @SuppressWarnings("deprecation")
-public final class ReceiptsChartTest extends AndroidTestCase {
+public final class ReceiptsChartTest extends FakturivaTestCase {
     private Store.Payment payment(String date,long cents){
         Store.Payment result=new Store.Payment();
         result.paidOn=date;result.amountCents=cents;return result;

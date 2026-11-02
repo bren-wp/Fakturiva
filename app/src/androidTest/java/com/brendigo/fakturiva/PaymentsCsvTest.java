@@ -1,13 +1,13 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /** Verifies locally exported payment rows are lossless and safe for spreadsheets. */
 @SuppressWarnings("deprecation")
-public final class PaymentsCsvTest extends AndroidTestCase {
+public final class PaymentsCsvTest extends FakturivaTestCase {
     public void testCsvContainsRealAmountsAndEscapedNames() throws Exception{
         Store.Payment row=new Store.Payment();
         row.invoiceNumber="R-2026-0002";

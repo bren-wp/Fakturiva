@@ -1,10 +1,10 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 
 /** Payment badges match actual status, outstanding balance and due date. */
 @SuppressWarnings("deprecation")
-public final class DocumentStatusTest extends AndroidTestCase {
+public final class DocumentStatusTest extends FakturivaTestCase {
     private Store.Document document(String type,String status,long total,long paid,String due){
         Store.Document d=new Store.Document();
         d.type=type;d.status=status;d.totalCents=total;d.paidCents=paid;

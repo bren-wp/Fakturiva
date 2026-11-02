@@ -1,10 +1,10 @@
 package com.brendigo.fakturiva;
 
-import android.test.AndroidTestCase;
+
 
 /** UI filter regression tests for the real invoice balances in screen 05. */
 @SuppressWarnings("deprecation")
-public final class InvoiceListFiltersTest extends AndroidTestCase {
+public final class InvoiceListFiltersTest extends FakturivaTestCase {
     private static Store.Document doc(String type,String status,long total,long paid){
         Store.Document d=new Store.Document();
         d.type=type;
