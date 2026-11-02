@@ -19,6 +19,13 @@ timeout 12s adb shell settings put system font_scale "$QA_FONT_SCALE"
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
+# Only the disposable emulator is changed. Android can display a first-run
+# "Viewing full screen" system dialog over otherwise correctly rendered views.
+# A hidden system prompt must never count as a successful app screenshot.
+if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
+  timeout 12s adb shell settings put secure immersive_mode_confirmations confirmed ||
+    { echo "::error::Could not acknowledge Android immersive-mode tutorial"; exit 1; }
+fi
 mkdir -p "$QA_OUTPUT_DIR" "$(dirname "$QA_ERROR_LOG")"
 # The requested profile's images must never be satisfied by repo-stored PNGs.
 rm -f "$QA_OUTPUT_DIR"/*.png
@@ -58,6 +65,58 @@ for index in "${!names[@]}"; do
   if [ "$ready" != true ]; then
     capture_failure "Screenshot harness did not render requested screen $number"
   fi
+  # Read the hierarchy BEFORE capturing the frame: an Android fullscreen
+  # tutorial or a launcher ANR can cover the app while its ready marker exists.
+  # Never accept that system dialog as one of the 20 Fakturiva screens.
+  if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
+    xml="$QA_OUTPUT_DIR/${number}_${names[$index]}.xml"
+    xml_ready=false
+    for try in 1 2 3; do
+      if timeout 25s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
+         timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml" &&
+         grep -Fq "<hierarchy" "$xml"; then
+        if grep -Fq 'android:id/immersive_cling_title' "$xml"; then
+          # Fallback for emulator images that ignore the secure setting above.
+          # Click the system tutorial's actual button, never an app control.
+          coords="$(python3 - "$xml" <<'PY'
+import re
+import sys
+from xml.etree import ElementTree as ET
+
+nodes = list(ET.parse(sys.argv[1]).getroot().iter("node"))
+if any(n.get("resource-id") == "android:id/immersive_cling_title"
+       for n in nodes):
+    for node in nodes:
+        if node.get("resource-id") == "android:id/ok":
+            match = re.fullmatch(
+                r"\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]",
+                node.get("bounds", ""),
+            )
+            if match:
+                x1, y1, x2, y2 = map(int, match.groups())
+                print((x1 + x2) // 2, (y1 + y2) // 2)
+                break
+PY
+)"
+          if [[ "$coords" =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
+            read -r tap_x tap_y <<< "$coords"
+            timeout 8s adb shell input tap "$tap_x" "$tap_y" ||
+              capture_failure "Cannot dismiss Android fullscreen tutorial"
+            sleep 2
+            continue
+          fi
+        fi
+        if grep -Fq "package=\"$APP\"" "$xml"; then
+          xml_ready=true
+          break
+        fi
+      fi
+      sleep 2
+    done
+    if [ "$xml_ready" != true ]; then
+      capture_failure "Screen $number is obscured by Android system UI or has no Fakturiva accessibility tree"
+    fi
+  fi
   # The readiness marker is written AFTER Activity pre-draw, but Android
   # SplashScreen can still remain in the compositor for a short time.
   # An identical frame for a different screen is never accepted as evidence.
@@ -88,24 +147,7 @@ for index in "${!names[@]}"; do
     capture_failure "Screen $number never rendered a distinct frame after four captures"
   fi
   echo "Captured distinct $output"
-  # For the responsive matrix also collect the *actual accessibility tree*.
-  # Screenshot dimensions alone cannot reveal clipped or missing controls.
-  if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
-    xml="${output%.png}.xml"
-    xml_ready=false
-    for try in 1 2; do
-      if timeout 25s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
-         timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml" &&
-         grep -Fq "<hierarchy" "$xml"; then
-        xml_ready=true
-        break
-      fi
-      sleep 1
-    done
-    if [ "$xml_ready" != true ]; then
-      capture_failure "Missing accessibility hierarchy for screen $number"
-    fi
-  fi
+
 done
 # A successful run must have twenty distinct rendered screens. Previous runs
 # silently captured onboarding across multiple screen IDs and were not valid.
