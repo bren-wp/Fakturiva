@@ -1,16 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 APP="com.brendigo.fakturiva"
+# The original reference profile remains the default; responsive CI overrides
+# these variables and writes separate, genuine emulator screenshots.
+QA_WIDTH="${QA_WIDTH:-1179}"
+QA_HEIGHT="${QA_HEIGHT:-2556}"
+QA_DENSITY="${QA_DENSITY:-480}"
+QA_FONT_SCALE="${QA_FONT_SCALE:-1.0}"
+QA_OUTPUT_DIR="${QA_OUTPUT_DIR:-docs/screenshots}"
+QA_ERROR_LOG="${QA_ERROR_LOG:-build/screenshot-errors.log}"
 timeout 90s adb wait-for-device ||
   { echo "::error::Android emulator did not become available"; exit 1; }
 timeout 90s adb install -r app/build/outputs/apk/debug/app-debug.apk ||
   { echo "::error::APK installation failed"; exit 1; }
-adb shell wm size 1179x2556
-adb shell wm density 480
+timeout 12s adb shell wm size "${QA_WIDTH}x${QA_HEIGHT}"
+timeout 12s adb shell wm density "$QA_DENSITY"
+timeout 12s adb shell settings put system font_scale "$QA_FONT_SCALE"
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
-mkdir -p docs/screenshots
+mkdir -p "$QA_OUTPUT_DIR" "$(dirname "$QA_ERROR_LOG")"
+# The requested profile's images must never be satisfied by repo-stored PNGs.
+rm -f "$QA_OUTPUT_DIR"/*.png
 names=(
   pocetni_zaslon dobrodosli prijava pocetna racuni novi_racun stavke_racuna pregled_racuna
   ponude nova_ponuda pregled_ponude klijenti detalji_klijenta artikli_usluge izvjestaji
@@ -20,7 +31,7 @@ capture_failure(){
   local reason="$1"
   echo "::error::$reason"
   # Keep the crash or ANR report even when one adb request times out.
-  timeout 8s adb logcat -d -v time -t 500 > build/screenshot-errors.log || true
+  timeout 8s adb logcat -d -v time -t 500 > "$QA_ERROR_LOG" || true
   exit 1
 }
 for index in "${!names[@]}"; do
@@ -48,7 +59,7 @@ for index in "${!names[@]}"; do
   fi
   # Let the view hierarchy finish one real frame after rendering the page.
   sleep 0.4
-  output="docs/screenshots/${number}_${names[$index]}.png"
+  output="$QA_OUTPUT_DIR/${number}_${names[$index]}.png"
   timeout 15s adb exec-out screencap -p > "$output" ||
     capture_failure "Screen capture timed out on screen $number"
   test "$(stat -c%s "$output")" -gt 14000 ||
@@ -57,11 +68,12 @@ for index in "${!names[@]}"; do
 done
 # A successful run must have twenty distinct rendered screens. Previous runs
 # silently captured onboarding across multiple screen IDs and were not valid.
-unique_count="$(sha256sum docs/screenshots/*.png | awk '{print $1}' | sort -u | wc -l)"
+unique_count="$(sha256sum "$QA_OUTPUT_DIR"/*.png | awk '{print $1}' | sort -u | wc -l)"
 if [ "$unique_count" -ne "${#names[@]}" ]; then
   echo "::error::Only $unique_count unique screenshots for ${#names[@]} requested screens."
   exit 1
 fi
 # Archive UI errors for QA inspection (screenshots are genuine Android captures).
-adb logcat -d -t 800 | grep -E "FATAL EXCEPTION|Emulator screenshot harness failed" > build/screenshot-errors.log || true
-if test -s build/screenshot-errors.log; then cat build/screenshot-errors.log; exit 1; fi
+timeout 10s adb logcat -d -t 800 |
+  grep -E "FATAL EXCEPTION|Emulator screenshot harness failed" > "$QA_ERROR_LOG" || true
+if test -s "$QA_ERROR_LOG"; then cat "$QA_ERROR_LOG"; exit 1; fi
