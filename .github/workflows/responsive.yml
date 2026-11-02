@@ -39,7 +39,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Install Android 16 SDK
+      - name: Install Android build SDK
         run: |
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
@@ -54,11 +54,14 @@ jobs:
       - name: Verify all 20 screens at ${{ matrix.profile }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 36
+          # Android 15 is used for the large viewport matrix because the API
+          # 36 screenshot emulator has shown intermittent ADB disconnects.
+          # API 36 JUnit instrumentation is verified independently.
+          api-level: 35
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          ram-size: 3072M
+          ram-size: 2048M
           disk-size: 4096M
           disable-animations: true
           script: bash ci/run_responsive_qa.sh "${{ matrix.profile }}" "${{ matrix.width }}" "${{ matrix.height }}" "${{ matrix.density }}" "${{ matrix.font }}"

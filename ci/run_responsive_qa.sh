@@ -28,6 +28,12 @@ export QA_OUTPUT_DIR="$root/screenshots"
 export QA_ERROR_LOG="$root/screenshot-errors.log"
 export QA_CAPTURE_ACCESSIBILITY=1
 
+# Capture continuous logcat before the first screen to distinguish renderer,
+# system_server and low-memory crashes from UI layout failures.
+( adb logcat -v threadtime || true ) > "$root/live-logcat.txt" 2>&1 &
+live_log_pid=$!
+trap 'kill "$live_log_pid" 2>/dev/null || true' EXIT
+
 # A real emulator takes the requested px/density and font scale. Screens
 # 01–20 must each launch and produce a unique screenshot plus UI hierarchy.
 set +e
