@@ -65,6 +65,24 @@ for index in "${!names[@]}"; do
   test "$(stat -c%s "$output")" -gt 14000 ||
     capture_failure "Truncated screenshot for screen $number"
   echo "Captured $output"
+  # For the responsive matrix also collect the *actual accessibility tree*.
+  # Screenshot dimensions alone cannot reveal clipped or missing controls.
+  if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
+    xml="${output%.png}.xml"
+    xml_ready=false
+    for try in 1 2; do
+      if timeout 25s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
+         timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml" &&
+         grep -Fq "<hierarchy" "$xml"; then
+        xml_ready=true
+        break
+      fi
+      sleep 1
+    done
+    if [ "$xml_ready" != true ]; then
+      capture_failure "Missing accessibility hierarchy for screen $number"
+    fi
+  fi
 done
 # A successful run must have twenty distinct rendered screens. Previous runs
 # silently captured onboarding across multiple screen IDs and were not valid.
