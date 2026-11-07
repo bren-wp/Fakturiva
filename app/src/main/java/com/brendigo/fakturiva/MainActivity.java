@@ -358,25 +358,30 @@ public final class MainActivity extends Activity {
             super.onDraw(canvas);
             float width=getWidth(),height=getHeight();
             if(width<=0||height<=0)return;
+            // Calibrated from the owner's original 1179x2556 Splash PNG,
+            // using only unobstructed background pixels. This remains a
+            // native, resolution-independent gradient — never a screenshot.
             paint.setShader(new android.graphics.LinearGradient(0,0,0,height,
-                new int[]{0xff163864,0xff0e2541,0xff0a1d32},
+                new int[]{0xff122d52,0xff0f2542,0xff0a1c32},
                 new float[]{0,.5f,1},android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(0,0,width,height,paint);
             paint.setShader(null);
 
-            // Scale the shader's local Y axis to give the bloom the same
-            // *relative* elliptical geometry on all portrait devices.
+            // Native radial gradient with separate horizontal/vertical radii.
+            // The prior circular (.60 x .60) bloom lost up to 47 blue levels
+            // in the reference's top-right corner at 393x852dp.
+            final float radiusX=width*1.043f;
+            final float radiusY=height*.468f;
+            final float verticalScale=radiusY/radiusX;
             canvas.save();
-            canvas.scale(1f,height/width);
-            // Transparent SRC_OVER avoids the GPU-dependent PorterDuff ADD
-            // mode, which can stall headless emulator framebuffer capture.
-            // Keep the same geometric bloom using a translucent blue overlay.
+            canvas.scale(1f,verticalScale);
+            // SRC_OVER is intentional: ADD was unreliable on CI emulators.
             paint.setShader(new android.graphics.RadialGradient(
-                width*.865f,width*.075f,width*.60f,
-                new int[]{0xa8245183,0x78245183,0x38245183,0x14245183,0x00245183},
+                width*.964f,height*.097f/verticalScale,radiusX,
+                new int[]{0xff225aa4,0xb1225aa4,0x67225aa4,0x33225aa4,0x00225aa4},
                 new float[]{0,.25f,.5f,.75f,1f},
                 android.graphics.Shader.TileMode.CLAMP));
-            canvas.drawRect(0,0,width,width,paint);
+            canvas.drawRect(0,0,width,height/verticalScale,paint);
             paint.setShader(null);
             canvas.restore();
         }
