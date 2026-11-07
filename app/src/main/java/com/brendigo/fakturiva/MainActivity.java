@@ -475,17 +475,19 @@ public final class MainActivity extends Activity {
         setup("welcome",false);
         root.setBackgroundColor(WHITE);
         body.setBackgroundColor(WHITE);
-        pad(body,25,27);
+        pad(body,28,27);
         LinearLayout brand=horizontal();
         ImageView mark=new ImageView(this);
         mark.setImageResource(R.drawable.brand_mark);brand.addView(mark,lp(43,43));
         TextView brandName=label("Fakturiva",24,NAVY,true);
-        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(10);
+        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(5);
         brand.addView(brandName,brandLp);
-        place(body,brand);gap(body,20);
+        place(body,brand);gap(body,19);
         body.addView(new WelcomeIllustration(this),lp(-1,345));gap(body,30);
         place(body,label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true));gap(body,11);
         TextView heading=label("Manje papirologije.\nViše vremena za posao.",26,NAVY,true);
+        // Narrow Roboto slightly to follow the supplied Inter-based line widths.
+        heading.setTextScaleX(.977f);
         heading.setLineSpacing(dp(3),1.0f);
         place(body,heading);gap(body,11);
         TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",13,MUTED,false);
@@ -613,7 +615,7 @@ public final class MainActivity extends Activity {
             canvas.save();canvas.scale(getWidth()/340f,getHeight()/340f);
             p.setStyle(android.graphics.Paint.Style.FILL);
             p.setShader(new android.graphics.LinearGradient(0,0,310,340,
-                new int[]{0xffe7edff,0xfff1f3ff,0xfff8f8fd},null,
+                new int[]{0xffe1e9fe,0xffe8f0ff,0xffe6efff},null,
                 android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRoundRect(0,0,340,340,37,37,p);p.setShader(null);
             p.setColor(0xffdae5fa);canvas.drawCircle(170,164,115,p);
@@ -625,17 +627,17 @@ public final class MainActivity extends Activity {
             p.setColor(Color.WHITE);canvas.drawRoundRect(72,63,270,288,20,20,p);
             p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
             p.setTextSize(11);canvas.drawText("FAKTURIVA",90,96,p);
-            p.setTextSize(25);canvas.drawText("RAČUN",90,156,p);
+            p.setTextSize(25);canvas.drawText("RAČUN",90,147,p);
             p.setColor(0xffe3eafd);
-            canvas.drawRoundRect(90,175,244,182,5,5,p);
-            canvas.drawRoundRect(90,193,184,200,5,5,p);
-            p.setStrokeWidth(1);canvas.drawLine(90,240,245,240,p);
+            canvas.drawRoundRect(90,158,244,165,5,5,p);
+            canvas.drawRoundRect(90,177,184,184,5,5,p);
+            p.setStrokeWidth(1);canvas.drawLine(90,223,245,223,p);
             p.setColor(0xff8191ad);p.setTextSize(11);p.setTypeface(Typeface.DEFAULT);
-            canvas.drawText("Ukupno",90,260,p);
+            canvas.drawText("Ukupno",90,247,p);
             p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
-            p.setTextSize(16);canvas.drawText("1.250,00 €",192,261,p);
+            p.setTextSize(16);canvas.drawText("1.250,00 €",192,248,p);
             // Small native verified stamp at the sheet's upper-right edge.
-            p.setColor(0xff15beb1);p.setStrokeWidth(1.6f);
+            p.setColor(0xff18c6b7);p.setStrokeWidth(1.6f);
             p.setStyle(android.graphics.Paint.Style.STROKE);
             canvas.drawCircle(246,88,6.1f,p);
             android.graphics.Path seal=new android.graphics.Path();
@@ -645,7 +647,7 @@ public final class MainActivity extends Activity {
             canvas.drawPath(seal,p);
             p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
-            p.setColor(0xff15beb1);p.setShadowLayer(12,0,10,0x5515beb1);
+            p.setColor(0xff18c6b7);p.setShadowLayer(12,0,10,0x5518c6b7);
             canvas.drawRoundRect(246,234,315,299,23,23,p);p.clearShadowLayer();
             p.setColor(Color.WHITE);p.setStrokeWidth(2.6f);
             p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
