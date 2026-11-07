@@ -2659,11 +2659,13 @@ public final class MainActivity extends Activity {
     /** Screen 15: reports are scoped to the selected accounting month. */
     private void reports(){
         setup("reports",true);
-        pad(body,18,15);
+        // The original report uses a shorter vertical rhythm before the chart.
+        pad(body,18,16);
         String yearMonth=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
             .format(reportMonth.getTime());
-        String month=new SimpleDateFormat("MMMM yyyy.",Locale.forLanguageTag("hr-HR"))
+        String month=new SimpleDateFormat("LLLL yyyy.",Locale.forLanguageTag("hr-HR"))
             .format(reportMonth.getTime());
+        if(!month.isEmpty())month=Character.toUpperCase(month.charAt(0))+month.substring(1);
         Calendar previous=(Calendar)reportMonth.clone();
         previous.add(Calendar.MONTH,-1);
         String previousKey=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
@@ -2698,16 +2700,20 @@ public final class MainActivity extends Activity {
         optionsLp.leftMargin=dp(8);
         header.addView(options,optionsLp);
         options.setOnClickListener(v->reportPeriodPicker());
-        place(body,header);gap(body,22);
+        place(body,header);gap(body,15);
 
         LinearLayout period=horizontal();period.setGravity(Gravity.CENTER_VERTICAL);
-        TextView picker=label("▣  "+month+"   ›",13,ink(),true);
-        pad(picker,12,12);picker.setBackground(outlined(panel()));
-        period.addView(picker,new LinearLayout.LayoutParams(0,-2,1));
+        TextView picker=label("▣  "+month+"  ›",12,ink(),true);
+        picker.setSingleLine(true);
+        picker.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        pad(picker,10,10);
+        picker.setBackground(outlined(panel()));
+        LinearLayout.LayoutParams periodLp=new LinearLayout.LayoutParams(0,-2,1);
+        periodLp.rightMargin=dp(8);
+        period.addView(picker,periodLp);
         picker.setContentDescription("Odaberi mjesec izvještaja: "+month);
         picker.setOnClickListener(v->reportPeriodPicker());
-        View spacer=new View(this);
-        period.addView(spacer,new LinearLayout.LayoutParams(0,dp(1),1));
+        // The month control takes the remaining width; no forced line wrap.
         TextView current=label(currentMonth?"Ovaj mjesec":"Na ovaj mjesec",11,BLUE,true);
         current.setGravity(Gravity.CENTER);
         current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
@@ -2717,11 +2723,11 @@ public final class MainActivity extends Activity {
             reportMonth.setTimeInMillis(System.currentTimeMillis());
             reports();
         });
-        place(body,period);gap(body,15);
+        place(body,period);gap(body,12);
 
-        LinearLayout revenue=card();pad(revenue,18,21);
-        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,12);
-        revenue.addView(label(Money.euros(totals[0]),30,ink(),true));gap(revenue,11);
+        LinearLayout revenue=card();pad(revenue,18,16);
+        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,9);
+        revenue.addView(label(Money.euros(totals[0]),30,ink(),true));gap(revenue,9);
         long previousCents=db.invoicedCentsMonth(previousKey);
         if(previousCents>0){
             double pct=(totals[0]-previousCents)*100d/previousCents;
@@ -2733,12 +2739,12 @@ public final class MainActivity extends Activity {
             revenue.addView(label("Bez usporedive osnovice za prethodni mjesec",
                 11,sub(),false));
         }
-        place(body,revenue);gap(body,13);
+        place(body,revenue);gap(body,11);
 
         LinearLayout metrics=horizontal();
         reportMetric(metrics,"Izdani računi",String.valueOf(totals[1]),"▤",BLUE,0);
         reportMetric(metrics,"Plaćeni računi",String.valueOf(totals[2]),"✓",TEAL,1);
-        place(body,metrics);gap(body,14);
+        place(body,metrics);gap(body,12);
 
         LinearLayout chart=card();pad(chart,17,17);
         LinearLayout chartHeader=horizontal();
@@ -2750,7 +2756,7 @@ public final class MainActivity extends Activity {
         interval.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         chartHeader.addView(interval,lp(92,-2));
         place(chart,chartHeader);gap(chart,19);
-        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,190));
+        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,185));
         place(body,chart);gap(body,14);
 
         LinearLayout payout=card();
@@ -2796,18 +2802,18 @@ public final class MainActivity extends Activity {
         symbol.setGravity(Gravity.CENTER);
         symbol.setBackground(shape(accent==TEAL?(dark?0xff20534b:0xffdcf8f4):
             (dark?0xff263a65:0xffe8edff),12));
-        c.addView(symbol,lp(39,39));gap(c,9);
-        c.addView(label(caption,11,sub(),false));gap(c,3);
+        c.addView(symbol,lp(36,36));gap(c,6);
+        c.addView(label(caption,11,sub(),false));gap(c,2);
         c.addView(label(value,25,ink(),true));
         // WRAP_CONTENT prevents clipping at Android font scale 1.3–1.5.
-        c.setMinimumHeight(dp(130));
+        c.setMinimumHeight(dp(112));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
     }
     private void payments(){
         setup("payments",true);
-        pad(body,18,15);
+        pad(body,18,17);
         LinearLayout top=horizontal();top.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout heading=vertical();
         heading.addView(label("Naplata",24,ink(),true));gap(heading,6);
@@ -2867,7 +2873,7 @@ public final class MainActivity extends Activity {
             filters.addView(tab,p);
             tab.setOnClickListener(v->{paymentFilter=selected;payments();});
         }
-        place(body,filters);gap(body,17);
+        place(body,filters);gap(body,8);
         LinearLayout listHeading=horizontal();
         listHeading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",
             17,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
@@ -2875,7 +2881,7 @@ public final class MainActivity extends Activity {
         viewAll.setContentDescription("Prikaži sve uplate");
         listHeading.addView(viewAll);
         viewAll.setOnClickListener(v->{paymentFilter=0;payments();});
-        place(body,listHeading);gap(body,11);
+        place(body,listHeading);gap(body,10);
 
         LinearLayout card=card();pad(card,0,0);
         if(paymentFilter==2){
@@ -3181,22 +3187,24 @@ public final class MainActivity extends Activity {
         help.setContentDescription("Važno o eRačunu i fiskalizaciji");
         help.setOnClickListener(v->showIntegrationRequirements());
         header.addView(help,lp(43,43));place(body,header);gap(body,20);
-        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,20);
+        // A slightly shorter hero leaves the integration notice legible
+        // above the persistent action even on 393dp and compact phones.
+        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,15);
         hero.setBackground(shape(dark?0xff243252:0xffecefff,21));
         TextView symbol=label("⇄",31,BLUE,true);
         symbol.setGravity(Gravity.CENTER);symbol.setBackground(shape(panel(),17));
         LinearLayout.LayoutParams iconLp=lp(68,68);iconLp.gravity=Gravity.CENTER;
-        hero.addView(symbol,iconLp);gap(hero,15);
+        hero.addView(symbol,iconLp);gap(hero,12);
         TextView heading=label("eRačuni i fiskalizacija",19,ink(),true);
         heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,8);
         TextView intro=label("Elektronička razmjena i fiskalizacija zahtijevaju provjerenu integraciju.",12,sub(),false);
-        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,13);
+        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,10);
         TextView state=label("Povezivanje nije dostupno",11,0xffb77312,true);
         state.setGravity(Gravity.CENTER);state.setBackground(shape(dark?0xff584125:0xfffff0d3,13));
         pad(state,12,6);
         LinearLayout.LayoutParams stateLp=lp(-2,-2);stateLp.gravity=Gravity.CENTER;
         hero.addView(state,stateLp);
-        place(body,hero);gap(body,13);
+        place(body,hero);gap(body,11);
 
         LinearLayout phases=card();
         place(phases,label("Status integracije",16,ink(),true));gap(phases,10);
@@ -3209,12 +3217,12 @@ public final class MainActivity extends Activity {
             "Pružatelj nije povezan",false,()->showIntegrationRequirements());
         integrationStep(phases,"3","Ovlaštenja i testiranje",
             "Nisu dostupni u ovoj verziji",false,()->showIntegrationRequirements());
-        place(body,phases);gap(body,12);
+        place(body,phases);gap(body,10);
 
         LinearLayout info=card();info.setBackground(shape(dark?0xff24314d:0xffedf1ff,17));
         info.addView(label("Važno za eRačun",14,ink(),true));gap(info,8);
         info.addView(label("PDF datoteka nije strukturirani eRačun ni potvrda fiskalizacije. Za razmjenu i slanje potrebna je stvarna autorizirana integracija.",12,sub(),false));
-        place(body,info);gap(body,20);
+        place(body,info);gap(body,18);
         // A persistent CTA matches the reference without pretending a network
         // provider or fiscalization service has actually been connected.
         stickyPrimary("Postavke integracije",this::integrationOptions);
@@ -3222,7 +3230,7 @@ public final class MainActivity extends Activity {
     }
     private void integrationStep(LinearLayout parent,String number,String heading,
             String description,boolean ok,Runnable action){
-        LinearLayout row=horizontal();pad(row,1,11);
+        LinearLayout row=horizontal();pad(row,1,9);
         TextView badge=label(number,16,ok?TEAL:sub(),true);
         badge.setGravity(Gravity.CENTER);badge.setBackground(shape(ok?
             (dark?0xff20483f:0xffddf8ec):(dark?0xff27354e:0xffeff1f8),14));
@@ -3234,7 +3242,7 @@ public final class MainActivity extends Activity {
         row.addView(label("›",23,sub(),false));
         place(parent,row);
         row.setOnClickListener(v->action.run());
-        gap(parent,5);
+        gap(parent,3);
     }
     /** Honest options: no network integration is available in this release. */
     private void integrationOptions(){
