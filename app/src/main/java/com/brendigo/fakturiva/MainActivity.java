@@ -2881,7 +2881,9 @@ public final class MainActivity extends Activity {
         viewAll.setContentDescription("Prikaži sve uplate");
         listHeading.addView(viewAll);
         viewAll.setOnClickListener(v->{paymentFilter=0;payments();});
-        place(body,listHeading);gap(body,10);
+        // Source has a compact 10dp gap from section heading to its first
+        // list card; the heading's own accessible row supplies that spacing.
+        place(body,listHeading);
 
         LinearLayout card=card();pad(card,0,0);
         if(paymentFilter==2){
