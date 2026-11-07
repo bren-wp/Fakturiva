@@ -1692,7 +1692,9 @@ public final class MainActivity extends Activity {
         boolean draft=Store.DRAFT.equals(d.status);
 
         setup("detail",true);
-        pad(body,18,13);
+        // Keep invoice masthead and actions aligned with the reference.
+        // Quote detail remains on its pre-existing independent geometry.
+        pad(body,18,invoice?20:13);
         toolbar(invoice?"Pregled računa":"Pregled ponude",
             draft?"Provjerite podatke prije potvrde":
                 (invoice?"Pregled potvrđenog dokumenta":"Ponuda pripremljena za dijeljenje"),true);
@@ -1727,7 +1729,7 @@ public final class MainActivity extends Activity {
                     else if(which==1)savePdf(id);
                     else sharePdf(id);
                 }).setNegativeButton("Zatvori",null).show());
-        place(body,statusBar);gap(body,12);
+        place(body,statusBar);gap(body,invoice?6:12);
 
         place(body,documentPaper(d));
         gap(body,13);
@@ -1777,7 +1779,7 @@ public final class MainActivity extends Activity {
     /** Paper-like native preview with exactly the saved business data. */
     private LinearLayout documentPaper(Store.Document d){
         LinearLayout paper=vertical();
-        pad(paper,18,20);
+        pad(paper,18,24);
         paper.setBackground(outlined(WHITE));
         paper.setMinimumHeight(dp(355));
 
