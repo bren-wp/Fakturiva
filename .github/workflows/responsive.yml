@@ -63,7 +63,9 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          ram-size: 2048M
+          # Android 15 SystemUI and UiAutomator occasionally exhaust a 2 GB AVD
+          # during the very first accessibility dump.
+          ram-size: 3072M
           disk-size: 4096M
           disable-animations: true
           script: bash ci/run_responsive_qa.sh "${{ matrix.profile }}" "${{ matrix.width }}" "${{ matrix.height }}" "${{ matrix.density }}" "${{ matrix.font }}"

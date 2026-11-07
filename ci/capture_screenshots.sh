@@ -25,6 +25,10 @@ adb shell settings put global animator_duration_scale 0
 if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
   timeout 12s adb shell settings put secure immersive_mode_confirmations confirmed ||
     { echo "::error::Could not acknowledge Android immersive-mode tutorial"; exit 1; }
+  # Let Android 15's SystemUI/launcher finish first-boot work before requesting
+  # the very first accessibility dump. On constrained AVDs an immediate dump
+  # occasionally blocks ADB while Fakturiva has already rendered.
+  sleep 6
 fi
 mkdir -p "$QA_OUTPUT_DIR" "$(dirname "$QA_ERROR_LOG")"
 # The requested profile's images must never be satisfied by repo-stored PNGs.
@@ -71,8 +75,8 @@ for index in "${!names[@]}"; do
   if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
     xml="$QA_OUTPUT_DIR/${number}_${names[$index]}.xml"
     xml_ready=false
-    for try in 1 2 3; do
-      if timeout 25s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
+    for try in 1 2 3 4; do
+      if timeout 35s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
          timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml" &&
          grep -Fq "<hierarchy" "$xml"; then
         if grep -Fq 'android:id/immersive_cling_title' "$xml"; then
