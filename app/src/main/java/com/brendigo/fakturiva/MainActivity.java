@@ -402,13 +402,14 @@ public final class MainActivity extends Activity {
         View rings=new View(this){
             final android.graphics.Paint brush=new android.graphics.Paint(3);
             @Override protected void onDraw(android.graphics.Canvas canvas){
-                brush.setColor(0x16ffffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
-                brush.setStrokeWidth(dp(0.67f));
+                brush.setColor(0x13ffffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
+                brush.setStrokeWidth(dp(.9f));
                 float unit=getWidth();
-                // Circle fits from three points on each original PNG outline.
-                // Right: center (1503,738), r=713; left: (-337,1606), r=816.
-                canvas.drawCircle(unit*1.275f,getHeight()*.289f,unit*.605f,brush);
-                canvas.drawCircle(-unit*.286f,getHeight()*.628f,unit*.692f,brush);
+                // Least-squares circles recovered from 751 original PNG
+                // outline pixels at 1179x2556, rather than three landmarks.
+                // Right: (1494.2,734.5), r704.4; left:(-346.0,1604.4),r823.6.
+                canvas.drawCircle(unit*1.26734f,getHeight()*.28738f,unit*.59745f,brush);
+                canvas.drawCircle(-unit*.29350f,getHeight()*.62771f,unit*.69854f,brush);
                 brush.setStyle(android.graphics.Paint.Style.FILL);
             }
         };
@@ -423,6 +424,9 @@ public final class MainActivity extends Activity {
         mark.setTranslationY(dp(3.67f));
         TextView name=label("Fakturiva",44,WHITE,true);name.setGravity(Gravity.CENTER);
         name.setTextScaleX(.989f);
+        // The design uses a heavier headline than Android Roboto Bold.
+        // Apply native paint emboldening rather than embedding a mockup.
+        name.getPaint().setFakeBoldText(true);
         name.setTranslationY(-dp(.33f));
         place(center,name);gap(center,17);
         TextView subtitle=label("Računi i ponude, jednostavno.",13,0xffbdcde1,false);
