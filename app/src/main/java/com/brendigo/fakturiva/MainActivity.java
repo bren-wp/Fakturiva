@@ -1446,47 +1446,44 @@ public final class MainActivity extends Activity {
         });
     }
     private void editItemsScreen(){
+        boolean invoice=Store.INVOICE.equals(editType);
         setup("edit_items",true);
-        pad(body,15,14);
-        toolbar(Store.INVOICE.equals(editType)?"Stavke računa":"Stavke ponude",
+        pad(body,15,invoice?21:14);
+        toolbar(invoice?"Stavke računa":"Stavke ponude",
             "2. korak od 3",true);
+        if(invoice)gap(body,11);
         wizardSteps(2);
         if(draftItems.isEmpty())caption(body,"Dodajte usluge ili artikle u dokument.");
         for(int index=0;index<draftItems.size();index++){
             Store.Item item=draftItems.get(index);
             final int selected=index;
-            LinearLayout c=card();
+            // Compact card geometry matches the reference's invoice rows.
+            // Deletion remains available in the actual item editor.
+            LinearLayout c=card();pad(c,13,9);
             LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
-            header.addView(label(item.name,14,ink(),true),
-                new LinearLayout.LayoutParams(0,-2,1));
+            TextView itemName=label(item.name,14,ink(),true);
+            itemName.setSingleLine(true);
+            itemName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            header.addView(itemName,new LinearLayout.LayoutParams(0,-2,1));
             ImageView edit=icon(R.drawable.ic_edit,sub());
-            edit.setPadding(dp(9),dp(9),dp(9),dp(9));
-            edit.setContentDescription("Uredi stavku "+item.name);
-            header.addView(edit,lp(42,42));
+            edit.setPadding(dp(6),dp(6),dp(6),dp(6));
+            edit.setContentDescription("Uredi ili ukloni stavku "+item.name);
+            header.addView(edit,lp(34,34));
             edit.setOnClickListener(v->editLine(selected));
-            place(c,header);gap(c,3);
-            c.addView(label(Money.decimalQuantity(item.qtyMilli)+" × "+
+            place(c,header);gap(c,1);
+            place(c,label(Money.decimalQuantity(item.qtyMilli)+" × "+
                 Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
-            gap(c,10);
-            LinearLayout bottom=horizontal();
-            TextView delete=label("Ukloni",11,RED,true);
-            delete.setContentDescription("Ukloni stavku "+item.name);
-            bottom.addView(delete,new LinearLayout.LayoutParams(0,-2,1));
-            bottom.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),
-                16,ink(),true));
-            delete.setOnClickListener(v->new AlertDialog.Builder(this)
-                .setTitle("Ukloniti stavku?")
-                .setMessage(item.name+" bit će uklonjena samo iz radnog nacrta.")
-                .setNegativeButton("Odustani",null)
-                .setPositiveButton("Ukloni",(dialog,which)->{
-                    Store.Item removed=draftItems.remove(selected);
-                    if(!saveWorkingDraft()){
-                        draftItems.add(selected,removed);
-                        return;
-                    }
-                    editItemsScreen();
-                }).show());
-            place(c,bottom);place(body,c);gap(body,9);
+            gap(c,4);
+            TextView amount=label(Money.euros(Math.addExact(item.net(),item.tax())),
+                16,ink(),true);
+            amount.setGravity(Gravity.RIGHT);
+            place(c,amount);
+            c.setContentDescription(item.name+" — "+
+                Money.euros(Math.addExact(item.net(),item.tax()))+
+                ". Dodirnite za uređivanje ili uklanjanje.");
+            c.setFocusable(true);
+            c.setOnClickListener(v->editLine(selected));
+            place(body,c);gap(body,9);
         }
         TextView add=label("＋  Dodaj artikl ili uslugu",13,BLUE,true);
         add.setGravity(Gravity.CENTER);add.setContentDescription("Dodaj stavku dokumenta");
@@ -1582,11 +1579,30 @@ public final class MainActivity extends Activity {
         fieldLabel(form,"Jedinična cijena bez PDV-a",price);
         gap(form,11);form.addView(label("Stopa PDV-a",12,ink(),true));
         place(form,tax);
-        AlertDialog dialog=new AlertDialog.Builder(this)
+        AlertDialog.Builder editor=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi stavku":"Nova stavka")
             .setView(form).setNegativeButton("Odustani",null)
-            .setPositiveButton("Spremi",null).create();
-        dialog.setOnShowListener(ignored->
+            .setPositiveButton("Spremi",null);
+        if(editing)editor.setNeutralButton("Ukloni",null);
+        AlertDialog dialog=editor.create();
+        dialog.setOnShowListener(ignored->{
+            if(editing){
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(button->
+                    new AlertDialog.Builder(this)
+                        .setTitle("Ukloniti stavku?")
+                        .setMessage(current.name+
+                            " bit će uklonjena samo iz radnog nacrta.")
+                        .setNegativeButton("Odustani",null)
+                        .setPositiveButton("Ukloni",(confirmation,which)->{
+                            Store.Item removed=draftItems.remove(index);
+                            if(!saveWorkingDraft()){
+                                draftItems.add(index,removed);
+                                return;
+                            }
+                            dialog.dismiss();
+                            editItemsScreen();
+                        }).show());
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{
                 try{
                     String description=name.getText().toString().trim();
@@ -1613,7 +1629,8 @@ public final class MainActivity extends Activity {
                     }
                     dialog.dismiss();editItemsScreen();
                 }catch(Exception error){error(error);}
-            }));
+            });
+        });
         dialog.show();
     }
     private void reviewDraft(){
