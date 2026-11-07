@@ -40,8 +40,49 @@ jobs:
             app/src/main/java/com/brendigo/fakturiva/Iban.java \
             quality/NativeCoreSmoke.java
           java -cp build/smoke com.brendigo.fakturiva.NativeCoreSmoke
-      - name: Build, instrument and lint before packaging
+      - name: Build and lint actual Android APK / AAB
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:bundleDebug :app:bundleRelease :app:lintDebug --stacktrace
+      - name: Enable emulator acceleration
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+          fi
+      - name: Verify 20 actual screens and 31 Android instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          ram-size: 3072M
+          disk-size: 4096M
+          disable-animations: true
+          script: bash ci/run_android_qa.sh
+      - name: Preserve tested emulator screenshots and instrumentation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fakturiva-release-${{ env.VERSION }}-real-screens
+          path: |
+            docs/screenshots/*.png
+            docs/screenshots/*.xml
+            build/screenshot-errors.log
+            build/instrumentation.log
+            app/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+      - name: Refresh README gallery from freshly tested Android screenshots
+        run: |
+          test "$(find docs/screenshots -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 20
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f docs/screenshots/*.png
+          if git diff --cached --quiet; then
+            echo "Screenshots match committed captures."
+          else
+            git commit -m "docs: refresh 20 authentic Android screenshots for v${VERSION}"
+            git push origin HEAD:main
+          fi
+          echo "RELEASE_TARGET=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: Verify debug-signing (not a production Google Play signature)
         run: jarsigner -verify app/build/outputs/bundle/debug/app-debug.aab
       - name: Package and checksum verified artifacts
@@ -67,11 +108,12 @@ jobs:
             exit 1
           fi
           if gh release create "v${VERSION}" build/publish/* \
-            --target "$GITHUB_SHA" \
+            --target "$RELEASE_TARGET" \
             --title "Fakturiva v${VERSION} — Android pretpregled" \
-            --notes-file docs/V0.10_RELEASE_NOTES.md \
+            --notes-file docs/V0.11_RELEASE_NOTES.md \
             --prerelease; then
             echo "Published verified preview release"
           else
-            echo "::warning::GitHub Release could not be published. Verified packages remain in workflow artifacts."
+            echo "::error::GitHub Release could not be published. Verified packages remain in workflow artifacts."
+            exit 1
           fi
