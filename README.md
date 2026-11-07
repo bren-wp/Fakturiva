@@ -1,130 +1,117 @@
 <div align="center">
 
-<img src="docs/assets/fakturiva-logo.svg" alt="Fakturiva — računi i ponude" width="430">
+<img src="docs/assets/fakturiva-logo.svg" alt="Fakturiva — računi i ponude, jednostavno" width="440">
 
-### Računi i ponude, jednostavno.
+### Manje papirologije. Više vremena za posao.
 
-**Više vremena za posao. Manje administracije.**
+**Fakturiva** je pregledna Android aplikacija na hrvatskom jeziku za izradu računa i ponuda, organizaciju klijenata, praćenje naplate i poslovnih evidencija — sve na vašem uređaju.
 
-Sve što vam treba za pripremu ponuda i računa, evidenciju klijenata i pregled naplate — jednostavno i pregledno na Android uređaju.
-
-[**Preuzmite Fakturivu**](https://github.com/bren-wp/Fakturiva/releases) · [**Upoznajte mogućnosti**](#sve-za-uredno-poslovanje)
+[**Preuzmite Android izdanje**](https://github.com/bren-wp/Fakturiva/releases) · [**Pogledajte aplikaciju**](#pogledajte-fakturivu-u-radu) · [**Kako radi**](#od-ponude-do-naplate)
 
 </div>
 
-![Fakturiva, hrvatska aplikacija za račune i ponude](docs/assets/fakturiva-banner.svg)
+![Fakturiva — hrvatska aplikacija za račune i ponude](docs/assets/fakturiva-banner.svg)
 
-## Sve za uredno poslovanje
+## Poslovanje na jednom mjestu
 
-| 🧾 **Računi** | 📑 **Ponude** | 👥 **Klijenti** |
-| :-- | :-- | :-- |
-| Sastavite račun, uredite pojedinačne stavke, sačuvajte nacrt i evidentirajte naplatu. | Izradite ponudu, uredite stavke, pregledajte dokument i pretvorite ga u račun. | Upravljajte kontaktima i poslovnim podacima te pratite račune i naplate po klijentu. |
+| 🧾 Računi | 📋 Ponude | 👥 Klijenti |
+| :--- | :--- | :--- |
+| Izradite račun, uredite stavke i iznose, pregledajte dokument te evidentirajte uplate. | Pripremite profesionalnu ponudu, uređujte stavke i pretvorite prihvaćenu ponudu u račun. | Pronađite kontakte, poslovne podatke i povezane dokumente na jednom mjestu. |
 
-| 🛍️ **Artikli i usluge** | 📊 **Izvještaji** | 📄 **PDF** |
-| :-- | :-- | :-- |
-| Pretražujte i uređujte artikle, usluge, cijene i PDV stope. | Birajte mjesec, pratite iznose računa i pregledajte graf stvarno evidentiranih uplata. | Spremite i podijelite čitljive dokumente izravno s uređaja. |
+| 🏷️ Artikli i usluge | 📈 Poslovni pregled | 📄 PDF dokumenti |
+| :--- | :--- | :--- |
+| Vodite katalog s cijenama, jedinicama, kategorijama i poreznim stopama. | Pratite mjesečne pokazatelje, račune, ponude i stvarno evidentirane uplate. | Pregledajte, izvezite i podijelite račune i ponude iz Android aplikacije. |
 
-## Profesionalni dokumenti s vašim identitetom
+## Od ponude do naplate
 
-**Fakturiva prilagođava dokumente vašem poslovanju.** Unesite naziv tvrtke ili obrta, OIB, PDV ID, adresu, grad, poštanski broj, državu, kontakt, IBAN, banku, SWIFT, podatke o registru i porezne napomene. Na računima i ponudama prikazuju se izdavatelj, klijent, datum izdavanja i datum usluge, stavke, porezne stope i iznosi te podaci za plaćanje.
+**1. Postavite podatke svojeg poslovanja.** Dodajte naziv tvrtke ili obrta, OIB, adresu, kontakte, IBAN i druge podatke relevantne za izdavanje dokumenata.
 
-Kad potvrdite dokument, podaci izdavatelja i klijenta ostaju zabilježeni u dokumentu. Naknadne promjene profila ne mijenjaju povijesne račune.
+**2. Odaberite klijenta i izradite dokument.** Dodajte stavke, količine, cijene, PDV stope i rokove. Sve možete pregledati i urediti prije potvrde.
 
-## Čuvanje dokumenata i vaša privatnost
+**3. Pošaljite PDF i pratite plaćanje.** Evidentirajte stvarne uplate i pratite neplaćene dokumente bez izmišljanja poslovnih pokazatelja.
 
-- 🔒 **Bez obvezne prijave i oblaka** — aplikacija radi lokalno, bez dozvole za internet.
-- 💾 **Automatsko čuvanje nacrta** — nastavite rad nakon prekida.
-- 🛡️ **Više lokalnih šifriranih kopija** — dodatan sloj oporavka ako je jedna datoteka oštećena.
-- 📤 **Šifrirani prijenosni izvoz** — napravite kopiju na mjesto koje sami odaberete.
-- 🌙 **Svijetla i tamna tema** — ugodan pregled na telefonu.
+Povijesni podaci izdavatelja i klijenta čuvaju se unutar potvrđenog dokumenta. Promjena profila ne prepisuje podatke u ranije izdanim računima.
 
-> Za zaštitu od krađe, kvara, brisanja aplikacije ili gubitka uređaja redovito izvezite šifriranu sigurnosnu kopiju **izvan telefona**. Samo lokalna pohrana ne može jamčiti očuvanje svakog podatka u svim okolnostima.
+## Pogledajte Fakturivu u radu
 
-## Izgled Fakturive
+Ovo su **autentične snimke Android aplikacije**, a ne dizajnerske makete. Snimljene su na emulatoru u testnom okruženju. Poslovni podaci na njima služe isključivo demonstraciji izgleda i toka rada.
 
 <div align="center">
-<img src="docs/assets/fakturiva-icon.svg" width="100" alt="Izvorna Fakturiva Android ikona">
 
-**Fakturiva by Brendigo**
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/02_dobrodosli.png" alt="Fakturiva — zaslon Dobrodošli" width="195"><br><b>Jednostavan početak</b></td>
+<td align="center"><img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — stvarna Početna s poslovnim pregledom" width="195"><br><b>Sve važno na početnoj</b></td>
+<td align="center"><img src="docs/screenshots/05_racuni.png" alt="Fakturiva — popis računa i filtri" width="195"><br><b>Računi bez traženja</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/06_novi_racun.png" alt="Fakturiva — obrazac za novi račun" width="195"><br><b>Račun korak po korak</b></td>
+<td align="center"><img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — pregled dokumenta" width="195"><br><b>Pregled prije slanja</b></td>
+<td align="center"><img src="docs/screenshots/20_tamna_tema.png" alt="Fakturiva — tamni izgled aplikacije" width="195"><br><b>Ugodna tamna tema</b></td>
+</tr>
+</table>
 
-Tamnoplava, električno plava, tirkizni naglasci i jednostavna navigacija — poznato Android iskustvo na hrvatskom jeziku.
 </div>
 
-### Računi i ponude od prvog koraka do naplate
-
-Uredite klijenta, datume i podatke za plaćanje, dodajte ili izmijenite stavke te pregledajte dokument prije potvrde. Na početnoj stranici prate se stvarno evidentirane uplate i nedavni računi, bez izmišljenih financijskih pokazatelja.
-
-### Fakturiva u svakodnevnom poslovanju
-
-<p align="center">
-  <img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — Početna" width="180">
-  <img src="docs/screenshots/06_novi_racun.png" alt="Fakturiva — Izrada računa" width="180">
-  <img src="docs/screenshots/07_stavke_racuna.png" alt="Fakturiva — Uređivanje stavki računa" width="180">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — PDF pregled računa" width="180">
-  <img src="docs/screenshots/16_naplata.png" alt="Fakturiva — Evidencija naplate" width="180">
-  <img src="docs/screenshots/20_tamna_tema.png" alt="Fakturiva — Tamna tema" width="180">
-</p>
-
 <details>
-<summary><b>Pogledajte svih 20 zaslona aplikacije</b></summary>
+<summary><b>📱 Pogledajte svih 20 zaslona</b></summary>
 
-<p align="center">
-  <img src="docs/screenshots/01_pocetni_zaslon.png" alt="Fakturiva — 01 pocetni zaslon" width="180">
-  <img src="docs/screenshots/02_dobrodosli.png" alt="Fakturiva — 02 dobrodosli" width="180">
-  <img src="docs/screenshots/03_prijava.png" alt="Fakturiva — 03 uvodni zaslon bez obvezne prijave" width="180">
-  <img src="docs/screenshots/04_pocetna.png" alt="Fakturiva — 04 pocetna" width="180">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/05_racuni.png" alt="Fakturiva — 05 racuni" width="180">
-  <img src="docs/screenshots/06_novi_racun.png" alt="Fakturiva — 06 novi racun" width="180">
-  <img src="docs/screenshots/07_stavke_racuna.png" alt="Fakturiva — 07 stavke racuna" width="180">
-  <img src="docs/screenshots/08_pregled_racuna.png" alt="Fakturiva — 08 pregled racuna" width="180">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/09_ponude.png" alt="Fakturiva — 09 ponude" width="180">
-  <img src="docs/screenshots/10_nova_ponuda.png" alt="Fakturiva — 10 nova ponuda" width="180">
-  <img src="docs/screenshots/11_pregled_ponude.png" alt="Fakturiva — 11 pregled ponude" width="180">
-  <img src="docs/screenshots/12_klijenti.png" alt="Fakturiva — 12 klijenti" width="180">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/13_detalji_klijenta.png" alt="Fakturiva — 13 detalji klijenta" width="180">
-  <img src="docs/screenshots/14_artikli_usluge.png" alt="Fakturiva — 14 artikli usluge" width="180">
-  <img src="docs/screenshots/15_izvjestaji.png" alt="Fakturiva — 15 izvjestaji" width="180">
-  <img src="docs/screenshots/16_naplata.png" alt="Fakturiva — 16 naplata" width="180">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/17_eracun_integracija.png" alt="Fakturiva — 17 eracun integracija" width="180">
-  <img src="docs/screenshots/18_postavke.png" alt="Fakturiva — 18 postavke" width="180">
-  <img src="docs/screenshots/19_profil_tvrtke.png" alt="Fakturiva — 19 profil tvrtke" width="180">
-  <img src="docs/screenshots/20_tamna_tema.png" alt="Fakturiva — 20 tamna tema" width="180">
-</p>
+| Početak i navigacija | Dokumenti | Poslovanje i postavke |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/01_pocetni_zaslon.png" alt="01 Splash" width="170"><br>01 · Splash | <img src="docs/screenshots/06_novi_racun.png" alt="06 Novi račun" width="170"><br>06 · Novi račun | <img src="docs/screenshots/12_klijenti.png" alt="12 Klijenti" width="170"><br>12 · Klijenti |
+| <img src="docs/screenshots/02_dobrodosli.png" alt="02 Dobrodošli" width="170"><br>02 · Dobrodošli | <img src="docs/screenshots/07_stavke_racuna.png" alt="07 Stavke računa" width="170"><br>07 · Stavke računa | <img src="docs/screenshots/13_detalji_klijenta.png" alt="13 Detalji klijenta" width="170"><br>13 · Detalji klijenta |
+| <img src="docs/screenshots/03_prijava.png" alt="03 Lokalna zaštita" width="170"><br>03 · Lokalna zaštita | <img src="docs/screenshots/08_pregled_racuna.png" alt="08 Pregled računa" width="170"><br>08 · Pregled računa | <img src="docs/screenshots/14_artikli_usluge.png" alt="14 Artikli i usluge" width="170"><br>14 · Artikli i usluge |
+| <img src="docs/screenshots/04_pocetna.png" alt="04 Početna" width="170"><br>04 · Početna | <img src="docs/screenshots/09_ponude.png" alt="09 Ponude" width="170"><br>09 · Ponude | <img src="docs/screenshots/15_izvjestaji.png" alt="15 Izvještaji" width="170"><br>15 · Izvještaji |
+| <img src="docs/screenshots/05_racuni.png" alt="05 Računi" width="170"><br>05 · Računi | <img src="docs/screenshots/10_nova_ponuda.png" alt="10 Nova ponuda" width="170"><br>10 · Nova ponuda | <img src="docs/screenshots/16_naplata.png" alt="16 Naplata" width="170"><br>16 · Naplata |
+| <img src="docs/screenshots/18_postavke.png" alt="18 Postavke" width="170"><br>18 · Postavke | <img src="docs/screenshots/11_pregled_ponude.png" alt="11 Pregled ponude" width="170"><br>11 · Pregled ponude | <img src="docs/screenshots/17_eracun_integracija.png" alt="17 Postavke eRačuna" width="170"><br>17 · eRačuni (bez aktivne integracije) |
+| <img src="docs/screenshots/19_profil_tvrtke.png" alt="19 Profil tvrtke" width="170"><br>19 · Profil tvrtke | <img src="docs/screenshots/20_tamna_tema.png" alt="20 Tamna tema" width="170"><br>20 · Tamna tema | |
 
 </details>
 
-**Upoznajte Fakturivu kroz stvarne snimke svih 20 Android zaslona**, snimljene na emulatoru — ne kroz umjetno generirane makete.
+## Vaši podaci pod vašom kontrolom
 
-## Preuzimanje
+<div align="center"><img src="docs/assets/fakturiva-icon.svg" width="82" alt="Originalna Fakturiva ikona"></div>
 
-[**GitHub izdanja za Android (APK i AAB)**](https://github.com/bren-wp/Fakturiva/releases)
+- **Radi lokalno:** nema obvezne registracije niti cloud računa; aplikacija ne traži internetsku dozvolu.
+- **Zaštita identiteta:** opcionalna potvrda identiteta putem Androidova zaključavanja uređaja. PIN ne pohranjuje Fakturiva.
+- **Automatska pohrana nacrta:** nastavite rad gdje ste stali.
+- **Šifrirane sigurnosne kopije:** izvezite podatke na lokaciju koju sami odaberete i sačuvajte ih izvan uređaja.
+- **Prilagodljiv izgled:** svijetla i tamna tema te podrška za različite veličine Android zaslona.
 
-Android 7.0 ili noviji. Uz svako izdanje navedeno je je li APK debug-potpisan i je li AAB potpisan za produkcijsko izdavanje. Izravni Play Store upload zahtijeva odgovarajući postojeći ključ i dodatne produkcijske provjere.
+**Preporuka:** redovito izvezite i provjerite šifriranu sigurnosnu kopiju izvan telefona. Lokalna pohrana nije zaštita od svih vrsta gubitka ili oštećenja uređaja.
 
-**Važno pri nadogradnji razvojne verzije:** debug-potpisani APK iz različitih izdanja možda neće imati isti ključ. Nemojte deinstalirati postojeću aplikaciju prije izvoza i provjere šifrirane kopije izvan uređaja. Za pouzdane produkcijske nadogradnje potreban je stabilan produkcijski potpisni ključ.
+## Preuzmite Fakturivu za Android
 
-**Važno za hrvatsko tržište:** Fakturiva trenutačno ne provodi fiskalizaciju ni razmjenu strukturiranih eRačuna. Izvezeni PDF nije fiskaliziran račun niti strukturirani eRačun. Prije korištenja u zakonski obveznim poslovnim procesima treba implementirati i provjeriti primjenjive zakonske zahtjeve.
+[**Sva GitHub izdanja i datoteke za preuzimanje**](https://github.com/bren-wp/Fakturiva/releases)
+
+**Novo:** [Fakturiva v0.11.0-preview.1 — Android pretpregled](https://github.com/bren-wp/Fakturiva/releases/tag/v0.11.0-preview.1)
+
+| Datoteka | Namjena |
+| :--- | :--- |
+| **debug.apk** | Instalacijski paket za isprobavanje aplikacije na Androidu 7.0 ili novijem. |
+| **DEBUG-SIGNED.aab** | Testni Android App Bundle, nije potpisan produkcijskim Google Play ključem. |
+| **UNSIGNED.aab** | Bundle koji prije objave treba valjano produkcijski potpisati. |
+| **SHA256SUMS.txt** | Provjera integriteta preuzetih paketa. |
+
+Ako već koristite razvojnu verziju, potpisni ključ novog APK-a možda neće odgovarati postojećoj instalaciji. **Prije deinstalacije ili zamjene obavezno izvezite i provjerite sigurnosnu kopiju podataka.**
+
+### Važna informacija za poslovne korisnike u Hrvatskoj
+
+Fakturiva zasad **ne provodi fiskalizaciju ni stvarnu razmjenu strukturiranih eRačuna**. PDF nije automatski fiskalizirani račun ni strukturirani eRačun. Funkcionalnosti koje podliježu zakonskoj obvezi potrebno je zasebno implementirati i provjeriti prije produkcijske uporabe za takve procese.
+
+## Kvaliteta sučelja i stvarne snimke
+
+Sučelje se razvija **ekran po ekran**, uz originalne vlasnikove referentne PNG-ove, nativne Android komponente i automatizirane screenshot testove. Stvarne snimke svih 20 zaslona prikupljaju se na Android emulatoru; matrica provjerava 9 konfiguracija zaslona, uključujući manje telefone, tablete, povećani tekst i pejzažni način.
+
+Točna matematička podudarnost od **0 % odstupanja nije potvrđena**. Razlike u stvarnim poslovnim podacima, sustavnim elementima, vremenu i fontovima nisu prikrivene statičnim maketama. [Detalji i porijeklo snimki](docs/SCREENSHOTS.md).
 
 ---
 
 <div align="center">
 
-**Fakturiva** · Brendigo
+<img src="docs/assets/fakturiva-logo.svg" width="280" alt="Fakturiva by Brendigo">
+
+**Fakturiva by [Brendigo](https://brendigo.com)**
 
 *Računi i ponude, jednostavno.*
 

@@ -673,7 +673,8 @@ public final class MainActivity extends Activity {
         setup("home",true);
         // The reference dashboard uses a 22 dp gutter on 393 dp phones.
         // Keep all dashboard figures sourced from the local SQLite database.
-        pad(body,22,16);
+        // Reference Home gutter is 18dp at 393dp; rows remain width-adaptive.
+        pad(body,18,16);
         backupAlert();
         LinearLayout bar=horizontal();
         LinearLayout brand=vertical();
@@ -722,9 +723,9 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,18);
+        place(body,welcome);gap(body,21);
 
-        LinearLayout hero=vertical();pad(hero,19,dark?13:19);
+        LinearLayout hero=vertical();pad(hero,19,dark?13:16);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
@@ -747,7 +748,7 @@ public final class MainActivity extends Activity {
         hero.addView(label(Money.euros(monthly[11]),31,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
-        hero.addView(new RevenueLine(this),lp(-1,57));
+        hero.addView(new RevenueLine(this),lp(-1,45));
         place(body,hero);gap(body,dark?10:16);
 
         LinearLayout stats=horizontal();
@@ -755,7 +756,7 @@ public final class MainActivity extends Activity {
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
-        gap(body,dark?14:18);
+        gap(body,dark?14:14);
         place(body,label("Brze radnje",18,ink(),true));
         gap(body,11);
         LinearLayout fast=horizontal();
@@ -803,7 +804,7 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();pad(c,14,dark?10:13);
+        LinearLayout c=card();pad(c,14,dark?10:9);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
         // Reference uses readable pastel icon tiles on both themes.
@@ -818,7 +819,7 @@ public final class MainActivity extends Activity {
     }
     private void quick(LinearLayout row,String glyph,String label,Runnable action){
         // Compact quick-action cards must leave enough room for the full caption.
-        LinearLayout c=card();pad(c,11,8);c.setGravity(Gravity.CENTER);
+        LinearLayout c=card();pad(c,11,7);c.setGravity(Gravity.CENTER);
         boolean quote="▣".equals(glyph),client="♧".equals(glyph);
         int tint=quote?TEAL:client?0xffeb963c:BLUE;
         ImageView image=icon(figureIcon(glyph),tint);
@@ -828,7 +829,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams iconLp=lp(45,45);iconLp.gravity=Gravity.CENTER_HORIZONTAL;c.addView(image,iconLp);
         gap(c,7);TextView text=label(label,11,ink(),true);text.setGravity(Gravity.CENTER);place(c,text);
         // Quick actions can grow with 150% font scaling.
-        c.setMinimumHeight(dp(93));
+        c.setMinimumHeight(dp(90));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
         p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
         c.setContentDescription(label);c.setFocusable(true);
@@ -837,7 +838,8 @@ public final class MainActivity extends Activity {
     private void documents(String type){
         boolean invoice=Store.INVOICE.equals(type);
         setup(invoice?"invoices":"quotes",true);
-        pad(body,15,14);
+        // Reference invoice list starts lower with a ~19dp horizontal inset.
+        pad(body,19,22);
         LinearLayout header=horizontal();
         LinearLayout heading=vertical();
         heading.addView(label(invoice?"Računi":"Ponude",23,ink(),true));
@@ -856,7 +858,7 @@ public final class MainActivity extends Activity {
         filtersAction.setBackground(shape(panel(),13));
         filtersAction.setContentDescription("Odaberi prikaz dokumenata");
         header.addView(filtersAction,lp(42,42));
-        place(body,header);gap(body,16);
+        place(body,header);gap(body,20);
 
         LinearLayout searchBar=horizontal();
         searchBar.setBackground(outlined(panel()));
@@ -893,7 +895,7 @@ public final class MainActivity extends Activity {
             .setNegativeButton("Odustani",null).show();
         filtersAction.setOnClickListener(v->chooseFilter.run());
         searchFilter.setOnClickListener(v->chooseFilter.run());
-        place(body,searchBar);gap(body,13);
+        place(body,searchBar);gap(body,16);
 
         LinearLayout chips=horizontal();pad(chips,3,3);
         chips.setBackground(shape(dark?0xff1d2a40:0xffe9edf4,15));
@@ -995,14 +997,14 @@ public final class MainActivity extends Activity {
         LinearLayout item=vertical();item.setTag(document);
         View divider=new View(this);divider.setBackgroundColor(border());
         item.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-        LinearLayout row=horizontal();pad(row,10,9);
+        LinearLayout row=horizontal();pad(row,10,12);
         ImageView symbol=icon(Store.INVOICE.equals(document.type)?
             R.drawable.ic_invoice:R.drawable.ic_quote,
             Store.INVOICE.equals(document.type)?BLUE:TEAL);
         symbol.setPadding(dp(9),dp(9),dp(9),dp(9));
         symbol.setBackground(shape(Store.INVOICE.equals(document.type)?
             0xffe8edff:0xffdcf8f4,12));
-        row.addView(symbol,lp(36,36));
+        row.addView(symbol,lp(38,38));
         LinearLayout description=vertical();
         LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(0,-2,1);
         descLp.leftMargin=dp(8);
