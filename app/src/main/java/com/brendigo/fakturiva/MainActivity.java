@@ -3189,22 +3189,22 @@ public final class MainActivity extends Activity {
         header.addView(help,lp(43,43));place(body,header);gap(body,20);
         // A slightly shorter hero leaves the integration notice legible
         // above the persistent action even on 393dp and compact phones.
-        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,15);
+        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,20);
         hero.setBackground(shape(dark?0xff243252:0xffecefff,21));
         TextView symbol=label("⇄",31,BLUE,true);
         symbol.setGravity(Gravity.CENTER);symbol.setBackground(shape(panel(),17));
         LinearLayout.LayoutParams iconLp=lp(68,68);iconLp.gravity=Gravity.CENTER;
-        hero.addView(symbol,iconLp);gap(hero,12);
+        hero.addView(symbol,iconLp);gap(hero,14);
         TextView heading=label("eRačuni i fiskalizacija",19,ink(),true);
         heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,8);
         TextView intro=label("Elektronička razmjena i fiskalizacija zahtijevaju provjerenu integraciju.",12,sub(),false);
-        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,10);
+        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,12);
         TextView state=label("Povezivanje nije dostupno",11,0xffb77312,true);
         state.setGravity(Gravity.CENTER);state.setBackground(shape(dark?0xff584125:0xfffff0d3,13));
         pad(state,12,6);
         LinearLayout.LayoutParams stateLp=lp(-2,-2);stateLp.gravity=Gravity.CENTER;
         hero.addView(state,stateLp);
-        place(body,hero);gap(body,11);
+        place(body,hero);gap(body,13);
 
         LinearLayout phases=card();
         place(phases,label("Status integracije",16,ink(),true));gap(phases,10);
@@ -3217,12 +3217,12 @@ public final class MainActivity extends Activity {
             "Pružatelj nije povezan",false,()->showIntegrationRequirements());
         integrationStep(phases,"3","Ovlaštenja i testiranje",
             "Nisu dostupni u ovoj verziji",false,()->showIntegrationRequirements());
-        place(body,phases);gap(body,10);
+        place(body,phases);gap(body,12);
 
         LinearLayout info=card();info.setBackground(shape(dark?0xff24314d:0xffedf1ff,17));
         info.addView(label("Važno za eRačun",14,ink(),true));gap(info,8);
-        info.addView(label("PDF datoteka nije strukturirani eRačun ni potvrda fiskalizacije. Za razmjenu i slanje potrebna je stvarna autorizirana integracija.",12,sub(),false));
-        place(body,info);gap(body,18);
+        info.addView(label("PDF nije strukturirani eRačun ni dokaz fiskalizacije. Za slanje je potrebna ovlaštena integracija.",12,sub(),false));
+        place(body,info);gap(body,16);
         // A persistent CTA matches the reference without pretending a network
         // provider or fiscalization service has actually been connected.
         stickyPrimary("Postavke integracije",this::integrationOptions);
@@ -3230,7 +3230,7 @@ public final class MainActivity extends Activity {
     }
     private void integrationStep(LinearLayout parent,String number,String heading,
             String description,boolean ok,Runnable action){
-        LinearLayout row=horizontal();pad(row,1,9);
+        LinearLayout row=horizontal();pad(row,1,10);
         TextView badge=label(number,16,ok?TEAL:sub(),true);
         badge.setGravity(Gravity.CENTER);badge.setBackground(shape(ok?
             (dark?0xff20483f:0xffddf8ec):(dark?0xff27354e:0xffeff1f8),14));
@@ -3242,7 +3242,7 @@ public final class MainActivity extends Activity {
         row.addView(label("›",23,sub(),false));
         place(parent,row);
         row.setOnClickListener(v->action.run());
-        gap(parent,3);
+        gap(parent,4);
     }
     /** Honest options: no network integration is available in this release. */
     private void integrationOptions(){
