@@ -1973,7 +1973,8 @@ public final class MainActivity extends Activity {
     /** Screen 12: a genuine searchable client registry with compact grouped rows. */
     private void clients(){
         setup("clients",true);
-        pad(body,18,15);
+        // Calibrated client header against the supplied 393dp reference.
+        pad(body,18,20);
         List<Store.Client> all=db.clients();
 
         // A stored client has no independent active/inactive flag. Count clients
@@ -2022,7 +2023,8 @@ public final class MainActivity extends Activity {
         filterButton.setPadding(dp(4),dp(4),dp(4),dp(4));
         filterButton.setContentDescription("Filtriraj klijente");
         searchRow.addView(filterButton,lp(29,29));
-        place(body,searchRow);gap(body,14);
+        // Move totals closer to search without hiding keyboard controls.
+        place(body,searchRow);gap(body,3);
 
         LinearLayout totals=horizontal();
         totals.setGravity(Gravity.CENTER_VERTICAL);
@@ -2032,7 +2034,7 @@ public final class MainActivity extends Activity {
         totals.addView(flexible,new LinearLayout.LayoutParams(0,dp(1),1));
         totals.addView(label("S dokumentima  ",11,sub(),false));
         totals.addView(label(String.valueOf(documented.size()),12,ink(),true));
-        place(body,totals);gap(body,13);
+        place(body,totals);gap(body,9);
 
         LinearLayout grouped=vertical();
         grouped.setBackground(outlined(panel()));
@@ -2045,7 +2047,7 @@ public final class MainActivity extends Activity {
             }
             LinearLayout row=horizontal();
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(12),dp(17),dp(12),dp(17));
+            row.setPadding(dp(12),dp(18),dp(12),dp(18));
             TextView avatar=label(clientInitials(client.name),14,BLUE,true);
             avatar.setGravity(Gravity.CENTER);
             avatar.setBackground(shape(dark?0xff293b63:0xffeaf0ff,12));
@@ -2188,7 +2190,7 @@ public final class MainActivity extends Activity {
     /** Screen 13: the real client profile and actual billing history. */
     private void clientDetails(Store.Client c){
         setup("client_detail",true);
-        pad(body,18,13);
+        pad(body,18,18);
 
         LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
         ImageView back=icon(R.drawable.ic_back,sub());
@@ -2216,7 +2218,7 @@ public final class MainActivity extends Activity {
         avatar.setBackground(shape(dark?0xff263759:0xffe8edff,20));
         LinearLayout.LayoutParams logoLp=lp(70,70);
         logoLp.gravity=Gravity.CENTER;
-        identity.addView(avatar,logoLp);gap(identity,14);
+        identity.addView(avatar,logoLp);gap(identity,8);
         TextView name=label(c.name,20,ink(),true);
         name.setGravity(Gravity.CENTER);
         place(identity,name);gap(identity,5);
@@ -2224,7 +2226,7 @@ public final class MainActivity extends Activity {
         TextView meta=label("Poslovni partner"+
             (location.isEmpty()?"":" · "+location),11,sub(),false);
         meta.setGravity(Gravity.CENTER);meta.setMaxLines(2);
-        place(identity,meta);gap(identity,14);
+        place(identity,meta);gap(identity,8);
         // There is no active/inactive field in SQLite; do not fabricate status.
         TextView recorded=label("U evidenciji",11,0xff15996d,true);
         recorded.setGravity(Gravity.CENTER);
@@ -2233,7 +2235,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams badgeLp=lp(-2,-2);
         badgeLp.gravity=Gravity.CENTER;
         identity.addView(recorded,badgeLp);
-        place(body,identity);gap(body,24);
+        place(body,identity);gap(body,18);
 
         long paid=0;
         int yearInvoices=0;
@@ -2259,15 +2261,15 @@ public final class MainActivity extends Activity {
             "▣","Ukupno",TEAL);
         // Two columns expand vertically for large system font sizes. Fixed
         // 128dp cards previously clipped monetary values on small phones.
-        invoices.setMinimumHeight(dp(128));
-        revenue.setMinimumHeight(dp(128));
+        invoices.setMinimumHeight(dp(125));
+        revenue.setMinimumHeight(dp(125));
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,-2,1);
         left.rightMargin=dp(6);
         statistics.addView(invoices,left);
         LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,-2,1);
         right.leftMargin=dp(6);
         statistics.addView(revenue,right);
-        place(body,statistics);gap(body,18);
+        place(body,statistics);gap(body,15);
 
         LinearLayout data=card();
         place(data,label("Podaci o klijentu",16,ink(),true));gap(data,15);
@@ -2423,7 +2425,8 @@ public final class MainActivity extends Activity {
     /** Screen 14: real catalog categories; no fake stock or activity status. */
     private void catalog(){
         setup("catalog",true);
-        pad(body,18,15);
+        // Keep category controls at the original vertical rhythm.
+        pad(body,18,20);
         List<Store.Item> products=db.products();
         LinearLayout head=horizontal();head.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout heading=vertical();
@@ -2459,7 +2462,7 @@ public final class MainActivity extends Activity {
         filterIcon.setPadding(dp(5),dp(5),dp(5),dp(5));
         filterIcon.setContentDescription("Filtriraj vrstu stavke");
         searchBar.addView(filterIcon,lp(30,30));
-        place(body,searchBar);gap(body,15);
+        place(body,searchBar);gap(body,10);
 
         String[] categories={"Sve","Usluge","Proizvodi"};
         final String[] selected={"Sve"};
@@ -2483,7 +2486,7 @@ public final class MainActivity extends Activity {
         View space=new View(this);meta.addView(space,new LinearLayout.LayoutParams(0,dp(1),1));
         meta.addView(label("U katalogu  ",11,sub(),false));
         meta.addView(label(String.valueOf(products.size()),12,ink(),true));
-        place(body,meta);gap(body,14);
+        place(body,meta);gap(body,2);
 
         LinearLayout grouped=vertical();grouped.setBackground(outlined(panel()));
         for(int i=0;i<products.size();i++){
@@ -2493,7 +2496,7 @@ public final class MainActivity extends Activity {
                 grouped.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
             }
             LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(12),dp(17),dp(12),dp(17));
+            row.setPadding(dp(12),dp(18),dp(12),dp(18));
             TextView symbol=label("⬡",26,i%3==0?BLUE:(i%3==1?TEAL:0xffeaa044),true);
             symbol.setGravity(Gravity.CENTER);
             symbol.setBackground(shape(dark?0xff273852:
