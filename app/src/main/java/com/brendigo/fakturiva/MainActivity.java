@@ -417,9 +417,17 @@ public final class MainActivity extends Activity {
         ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.brand_mark);
         LinearLayout.LayoutParams logo=lp(108,108);logo.gravity=Gravity.CENTER_HORIZONTAL;
         center.addView(mark,logo);gap(center,28);
+        // Reference white/teal glyph bounds: +2 px X, +11 px Y at 480 dpi.
+        // Translation leaves the surrounding vertical rhythm unchanged.
+        mark.setTranslationX(dp(.67f));
+        mark.setTranslationY(dp(3.67f));
         TextView name=label("Fakturiva",44,WHITE,true);name.setGravity(Gravity.CENTER);
+        name.setTextScaleX(.989f);
+        name.setTranslationY(-dp(.33f));
         place(center,name);gap(center,17);
         TextView subtitle=label("Računi i ponude, jednostavno.",13,0xffbdcde1,false);
+        subtitle.setTextScaleX(.978f);
+        subtitle.setTranslationY(-dp(1f));
         subtitle.setGravity(Gravity.CENTER);place(center,subtitle);
         FrameLayout.LayoutParams middle=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
         middle.leftMargin=dp(18);middle.rightMargin=dp(18);frame.addView(center,middle);
@@ -429,14 +437,17 @@ public final class MainActivity extends Activity {
         LinearLayout bottom=vertical();bottom.setGravity(Gravity.CENTER);
         FrameLayout progress=new FrameLayout(this);background(progress,0xff36516c,4);
         View completed=new View(this);background(completed,0xff2fd2c5,4);
-        FrameLayout.LayoutParams fill=new FrameLayout.LayoutParams(dp(33),dp(4),Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        FrameLayout.LayoutParams fill=new FrameLayout.LayoutParams(dp(34),dp(4),Gravity.LEFT|Gravity.CENTER_VERTICAL);
         progress.addView(completed,fill);
-        LinearLayout.LayoutParams progressLp=lp(82,4);progressLp.gravity=Gravity.CENTER;
-        bottom.addView(progress,progressLp);gap(bottom,21);
+        LinearLayout.LayoutParams progressLp=lp(85,4);progressLp.gravity=Gravity.CENTER;
+        bottom.addView(progress,progressLp);gap(bottom,17);
         TextView text=label("Vaše poslovanje. Jednostavnije.",12,0xff9fb5ce,false);
+        // Source footer spans 437 px rather than the old 512 px. Keep the
+        // native TextView and real accessibility content instead of a bitmap.
+        text.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,10.25f);
         text.setGravity(Gravity.CENTER);place(bottom,text);
         FrameLayout.LayoutParams down=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
-        down.bottomMargin=dp(53);frame.addView(bottom,down);
+        down.bottomMargin=dp(57);frame.addView(bottom,down);
         if(animate){
             frame.setContentDescription("Fakturiva — učitavanje aplikacije");
             frame.setOnClickListener(v->finishSplash());
