@@ -110,7 +110,7 @@ jobs:
           if gh release create "v${VERSION}" build/publish/* \
             --target "$RELEASE_TARGET" \
             --title "Fakturiva v${VERSION} — Android pretpregled" \
-            --notes-file docs/V0.11_RELEASE_NOTES.md \
+            --notes-file docs/V0.12_RELEASE_NOTES.md \
             --prerelease; then
             echo "Published verified preview release"
           else
