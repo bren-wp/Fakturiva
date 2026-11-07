@@ -522,7 +522,7 @@ public final class MainActivity extends Activity {
         }
         root.setBackgroundColor(WHITE);
         body.setBackgroundColor(WHITE);
-        pad(body,25,49);
+        pad(body,25,65);
         ImageView mark=new ImageView(this);
         mark.setImageResource(R.drawable.brand_mark);
         LinearLayout.LayoutParams markLp=lp(72,72);
@@ -533,26 +533,26 @@ public final class MainActivity extends Activity {
         place(body,label(locked?
             "Potvrdite identitet zaključavanjem uređaja.":
             "Vaši računi i klijenti ostaju lokalno na uređaju.",13,MUTED,false));
-        gap(body,62);
+        gap(body,82);
 
         place(body,label("SIGURNOST APLIKACIJE",11,0xff6a81a5,true));
-        gap(body,12);
+        gap(body,5);
         LinearLayout guard=vertical();
         guard.setBackground(outlined(WHITE));
-        pad(guard,15,18);
+        pad(guard,15,5);
         place(guard,label("Zaštita pri ponovnom otvaranju",15,NAVY,true));
         gap(guard,7);
         place(guard,label("Koristi PIN, uzorak ili lozinku koju je postavio Android.",12,MUTED,false));
         place(body,guard);
-        gap(body,22);
+        gap(body,37);
         LinearLayout local=vertical();
         local.setBackground(outlined(WHITE));
-        pad(local,15,17);
+        pad(local,15,5);
         place(local,label("Bez registracije i cloud računa",14,NAVY,true));
         gap(local,7);
-        place(local,label("Fakturiva ne sprema vaš PIN. Provjeru identiteta obavlja sustav.",12,MUTED,false));
+        place(local,label("Identitet provjerava Android, ne Fakturiva.",12,MUTED,false));
         place(body,local);
-        gap(body,34);
+        gap(body,62);
 
         android.app.KeyguardManager manager=(android.app.KeyguardManager)
             getSystemService(Context.KEYGUARD_SERVICE);
@@ -565,7 +565,7 @@ public final class MainActivity extends Activity {
             button(body,secure?"Uključi zaštitu uređajem":"Postavi zaštitu uređaja",
                 ()->confirmDeviceCredential(1));
         }
-        gap(body,16);
+        gap(body,50);
         if(!locked){
             place(body,action(fromSettings?"Natrag na postavke":"Nastavi bez dodatne zaštite",
                 BLUE,false,()->{
@@ -578,7 +578,7 @@ public final class MainActivity extends Activity {
                     }
                 }));
         }
-        gap(body,54);
+        gap(body,84);
         TextView note=label("Vaši poslovni podaci ostaju pod vašom kontrolom.",11,MUTED,false);
         note.setGravity(Gravity.CENTER);
         place(body,note);
