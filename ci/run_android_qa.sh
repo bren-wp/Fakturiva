@@ -9,9 +9,20 @@ rm -f docs/screenshots/*.png
 # Capture actual APK UI *before* the intensive integration tests.
 # The PDF/backup tests can exhaust the emulator process or leave ADB unstable.
 # This order preserves evidence even if instrumentation subsequently fails.
+# Screenshot QA must use the same accessibility checks as the responsive
+# matrix. Previously the API 36 workflow could report success while its first
+# PNG contained Android's "Viewing full screen" tutorial over the Splash.
+export QA_CAPTURE_ACCESSIBILITY=1
 set +e
 bash ci/capture_screenshots.sh
 capture_status=$?
+if [ "$capture_status" -eq 0 ]; then
+  # A generated PNG alone is insufficient: verify the app's actual screen
+  # headings, accessibility tree and clickable bounds for all 20 views.
+  python3 ci/verify_responsive_capture.py \
+    docs/screenshots "android-36-screens" 1179 2556 480 1.0
+  capture_status=$?
+fi
 set -e
 
 # Reset logcat so test crashes remain distinct from screen-capture errors.
