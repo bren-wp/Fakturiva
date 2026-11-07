@@ -235,12 +235,18 @@ public final class PdfMaker {
         text(Store.DRAFT.equals(d.status)?"Nacrt — dokument nije potvrđen":
             Store.PAID.equals(d.status)?"Plaćeno":
             Store.SENT.equals(d.status)?"Potvrđena ponuda":"Potvrđeno",M,y,10,GRAY,false);y+=25;
+        if(Store.QUOTE.equals(d.type) && has(d.quoteTitle)){
+            field("Naslov ponude",d.quoteTitle);
+            y+=8;
+        }
         paired("IZDAVATELJ","KLIJENT");y+=4;
         pairedSection(company(d),customer(d));y+=9;
         requireSpace(20);rule();
         paired("Datum izdavanja: "+safe(d.issueDate),
             "Dospijeće / valjanost: "+safe(d.dueDate));
-        if(has(d.supplyDate))field("Datum isporuke / obavljene usluge",d.supplyDate);
+        if(has(d.supplyDate))
+            field(Store.QUOTE.equals(d.type)?"Rok izvedbe":
+                "Datum isporuke / obavljene usluge",d.supplyDate);
         y+=12;
         printItems(d);
         totals(d);

@@ -10,7 +10,9 @@ android {
         targetSdk 36
         versionCode 12
         versionName '0.10.0-preview.1'
-        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+        // Android 16 no longer loads the legacy instrumentation runner.
+        // AndroidX test runner is packaged only into the androidTest APK.
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -25,5 +27,7 @@ android {
     lint { abortOnError true; checkReleaseBuilds true }
 }
 dependencies {
-    // All runtime features use Android framework APIs. No third-party runtime libraries.
+    // All production/runtime features use Android framework APIs.
+    // No AndroidX dependency is packaged into the Fakturiva production APK.
+    androidTestImplementation 'androidx.test:runner:1.7.0'
 }

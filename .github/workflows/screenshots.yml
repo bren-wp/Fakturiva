@@ -48,9 +48,9 @@ jobs:
           ram-size: 3072M
           disk-size: 4096M
           disable-animations: true
-          script: |
-            gradle :app:connectedDebugAndroidTest --stacktrace
-            bash ci/capture_screenshots.sh
+          # Runner treats each YAML line as an independent sh command.
+          # A single Bash entrypoint is required for reliable exit handling.
+          script: bash ci/run_android_qa.sh
       - name: Upload real screenshots and instrumentation results
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,6 +59,8 @@ jobs:
           path: |
             docs/screenshots/*.png
             build/screenshot-errors.log
+            build/instrumentation.log
+            app/build/outputs/androidTest-results/connected/**
             app/build/reports/androidTests/connected/**
           if-no-files-found: warn
       # Original 20 reference PNGs are private user-supplied assets and are

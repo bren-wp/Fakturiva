@@ -34,8 +34,8 @@ public final class ScreenshotHarness {
             store.setting("iban","HR0000000000000000000");
             store.saveClient("Studio Primjer d.o.o.","12345678903","Primjer ulica 3, Rijeka","studio@example.invalid");
             store.saveClient("Obrt Primjer","12345678903","Trg Primjera 8, Rijeka","obrt@example.invalid");
-            store.saveProduct("Dizajn web stranice",100000,25);
-            store.saveProduct("Tehnička podrška",5000,25);
+            store.saveProduct("Dizajn web stranice",100000,25,"SERVICE","kom");
+            store.saveProduct("Tehnička podrška",5000,25,"SERVICE","sat");
         }
         if(store.documents(Store.INVOICE).isEmpty()){
             long client=store.clients().get(0).id;
@@ -49,7 +49,9 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.QUOTE).isEmpty()){
             Store.Item item=new Store.Item();item.name="Izrada web stranice";item.qtyMilli=1000;item.unitCents=80000;item.taxRate=25;
-            long id=store.createDraft(Store.QUOTE,store.clients().get(0).id,"2026-10-28","2026-11-28","Primjer ponude",Arrays.asList(item));
+            long id=store.createDraft(Store.QUOTE,store.clients().get(0).id,
+                "2026-10-28","2026-11-28","2026-11-15",
+                "Primjer ponude","Usluge digitalnog marketinga",Arrays.asList(item));
             store.confirm(id);
         }
     }
@@ -61,7 +63,13 @@ public final class ScreenshotHarness {
         String page=screen==null?"04":screen;
         switch(page){
             case "01":call(a,"splash",new Class<?>[]{boolean.class},false);break;
-            case "02":case "03":call(a,"welcome");break;
+            case "02":call(a,"welcome");break;
+            case "03":
+                call(a,"securityScreen",new Class<?>[]{boolean.class,boolean.class},false,false);
+                // Genuine emulator QA screenshot only. Production screen keeps
+                // FLAG_SECURE to prevent sensitive data in recents/captures.
+                a.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+                break;
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
             case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
@@ -71,14 +79,41 @@ public final class ScreenshotHarness {
                 Store.Item item=new Store.Item();item.name="Dizajn web stranice";item.qtyMilli=1000;item.unitCents=100000;item.taxRate=25;
                 lines.add(item);
                 call(a,"editItemsScreen");break;
-            case "08":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.INVOICE).get(0).id);break;
+            case "08":{
+                // Screen 08's reference is an invoice *draft* with two lines.
+                // Use a realistic debug-only draft, never a fabricated issued
+                // number or a hardcoded screenshot in the release application.
+                Store.Item site=new Store.Item();
+                site.name="Izrada web stranice";
+                site.qtyMilli=1000;site.unitCents=60000;site.taxRate=25;
+                Store.Item seo=new Store.Item();
+                seo.name="SEO optimizacija";
+                seo.qtyMilli=1000;seo.unitCents=25000;seo.taxRate=25;
+                long invoiceDraft=db.createDraft(Store.INVOICE,db.clients().get(0).id,
+                    "2026-10-27","2026-11-10","Pregled prije potvrde",
+                    Arrays.asList(site,seo));
+                call(a,"showDocument",new Class<?>[]{long.class},invoiceDraft);
+                break;
+            }
             case "09":call(a,"documents",new Class<?>[]{String.class},Store.QUOTE);break;
-            case "10":call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);break;
+            case "10":
+                call(a,"newDocument",new Class<?>[]{String.class},Store.QUOTE);
+                // Stable, fictitious values matching the dated design reference,
+                // restricted to this debug-only emulator harness.
+                set(a,"draftIssue","2026-10-27");
+                set(a,"draftDue","2026-11-10");
+                set(a,"draftSupply","2026-11-15");
+                set(a,"draftQuoteTitle","Usluge digitalnog marketinga");
+                call(a,"editDocumentScreen");
+                break;
             case "11":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.QUOTE).get(0).id);break;
             case "12":call(a,"clients");break;
             case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
             case "14":call(a,"catalog");break;
-            case "15":call(a,"reports");break;
+            case "15":
+                ((java.util.Calendar)get(a,"reportMonth")).set(2026,java.util.Calendar.OCTOBER,1);
+                call(a,"reports");
+                break;
             case "16":call(a,"payments");break;
             case "17":call(a,"eracun");break;
             case "18":call(a,"settings");break;
@@ -86,5 +121,37 @@ public final class ScreenshotHarness {
             case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }
+        // Calling setContentView is not the same as a framebuffer draw.
+        // On Android 15/16 the system SplashScreen may still cover the Activity
+        // for several frames, even though the layout methods have finished.
+        // Emit the readiness file only AFTER the requested view has actually
+        // entered the draw pipeline, and allow the system splash to clear.
+        final android.view.View decor=a.getWindow().getDecorView();
+        final android.view.ViewTreeObserver tree=decor.getViewTreeObserver();
+        tree.addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener(){
+            private boolean scheduled=false;
+            @Override public boolean onPreDraw(){
+                if(!scheduled){
+                    scheduled=true;
+                    decor.getViewTreeObserver().removeOnPreDrawListener(this);
+                    decor.postDelayed(()->{
+                        // Ignore a now-destroyed Activity; never signal that
+                        // a stale screen belongs to the next screenshot.
+                        if(a.isFinishing()||a.isDestroyed()||!decor.isShown())return;
+                        try(java.io.FileOutputStream signal=a.openFileOutput(
+                                "qa-screen-ready.txt",
+                                android.content.Context.MODE_PRIVATE)){
+                            signal.write(page.getBytes(
+                                java.nio.charset.StandardCharsets.UTF_8));
+                            signal.flush();
+                            Log.i("FakturivaQA","QA_SCREEN_READY "+page);
+                        }catch(java.io.IOException e){
+                            Log.e("FakturivaQA","QA readiness marker failed "+page,e);
+                        }
+                    },1000);
+                }
+                return true;
+            }
+        });
     }
 }
