@@ -1779,7 +1779,9 @@ public final class MainActivity extends Activity {
     /** Paper-like native preview with exactly the saved business data. */
     private LinearLayout documentPaper(Store.Document d){
         LinearLayout paper=vertical();
-        pad(paper,18,24);
+        // Invoice reference requires a slightly taller white paper inset.
+        // Quote previews retain their original document geometry.
+        pad(paper,18,Store.INVOICE.equals(d.type)?24:20);
         paper.setBackground(outlined(WHITE));
         paper.setMinimumHeight(dp(355));
 
