@@ -84,7 +84,9 @@ Ovo su **autentične snimke Android aplikacije**, a ne dizajnerske makete. Sniml
 
 [**Sva GitHub izdanja i datoteke za preuzimanje**](https://github.com/bren-wp/Fakturiva/releases)
 
-**Novo:** [Fakturiva v0.11.0-preview.1 — Android pretpregled](https://github.com/bren-wp/Fakturiva/releases/tag/v0.11.0-preview.1)
+**Novo:** [Fakturiva v0.12.0-preview.1 — Android pretpregled](https://github.com/bren-wp/Fakturiva/releases/tag/v0.12.0-preview.1)
+
+**U izdanju v0.12:** dorađeni zasloni **06 Novi račun**, **07 Stavke računa** i **08 Pregled računa**; izrada, pregled i PDF koriste stvarne poslovne podatke. Uklanjanje stavke dostupno je iz dijaloga za uređivanje uz izričitu potvrdu.
 
 | Datoteka | Namjena |
 | :--- | :--- |

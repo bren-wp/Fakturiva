@@ -1122,7 +1122,13 @@ public final class MainActivity extends Activity {
         e.setMinimumHeight(dp(50));return e;
     }
     private void fieldLabel(LinearLayout target,String name,EditText field){
-        gap(target,12);target.addView(label(name,12,ink(),true));gap(target,6);place(target,field);
+        fieldLabel(target,name,field,12);
+    }
+    private void fieldLabel(LinearLayout target,String name,EditText field,int precedingGapDp){
+        gap(target,precedingGapDp);
+        target.addView(label(name,12,ink(),true));
+        gap(target,6);
+        place(target,field);
     }
     static String quoteDateForDisplay(String iso){
         if(iso==null||!IsoDates.valid(iso))return iso==null?"":iso;
@@ -1311,15 +1317,17 @@ public final class MainActivity extends Activity {
     private void editDocumentScreen(){
         boolean quote=Store.QUOTE.equals(editType);
         setup("new_doc",true);
-        pad(body,quote?18:15,quote?17:14);
+        // Match invoice reference vertically while retaining quote geometry.
+        pad(body,quote?18:15,quote?17:21);
         toolbar(quote?"Nova ponuda":"Novi račun",
             quote?"Sastavite novu poslovnu ponudu":"Izradite novi dokument",true);
+        if(!quote)gap(body,11);
         wizardSteps(1);
         List<Store.Client> clients=db.clients();
 
         LinearLayout basics=card();
         place(basics,label(quote?"Nova ponuda":"Osnovni podaci",
-            18,ink(),true));gap(basics,quote?16:12);
+            quote?18:16,ink(),true));gap(basics,quote?16:12);
         String typeName=Store.INVOICE.equals(editType)?"računa":"ponude";
         basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
         TextView sequence=label(editingDraftId>0?
@@ -1339,16 +1347,17 @@ public final class MainActivity extends Activity {
             names[i+1]=clients.get(i).name;
             if(clients.get(i).id==editClientId)current=i+1;
         }
-        gap(basics,13);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
+        gap(basics,quote?13:10);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
         LinearLayout choose=horizontal();choose.setGravity(Gravity.CENTER_VERTICAL);
-        choose.setBackground(outlined(panel()));choose.setPadding(dp(12),dp(5),dp(12),dp(5));
+        choose.setBackground(outlined(panel()));
+        choose.setPadding(dp(12),dp(quote?5:2),dp(12),dp(quote?5:2));
         Spinner selector=new Spinner(this);
         ArrayAdapter<String> adapter=new ArrayAdapter<>(
             this,android.R.layout.simple_spinner_dropdown_item,names);
         selector.setAdapter(adapter);selector.setSelection(current);
         // Remove the duplicate platform arrow; use the custom chevron.
         selector.setBackgroundColor(Color.TRANSPARENT);
-        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(42),1));
+        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(quote?42:38),1));
         choose.addView(label("›",23,sub(),false));
         place(basics,choose);
         selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
@@ -1358,12 +1367,24 @@ public final class MainActivity extends Activity {
                 saveWorkingDraft();
             }
         });
+        // Show dates consistently in Croatian notation on both workflows;
+        // the draft still persists validated ISO 8601 dates internally.
         EditText issued=field("Datum izdavanja",
-            quote?quoteDateForDisplay(draftIssue):draftIssue);
-        dateInput(issued,quote);fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued);
+            quoteDateForDisplay(draftIssue));
+        if(!quote){
+            issued.setPadding(dp(14),dp(9),dp(14),dp(9));
+            issued.setMinimumHeight(dp(44));
+        }
+        dateInput(issued,true);
+        fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued,quote?12:8);
         EditText due=field("Datum dospijeća / valjanosti",
-            quote?quoteDateForDisplay(draftDue):draftDue);
-        dateInput(due,quote);fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due);
+            quoteDateForDisplay(draftDue));
+        if(!quote){
+            due.setPadding(dp(14),dp(9),dp(14),dp(9));
+            due.setMinimumHeight(dp(44));
+        }
+        dateInput(due,true);
+        fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due,quote?12:8);
         final EditText quoteTitle=quote?field("Npr. Usluge digitalnog marketinga",
             draftQuoteTitle):null;
         if(quote){
@@ -1373,10 +1394,10 @@ public final class MainActivity extends Activity {
             });
         }else{
             String method=db.setting("payment_method").trim();
-            gap(basics,13);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
+            gap(basics,10);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
             LinearLayout paying=horizontal();paying.setGravity(Gravity.CENTER_VERTICAL);
             paying.setBackground(outlined(panel()));
-            paying.setPadding(dp(13),dp(14),dp(13),dp(14));
+            paying.setPadding(dp(13),dp(9),dp(13),dp(9));
             paying.addView(label(method.isEmpty()?"Odaberite u profilu tvrtke":method,
                 13,ink(),false),new LinearLayout.LayoutParams(0,-2,1));
             paying.addView(label("›",20,sub(),false));
@@ -1427,47 +1448,44 @@ public final class MainActivity extends Activity {
         });
     }
     private void editItemsScreen(){
+        boolean invoice=Store.INVOICE.equals(editType);
         setup("edit_items",true);
-        pad(body,15,14);
-        toolbar(Store.INVOICE.equals(editType)?"Stavke računa":"Stavke ponude",
+        pad(body,15,invoice?21:14);
+        toolbar(invoice?"Stavke računa":"Stavke ponude",
             "2. korak od 3",true);
+        if(invoice)gap(body,11);
         wizardSteps(2);
         if(draftItems.isEmpty())caption(body,"Dodajte usluge ili artikle u dokument.");
         for(int index=0;index<draftItems.size();index++){
             Store.Item item=draftItems.get(index);
             final int selected=index;
-            LinearLayout c=card();
+            // Compact card geometry matches the reference's invoice rows.
+            // Deletion remains available in the actual item editor.
+            LinearLayout c=card();pad(c,13,9);
             LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
-            header.addView(label(item.name,14,ink(),true),
-                new LinearLayout.LayoutParams(0,-2,1));
+            TextView itemName=label(item.name,14,ink(),true);
+            itemName.setSingleLine(true);
+            itemName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            header.addView(itemName,new LinearLayout.LayoutParams(0,-2,1));
             ImageView edit=icon(R.drawable.ic_edit,sub());
-            edit.setPadding(dp(9),dp(9),dp(9),dp(9));
-            edit.setContentDescription("Uredi stavku "+item.name);
-            header.addView(edit,lp(42,42));
+            edit.setPadding(dp(6),dp(6),dp(6),dp(6));
+            edit.setContentDescription("Uredi ili ukloni stavku "+item.name);
+            header.addView(edit,lp(34,34));
             edit.setOnClickListener(v->editLine(selected));
-            place(c,header);gap(c,3);
-            c.addView(label(Money.decimalQuantity(item.qtyMilli)+" × "+
+            place(c,header);gap(c,1);
+            place(c,label(Money.decimalQuantity(item.qtyMilli)+" × "+
                 Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
-            gap(c,10);
-            LinearLayout bottom=horizontal();
-            TextView delete=label("Ukloni",11,RED,true);
-            delete.setContentDescription("Ukloni stavku "+item.name);
-            bottom.addView(delete,new LinearLayout.LayoutParams(0,-2,1));
-            bottom.addView(label(Money.euros(Math.addExact(item.net(),item.tax())),
-                16,ink(),true));
-            delete.setOnClickListener(v->new AlertDialog.Builder(this)
-                .setTitle("Ukloniti stavku?")
-                .setMessage(item.name+" bit će uklonjena samo iz radnog nacrta.")
-                .setNegativeButton("Odustani",null)
-                .setPositiveButton("Ukloni",(dialog,which)->{
-                    Store.Item removed=draftItems.remove(selected);
-                    if(!saveWorkingDraft()){
-                        draftItems.add(selected,removed);
-                        return;
-                    }
-                    editItemsScreen();
-                }).show());
-            place(c,bottom);place(body,c);gap(body,9);
+            gap(c,4);
+            TextView amount=label(Money.euros(Math.addExact(item.net(),item.tax())),
+                16,ink(),true);
+            amount.setGravity(Gravity.RIGHT);
+            place(c,amount);
+            c.setContentDescription(item.name+" — "+
+                Money.euros(Math.addExact(item.net(),item.tax()))+
+                ". Dodirnite za uređivanje ili uklanjanje.");
+            c.setFocusable(true);
+            c.setOnClickListener(v->editLine(selected));
+            place(body,c);gap(body,9);
         }
         TextView add=label("＋  Dodaj artikl ili uslugu",13,BLUE,true);
         add.setGravity(Gravity.CENTER);add.setContentDescription("Dodaj stavku dokumenta");
@@ -1563,11 +1581,30 @@ public final class MainActivity extends Activity {
         fieldLabel(form,"Jedinična cijena bez PDV-a",price);
         gap(form,11);form.addView(label("Stopa PDV-a",12,ink(),true));
         place(form,tax);
-        AlertDialog dialog=new AlertDialog.Builder(this)
+        AlertDialog.Builder editor=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi stavku":"Nova stavka")
             .setView(form).setNegativeButton("Odustani",null)
-            .setPositiveButton("Spremi",null).create();
-        dialog.setOnShowListener(ignored->
+            .setPositiveButton("Spremi",null);
+        if(editing)editor.setNeutralButton("Ukloni",null);
+        AlertDialog dialog=editor.create();
+        dialog.setOnShowListener(ignored->{
+            if(editing){
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(button->
+                    new AlertDialog.Builder(this)
+                        .setTitle("Ukloniti stavku?")
+                        .setMessage(current.name+
+                            " bit će uklonjena samo iz radnog nacrta.")
+                        .setNegativeButton("Odustani",null)
+                        .setPositiveButton("Ukloni",(confirmation,which)->{
+                            Store.Item removed=draftItems.remove(index);
+                            if(!saveWorkingDraft()){
+                                draftItems.add(index,removed);
+                                return;
+                            }
+                            dialog.dismiss();
+                            editItemsScreen();
+                        }).show());
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{
                 try{
                     String description=name.getText().toString().trim();
@@ -1594,7 +1631,8 @@ public final class MainActivity extends Activity {
                     }
                     dialog.dismiss();editItemsScreen();
                 }catch(Exception error){error(error);}
-            }));
+            });
+        });
         dialog.show();
     }
     private void reviewDraft(){
@@ -1656,7 +1694,9 @@ public final class MainActivity extends Activity {
         boolean draft=Store.DRAFT.equals(d.status);
 
         setup("detail",true);
-        pad(body,18,13);
+        // Keep invoice masthead and actions aligned with the reference.
+        // Quote detail remains on its pre-existing independent geometry.
+        pad(body,18,invoice?20:13);
         toolbar(invoice?"Pregled računa":"Pregled ponude",
             draft?"Provjerite podatke prije potvrde":
                 (invoice?"Pregled potvrđenog dokumenta":"Ponuda pripremljena za dijeljenje"),true);
@@ -1691,7 +1731,7 @@ public final class MainActivity extends Activity {
                     else if(which==1)savePdf(id);
                     else sharePdf(id);
                 }).setNegativeButton("Zatvori",null).show());
-        place(body,statusBar);gap(body,12);
+        place(body,statusBar);gap(body,invoice?6:12);
 
         place(body,documentPaper(d));
         gap(body,13);
@@ -1741,7 +1781,9 @@ public final class MainActivity extends Activity {
     /** Paper-like native preview with exactly the saved business data. */
     private LinearLayout documentPaper(Store.Document d){
         LinearLayout paper=vertical();
-        pad(paper,18,20);
+        // Invoice reference requires a slightly taller white paper inset.
+        // Quote previews retain their original document geometry.
+        pad(paper,18,Store.INVOICE.equals(d.type)?24:20);
         paper.setBackground(outlined(WHITE));
         paper.setMinimumHeight(dp(355));
 
