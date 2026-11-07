@@ -1122,7 +1122,13 @@ public final class MainActivity extends Activity {
         e.setMinimumHeight(dp(50));return e;
     }
     private void fieldLabel(LinearLayout target,String name,EditText field){
-        gap(target,12);target.addView(label(name,12,ink(),true));gap(target,6);place(target,field);
+        fieldLabel(target,name,field,12);
+    }
+    private void fieldLabel(LinearLayout target,String name,EditText field,int precedingGapDp){
+        gap(target,precedingGapDp);
+        target.addView(label(name,12,ink(),true));
+        gap(target,6);
+        place(target,field);
     }
     static String quoteDateForDisplay(String iso){
         if(iso==null||!IsoDates.valid(iso))return iso==null?"":iso;
@@ -1311,15 +1317,17 @@ public final class MainActivity extends Activity {
     private void editDocumentScreen(){
         boolean quote=Store.QUOTE.equals(editType);
         setup("new_doc",true);
-        pad(body,quote?18:15,quote?17:14);
+        // Match invoice reference vertically while retaining quote geometry.
+        pad(body,quote?18:15,quote?17:21);
         toolbar(quote?"Nova ponuda":"Novi račun",
             quote?"Sastavite novu poslovnu ponudu":"Izradite novi dokument",true);
+        if(!quote)gap(body,11);
         wizardSteps(1);
         List<Store.Client> clients=db.clients();
 
         LinearLayout basics=card();
         place(basics,label(quote?"Nova ponuda":"Osnovni podaci",
-            18,ink(),true));gap(basics,quote?16:12);
+            quote?18:16,ink(),true));gap(basics,quote?16:12);
         String typeName=Store.INVOICE.equals(editType)?"računa":"ponude";
         basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
         TextView sequence=label(editingDraftId>0?
@@ -1339,16 +1347,17 @@ public final class MainActivity extends Activity {
             names[i+1]=clients.get(i).name;
             if(clients.get(i).id==editClientId)current=i+1;
         }
-        gap(basics,13);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
+        gap(basics,quote?13:10);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
         LinearLayout choose=horizontal();choose.setGravity(Gravity.CENTER_VERTICAL);
-        choose.setBackground(outlined(panel()));choose.setPadding(dp(12),dp(5),dp(12),dp(5));
+        choose.setBackground(outlined(panel()));
+        choose.setPadding(dp(12),dp(quote?5:2),dp(12),dp(quote?5:2));
         Spinner selector=new Spinner(this);
         ArrayAdapter<String> adapter=new ArrayAdapter<>(
             this,android.R.layout.simple_spinner_dropdown_item,names);
         selector.setAdapter(adapter);selector.setSelection(current);
         // Remove the duplicate platform arrow; use the custom chevron.
         selector.setBackgroundColor(Color.TRANSPARENT);
-        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(42),1));
+        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(quote?42:38),1));
         choose.addView(label("›",23,sub(),false));
         place(basics,choose);
         selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
@@ -1360,10 +1369,20 @@ public final class MainActivity extends Activity {
         });
         EditText issued=field("Datum izdavanja",
             quote?quoteDateForDisplay(draftIssue):draftIssue);
-        dateInput(issued,quote);fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued);
+        if(!quote){
+            issued.setPadding(dp(14),dp(9),dp(14),dp(9));
+            issued.setMinimumHeight(dp(44));
+        }
+        dateInput(issued,quote);
+        fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued,quote?12:8);
         EditText due=field("Datum dospijeća / valjanosti",
             quote?quoteDateForDisplay(draftDue):draftDue);
-        dateInput(due,quote);fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due);
+        if(!quote){
+            due.setPadding(dp(14),dp(9),dp(14),dp(9));
+            due.setMinimumHeight(dp(44));
+        }
+        dateInput(due,quote);
+        fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due,quote?12:8);
         final EditText quoteTitle=quote?field("Npr. Usluge digitalnog marketinga",
             draftQuoteTitle):null;
         if(quote){
@@ -1373,10 +1392,10 @@ public final class MainActivity extends Activity {
             });
         }else{
             String method=db.setting("payment_method").trim();
-            gap(basics,13);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
+            gap(basics,10);basics.addView(label("Način plaćanja",12,sub(),true));gap(basics,6);
             LinearLayout paying=horizontal();paying.setGravity(Gravity.CENTER_VERTICAL);
             paying.setBackground(outlined(panel()));
-            paying.setPadding(dp(13),dp(14),dp(13),dp(14));
+            paying.setPadding(dp(13),dp(9),dp(13),dp(9));
             paying.addView(label(method.isEmpty()?"Odaberite u profilu tvrtke":method,
                 13,ink(),false),new LinearLayout.LayoutParams(0,-2,1));
             paying.addView(label("›",20,sub(),false));
