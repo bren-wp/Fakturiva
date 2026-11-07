@@ -997,7 +997,8 @@ public final class MainActivity extends Activity {
         LinearLayout item=vertical();item.setTag(document);
         View divider=new View(this);divider.setBackgroundColor(border());
         item.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-        LinearLayout row=horizontal();pad(row,10,12);
+        // Quote rows retain accessible actions but follow the taller source cards.
+        LinearLayout row=horizontal();pad(row,10,Store.QUOTE.equals(document.type)?14:12);
         ImageView symbol=icon(Store.INVOICE.equals(document.type)?
             R.drawable.ic_invoice:R.drawable.ic_quote,
             Store.INVOICE.equals(document.type)?BLUE:TEAL);
@@ -1321,7 +1322,8 @@ public final class MainActivity extends Activity {
         pad(body,quote?18:15,quote?17:21);
         toolbar(quote?"Nova ponuda":"Novi račun",
             quote?"Sastavite novu poslovnu ponudu":"Izradite novi dokument",true);
-        if(!quote)gap(body,11);
+        // Quote reference positions the stepper lower, without a bitmap overlay.
+        gap(body,quote?14:11);
         wizardSteps(1);
         List<Store.Client> clients=db.clients();
 
@@ -1332,7 +1334,7 @@ public final class MainActivity extends Activity {
         basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
         TextView sequence=label(editingDraftId>0?
             "Nacrt · broj nakon potvrde":"Dodjeljuje se pri potvrdi",13,ink(),false);
-        pad(sequence,14,13);sequence.setBackground(outlined(panel()));
+        pad(sequence,14,quote?9:13);sequence.setBackground(outlined(panel()));
         place(basics,sequence);
         if(clients.isEmpty()){
             gap(basics,12);
@@ -1347,17 +1349,17 @@ public final class MainActivity extends Activity {
             names[i+1]=clients.get(i).name;
             if(clients.get(i).id==editClientId)current=i+1;
         }
-        gap(basics,quote?13:10);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
+        gap(basics,quote?9:10);basics.addView(label("Klijent",12,sub(),true));gap(basics,6);
         LinearLayout choose=horizontal();choose.setGravity(Gravity.CENTER_VERTICAL);
         choose.setBackground(outlined(panel()));
-        choose.setPadding(dp(12),dp(quote?5:2),dp(12),dp(quote?5:2));
+        choose.setPadding(dp(12),dp(2),dp(12),dp(2));
         Spinner selector=new Spinner(this);
         ArrayAdapter<String> adapter=new ArrayAdapter<>(
             this,android.R.layout.simple_spinner_dropdown_item,names);
         selector.setAdapter(adapter);selector.setSelection(current);
         // Remove the duplicate platform arrow; use the custom chevron.
         selector.setBackgroundColor(Color.TRANSPARENT);
-        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(quote?42:38),1));
+        choose.addView(selector,new LinearLayout.LayoutParams(0,dp(38),1));
         choose.addView(label("›",23,sub(),false));
         place(basics,choose);
         selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
@@ -1371,24 +1373,22 @@ public final class MainActivity extends Activity {
         // the draft still persists validated ISO 8601 dates internally.
         EditText issued=field("Datum izdavanja",
             quoteDateForDisplay(draftIssue));
-        if(!quote){
-            issued.setPadding(dp(14),dp(9),dp(14),dp(9));
-            issued.setMinimumHeight(dp(44));
-        }
+        issued.setPadding(dp(14),dp(9),dp(14),dp(9));
+        issued.setMinimumHeight(dp(quote?43:44));
         dateInput(issued,true);
-        fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued,quote?12:8);
+        fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued,8);
         EditText due=field("Datum dospijeća / valjanosti",
             quoteDateForDisplay(draftDue));
-        if(!quote){
-            due.setPadding(dp(14),dp(9),dp(14),dp(9));
-            due.setMinimumHeight(dp(44));
-        }
+        due.setPadding(dp(14),dp(9),dp(14),dp(9));
+        due.setMinimumHeight(dp(quote?43:44));
         dateInput(due,true);
-        fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due,quote?12:8);
+        fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due,8);
         final EditText quoteTitle=quote?field("Npr. Usluge digitalnog marketinga",
             draftQuoteTitle):null;
         if(quote){
-            fieldLabel(basics,"Naslov ponude",quoteTitle);
+            quoteTitle.setPadding(dp(14),dp(9),dp(14),dp(9));
+            quoteTitle.setMinimumHeight(dp(43));
+            fieldLabel(basics,"Naslov ponude",quoteTitle,8);
             quoteTitle.setFilters(new android.text.InputFilter[]{
                 new android.text.InputFilter.LengthFilter(200)
             });
@@ -1891,7 +1891,9 @@ public final class MainActivity extends Activity {
             gap(paper,7);
             paperAmount(paper,"Preostalo",Money.euros(d.outstanding()),false);
         }
-        gap(paper,19);paperRule(paper);gap(paper,12);
+        // Quote paper reserves reference footer whitespace; invoice stays unchanged.
+        gap(paper,Store.QUOTE.equals(d.type)?34:19);
+        paperRule(paper);gap(paper,12);
         place(paper,label(Store.QUOTE.equals(d.type)?
             "Ponuda nije račun niti dokaz o plaćanju.":
             "Dokument za pregled • Nije fiskaliziran",9,0xff9eacbe,false));
