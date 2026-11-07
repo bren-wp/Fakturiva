@@ -358,25 +358,30 @@ public final class MainActivity extends Activity {
             super.onDraw(canvas);
             float width=getWidth(),height=getHeight();
             if(width<=0||height<=0)return;
+            // Calibrated from the owner's original 1179x2556 Splash PNG,
+            // using only unobstructed background pixels. This remains a
+            // native, resolution-independent gradient — never a screenshot.
             paint.setShader(new android.graphics.LinearGradient(0,0,0,height,
-                new int[]{0xff163864,0xff0e2541,0xff0a1d32},
+                new int[]{0xff122d52,0xff0f2542,0xff0a1c32},
                 new float[]{0,.5f,1},android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(0,0,width,height,paint);
             paint.setShader(null);
 
-            // Scale the shader's local Y axis to give the bloom the same
-            // *relative* elliptical geometry on all portrait devices.
+            // Native radial gradient with separate horizontal/vertical radii.
+            // The prior circular (.60 x .60) bloom lost up to 47 blue levels
+            // in the reference's top-right corner at 393x852dp.
+            final float radiusX=width*1.043f;
+            final float radiusY=height*.468f;
+            final float verticalScale=radiusY/radiusX;
             canvas.save();
-            canvas.scale(1f,height/width);
-            // Transparent SRC_OVER avoids the GPU-dependent PorterDuff ADD
-            // mode, which can stall headless emulator framebuffer capture.
-            // Keep the same geometric bloom using a translucent blue overlay.
+            canvas.scale(1f,verticalScale);
+            // SRC_OVER is intentional: ADD was unreliable on CI emulators.
             paint.setShader(new android.graphics.RadialGradient(
-                width*.865f,width*.075f,width*.60f,
-                new int[]{0xa8245183,0x78245183,0x38245183,0x14245183,0x00245183},
+                width*.964f,height*.097f/verticalScale,radiusX,
+                new int[]{0xff225aa4,0xb1225aa4,0x67225aa4,0x33225aa4,0x00225aa4},
                 new float[]{0,.25f,.5f,.75f,1f},
                 android.graphics.Shader.TileMode.CLAMP));
-            canvas.drawRect(0,0,width,width,paint);
+            canvas.drawRect(0,0,width,height/verticalScale,paint);
             paint.setShader(null);
             canvas.restore();
         }
@@ -397,13 +402,14 @@ public final class MainActivity extends Activity {
         View rings=new View(this){
             final android.graphics.Paint brush=new android.graphics.Paint(3);
             @Override protected void onDraw(android.graphics.Canvas canvas){
-                brush.setColor(0x16ffffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
-                brush.setStrokeWidth(dp(0.67f));
+                brush.setColor(0x13ffffff);brush.setStyle(android.graphics.Paint.Style.STROKE);
+                brush.setStrokeWidth(dp(.9f));
                 float unit=getWidth();
-                // Circle fits from three points on each original PNG outline.
-                // Right: center (1503,738), r=713; left: (-337,1606), r=816.
-                canvas.drawCircle(unit*1.275f,getHeight()*.289f,unit*.605f,brush);
-                canvas.drawCircle(-unit*.286f,getHeight()*.628f,unit*.692f,brush);
+                // Least-squares circles recovered from 751 original PNG
+                // outline pixels at 1179x2556, rather than three landmarks.
+                // Right: (1494.2,734.5), r704.4; left:(-346.0,1604.4),r823.6.
+                canvas.drawCircle(unit*1.26734f,getHeight()*.28738f,unit*.59745f,brush);
+                canvas.drawCircle(-unit*.29350f,getHeight()*.62771f,unit*.69854f,brush);
                 brush.setStyle(android.graphics.Paint.Style.FILL);
             }
         };
@@ -412,9 +418,20 @@ public final class MainActivity extends Activity {
         ImageView mark=new ImageView(this);mark.setImageResource(R.drawable.brand_mark);
         LinearLayout.LayoutParams logo=lp(108,108);logo.gravity=Gravity.CENTER_HORIZONTAL;
         center.addView(mark,logo);gap(center,28);
+        // Reference white/teal glyph bounds: +2 px X, +11 px Y at 480 dpi.
+        // Translation leaves the surrounding vertical rhythm unchanged.
+        mark.setTranslationX(dp(.67f));
+        mark.setTranslationY(dp(3.67f));
         TextView name=label("Fakturiva",44,WHITE,true);name.setGravity(Gravity.CENTER);
+        name.setTextScaleX(.989f);
+        // The design uses a heavier headline than Android Roboto Bold.
+        // Apply native paint emboldening rather than embedding a mockup.
+        name.getPaint().setFakeBoldText(true);
+        name.setTranslationY(-dp(.33f));
         place(center,name);gap(center,17);
         TextView subtitle=label("Računi i ponude, jednostavno.",13,0xffbdcde1,false);
+        subtitle.setTextScaleX(.978f);
+        subtitle.setTranslationY(-dp(1f));
         subtitle.setGravity(Gravity.CENTER);place(center,subtitle);
         FrameLayout.LayoutParams middle=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
         middle.leftMargin=dp(18);middle.rightMargin=dp(18);frame.addView(center,middle);
@@ -424,14 +441,17 @@ public final class MainActivity extends Activity {
         LinearLayout bottom=vertical();bottom.setGravity(Gravity.CENTER);
         FrameLayout progress=new FrameLayout(this);background(progress,0xff36516c,4);
         View completed=new View(this);background(completed,0xff2fd2c5,4);
-        FrameLayout.LayoutParams fill=new FrameLayout.LayoutParams(dp(33),dp(4),Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        FrameLayout.LayoutParams fill=new FrameLayout.LayoutParams(dp(34),dp(4),Gravity.LEFT|Gravity.CENTER_VERTICAL);
         progress.addView(completed,fill);
-        LinearLayout.LayoutParams progressLp=lp(82,4);progressLp.gravity=Gravity.CENTER;
-        bottom.addView(progress,progressLp);gap(bottom,21);
+        LinearLayout.LayoutParams progressLp=lp(85,4);progressLp.gravity=Gravity.CENTER;
+        bottom.addView(progress,progressLp);gap(bottom,17);
         TextView text=label("Vaše poslovanje. Jednostavnije.",12,0xff9fb5ce,false);
+        // Source footer spans 437 px rather than the old 512 px. Keep the
+        // native TextView and real accessibility content instead of a bitmap.
+        text.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,10.25f);
         text.setGravity(Gravity.CENTER);place(bottom,text);
         FrameLayout.LayoutParams down=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
-        down.bottomMargin=dp(53);frame.addView(bottom,down);
+        down.bottomMargin=dp(57);frame.addView(bottom,down);
         if(animate){
             frame.setContentDescription("Fakturiva — učitavanje aplikacije");
             frame.setOnClickListener(v->finishSplash());
