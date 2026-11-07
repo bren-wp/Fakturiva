@@ -1367,21 +1367,23 @@ public final class MainActivity extends Activity {
                 saveWorkingDraft();
             }
         });
+        // Show dates consistently in Croatian notation on both workflows;
+        // the draft still persists validated ISO 8601 dates internally.
         EditText issued=field("Datum izdavanja",
-            quote?quoteDateForDisplay(draftIssue):draftIssue);
+            quoteDateForDisplay(draftIssue));
         if(!quote){
             issued.setPadding(dp(14),dp(9),dp(14),dp(9));
             issued.setMinimumHeight(dp(44));
         }
-        dateInput(issued,quote);
+        dateInput(issued,true);
         fieldLabel(basics,quote?"Datum ponude":"Datum izdavanja",issued,quote?12:8);
         EditText due=field("Datum dospijeća / valjanosti",
-            quote?quoteDateForDisplay(draftDue):draftDue);
+            quoteDateForDisplay(draftDue));
         if(!quote){
             due.setPadding(dp(14),dp(9),dp(14),dp(9));
             due.setMinimumHeight(dp(44));
         }
-        dateInput(due,quote);
+        dateInput(due,true);
         fieldLabel(basics,quote?"Vrijedi do":"Datum dospijeća",due,quote?12:8);
         final EditText quoteTitle=quote?field("Npr. Usluge digitalnog marketinga",
             draftQuoteTitle):null;
