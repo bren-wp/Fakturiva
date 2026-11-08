@@ -91,6 +91,7 @@ Fakturiva podržava više načina ispisa dokumenata:
 - **Bluetooth Classic termalni pisači:** ESC/POS računi na **58 mm (384 točke)** ili **80 mm (512 ili 576 točaka)**, uz prethodno uparivanje.
 - **Mrežni termalni pisači:** ESC/POS preko lokalne IPv4 adrese i TCP priključka (obično **9100**), na 58 mm ili 80 mm. Adresu i priključak unosi korisnik; javne internetske adrese namjerno su blokirane.
 - **USB termalni pisači (nova razvojna grana):** ESC/POS preko USB host/OTG veze, uz izbor uređaja i Androidovu dozvolu; podržane su USB Printer Class veze s izlaznim bulk endpointom i širine 58/80 mm. Potrebno je fizički provjeriti pojedini model.
+- **SUNMI ugrađeni termalni pisači (službeni SDK, razvojna grana):** poseban SUNMI Android printer service, prepoznavanje širine papira 58/80 mm i izravni termalni ispis na podržanim uređajima. Nije dostupno na običnim Android telefonima i još nije potvrđeno fizičkim testom.
 
 Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađeni PDF-ovi imaju sitnu oznaku **Powered by Brendigo** u podnožju svake stranice, a termalni računi pri samom dnu ispisa. Ako korisnik želi zatražiti uklanjanje te oznake, u **Postavke → O aplikaciji i podrška** može poslati upit na **info@plati.com.hr**.
 
@@ -98,7 +99,7 @@ Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađen
 
 [**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md)
 
-[**Proizvođači pisača, službeni SDK-ovi i hrvatski POS servisi**](docs/POS_INTEGRATION_MATRIX.md) — obuhvaća Epson, Star, BIXOLON, Citizen, SUNMI, Xprinter i odvojene kartične integracije poput Monrija. **Ovo nije tvrdnja da su vendor SDK-ovi integrirani ili da je podržana kartična naplata.**
+[**Proizvođači pisača, službeni SDK-ovi i hrvatski POS servisi**](docs/POS_INTEGRATION_MATRIX.md) — obuhvaća Epson, Star, BIXOLON, Citizen, SUNMI, Xprinter i odvojene kartične integracije poput Monrija. **Službeni SUNMI printer SDK sada je povezan u razvojnoj grani**, ali zahtijeva test na stvarnom SUNMI terminalu. Ostali proizvođački SDK-ovi i certificirana kartična naplata nisu implementirani.
 
 Ove značajke **još nisu dio posljednjeg objavljenog izdanja** v0.17.0-preview.1. Trenutačna aplikacija nije certificirana za automatsko ispunjavanje zakonskih obveza bilo koje države; korisnik provjerava obvezne podatke i računovodstvene zahtjeve u svojoj jurisdikciji.
 
