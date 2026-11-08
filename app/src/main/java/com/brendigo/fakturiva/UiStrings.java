@@ -46,6 +46,13 @@ public final class UiStrings {
     private static final Map<String,String> HR=new HashMap<>();
     static {
         EN.put("Početna","Home");
+        EN.put("Odaberite USB pisač","Choose USB printer");
+        EN.put("Potvrdite USB ispis","Confirm USB printing");
+        EN.put("USB termalni pisači","USB receipt printers");
+        EN.put("Nije pronađen priključen USB Printer Class pisač. Provjerite OTG kabel, podršku za ESC/POS i USB dozvolu.","No USB Printer Class device found. Check the OTG adapter, ESC/POS support and USB permission.");
+        EN.put("Podaci dokumenta šalju se isključivo na odabrani USB pisač. Android će zatražiti dozvolu. Provjerite model i papir.","Document data will only be sent to the selected USB printer. Android will ask for access. Verify the model and paper.");
+        EN.put("Slanje na USB pisač…","Sending receipt to USB printer…");
+        EN.put("Podaci su poslani. Provjerite ispis na papiru.","Print data sent. Verify the paper output.");
         EN.put("Računi","Invoices");
         EN.put("Ponude","Quotes");
         EN.put("Klijenti","Clients");
@@ -302,6 +309,13 @@ public final class UiStrings {
         HR.put("This app creates ordinary invoices and quotes. Printing does not process card payments or provide fiscalization.","Aplikacija izrađuje obične račune i ponude. Ispis ne obrađuje kartična plaćanja niti provodi fiskalizaciju.");
         HR.put("No email app is installed. Please write to info@plati.com.hr.","Nije pronađena aplikacija za e-poštu. Pošaljite poruku na info@plati.com.hr.");
         HR.put("Printers and paper","Pisači i formati papira");
+        HR.put("80 mm · USB ESC/POS (512 dots)","80 mm · USB ESC/POS (512 točaka)");
+        HR.put("80 mm · USB ESC/POS (576 dots)","80 mm · USB ESC/POS (576 točaka)");
+        HR.put("The selected USB device has no printer-class bulk OUT endpoint.","Odabrani USB uređaj nema odgovarajući izlaz pisača.");
+        HR.put("USB host service is unavailable.","USB host usluga nije dostupna.");
+        HR.put("USB printer access was denied or the printer was removed.","Dozvola za USB pisač je odbijena ili je pisač uklonjen.");
+        HR.put("Could not request permission for the selected USB printer.","Nije moguće zatražiti dozvolu za odabrani USB pisač.");
+        HR.put("USB print interrupted. Check for a partial receipt before retrying.","USB ispis je prekinut. Prije ponavljanja provjerite je li ispis djelomično završen.");
         HR.put("A4 · Android printer","A4 · Android pisač");
         HR.put("US Letter · Android printer","US Letter · Android pisač");
         HR.put("A5 · Android printer","A5 · Android pisač");
