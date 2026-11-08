@@ -566,12 +566,12 @@ public final class MainActivity extends Activity {
         }
         place(body,dots);gap(body,23);
         button(body,"›  Započni",()->securityScreen(false,false));
-        gap(body,4);
+        gap(body,0);
         // Restore the split muted/blue login line from the owner's reference.
         // Both visible segments share a single accessible tap target.
         LinearLayout account=horizontal();
         account.setGravity(Gravity.CENTER);
-        account.setMinimumHeight(dp(36));
+        account.setMinimumHeight(dp(44));
         account.addView(label("Već imate račun? ",11,MUTED,false));
         TextView signIn=label("Prijavite se",11,BLUE,true);
         account.addView(signIn);
@@ -697,24 +697,38 @@ public final class MainActivity extends Activity {
             super.onDraw(canvas);
             canvas.save();canvas.scale(getWidth()/340f,getHeight()/340f);
             p.setStyle(android.graphics.Paint.Style.FILL);
-            p.setShader(new android.graphics.LinearGradient(0,0,310,340,
-                new int[]{0xffe1e9fe,0xffe8f0ff,0xffe6efff},null,
+            // Sampled from the reference's unobstructed card corners:
+            // cool #E5EBFF above, near-white bottom-left, blue haze on
+            // bottom-right. These layers remain vector gradients on any dpi.
+            p.setShader(new android.graphics.LinearGradient(0,0,0,340,
+                new int[]{0xffe5ebff,0xffe6ecff,0xffe9f0ff},
+                new float[]{0f,.6f,1f},
                 android.graphics.Shader.TileMode.CLAMP));
-            canvas.drawRoundRect(0,0,340,340,37,37,p);p.setShader(null);
-            p.setColor(0xffdae5fa);canvas.drawCircle(170,164,115,p);
+            canvas.drawRoundRect(0,0,340,340,37,37,p);
+            p.setShader(new android.graphics.RadialGradient(0,340,220,
+                new int[]{0xbbfffcff,0x66fffcff,0x00fffcff},
+                new float[]{0f,.35f,.70f},
+                android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(0,0,340,340,37,37,p);
+            p.setShader(new android.graphics.RadialGradient(340,340,140,
+                new int[]{0x55faf6fc,0x00faf6fc},null,
+                android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(0,0,340,340,37,37,p);
+            p.setShader(null);
+            p.setColor(0xffd6e4fb);canvas.drawCircle(170,164,120,p);
             // Raise the invoice sheet ~6 design units to match the owner's
             // reference without changing the original illustration bitmap.
             canvas.save();canvas.translate(0,-6);canvas.rotate(-5,170,174);
             p.setColor(0x330f2e72);p.setShadowLayer(19,0,16,0x330f2e72);
-            canvas.drawRoundRect(72,63,270,288,20,20,p);p.clearShadowLayer();
-            p.setColor(Color.WHITE);canvas.drawRoundRect(72,63,270,288,20,20,p);
+            canvas.drawRoundRect(74,63,281,288,20,20,p);p.clearShadowLayer();
+            p.setColor(Color.WHITE);canvas.drawRoundRect(74,63,281,288,20,20,p);
             p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
             p.setTextSize(11);canvas.drawText("FAKTURIVA",90,96,p);
             p.setTextSize(25);canvas.drawText("RAČUN",90,147,p);
             p.setColor(0xffe3eafd);
-            canvas.drawRoundRect(90,158,244,165,5,5,p);
-            canvas.drawRoundRect(90,177,184,184,5,5,p);
-            p.setStrokeWidth(1);canvas.drawLine(90,223,245,223,p);
+            canvas.drawRoundRect(90,158,255,165,5,5,p);
+            canvas.drawRoundRect(90,177,193,184,5,5,p);
+            p.setStrokeWidth(1);canvas.drawLine(90,223,256,223,p);
             p.setColor(0xff8191ad);p.setTextSize(11);p.setTypeface(Typeface.DEFAULT);
             canvas.drawText("Ukupno",90,247,p);
             p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
