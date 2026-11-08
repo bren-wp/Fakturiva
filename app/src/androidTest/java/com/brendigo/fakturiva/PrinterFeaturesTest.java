@@ -124,6 +124,25 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
             }catch(IllegalArgumentException expected){}
         }
     }
+    @Test public void testUsbPrinterClassAndEndpointSafety(){
+        assertTrue(UsbReceiptPrinter.acceptsInterfaceClass(
+            android.hardware.usb.UsbConstants.USB_CLASS_PRINTER));
+        assertFalse(UsbReceiptPrinter.acceptsInterfaceClass(
+            android.hardware.usb.UsbConstants.USB_CLASS_MASS_STORAGE));
+        assertFalse(UsbReceiptPrinter.acceptsInterfaceClass(
+            android.hardware.usb.UsbConstants.USB_CLASS_VENDOR_SPEC));
+        assertTrue(UsbReceiptPrinter.isBulkOut(
+            android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK,
+            android.hardware.usb.UsbConstants.USB_DIR_OUT));
+        assertFalse(UsbReceiptPrinter.isBulkOut(
+            android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_INT,
+            android.hardware.usb.UsbConstants.USB_DIR_OUT));
+        assertFalse(UsbReceiptPrinter.isBulkOut(
+            android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK,
+            android.hardware.usb.UsbConstants.USB_DIR_IN));
+        assertFalse(UsbReceiptPrinter.supports(null));
+    }
+
     @Test public void testVeryLongReceiptDoesNotSilentlyTruncate()throws Exception{
         Store.Document d=sample();
         for(int i=0;i<850;i++){

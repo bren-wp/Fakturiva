@@ -58,16 +58,29 @@ public final class UsbReceiptPrinter {
         }
     }
 
+    /** Package-visible selectors allow tests to verify safety without hardware. */
+    static boolean acceptsInterfaceClass(int deviceClass) {
+        return deviceClass == UsbConstants.USB_CLASS_PRINTER;
+    }
+
+    static boolean isBulkOut(int type, int direction) {
+        return type == UsbConstants.USB_ENDPOINT_XFER_BULK
+            && direction == UsbConstants.USB_DIR_OUT;
+    }
+
+    static boolean supports(UsbDevice device) {
+        return printerPort(device) != null;
+    }
+
     private static Port printerPort(UsbDevice device) {
         if (device == null) return null;
         for (int i = 0; i < device.getInterfaceCount(); i++) {
             UsbInterface intf = device.getInterface(i);
-            if (intf.getInterfaceClass() != UsbConstants.USB_CLASS_PRINTER)
+            if (!acceptsInterfaceClass(intf.getInterfaceClass()))
                 continue;
             for (int j = 0; j < intf.getEndpointCount(); j++) {
                 UsbEndpoint ep = intf.getEndpoint(j);
-                if (ep.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK &&
-                    ep.getDirection() == UsbConstants.USB_DIR_OUT)
+                if (isBulkOut(ep.getType(), ep.getDirection()))
                     return new Port(intf, ep);
             }
         }

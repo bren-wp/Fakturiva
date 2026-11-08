@@ -109,7 +109,7 @@ Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađen
 
 **Napomena:** Ne postoji univerzalna podrška za sve pisače i kartične POS terminale. Potrebna je kompatibilnost s Androidovim servisom ispisa ili ESC/POS protokolom i provjera konkretnog modela. Funkcija ne naplaćuje kartice i ne provodi fiskalizaciju.
 
-[**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md) · [**Proizvođači pisača i hrvatski POS servisi**](docs/PRINTER_VENDOR_AND_POS_MATRIX.md)
+[**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md) · [**Proizvođači pisača i hrvatski POS servisi**](docs/PRINTER_VENDOR_AND_POS_MATRIX.md) · [**SUNMI SDK i drugi proizvođači**](docs/POS_INTEGRATION_MATRIX.md)
 
 Ove značajke **još nisu dio posljednjeg objavljenog izdanja** v0.17.0-preview.1. Trenutačna aplikacija nije certificirana za automatsko ispunjavanje zakonskih obveza bilo koje države; korisnik provjerava obvezne podatke i računovodstvene zahtjeve u svojoj jurisdikciji.
 
