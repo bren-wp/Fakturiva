@@ -27,7 +27,7 @@ VISIBLE_HEADERS = [
     "Fakturiva", "Fakturiva", "Zaštitite svoje poslovanje", "Fakturiva",
     "Računi", "Novi račun", "Stavke računa", "Pregled računa", "Ponude",
     "Nova ponuda", "Pregled ponude", "Klijenti", "Detalji klijenta",
-    "Artikli i usluge", "Izvještaji", "Naplata", "eRačuni", "Postavke",
+    "Artikli i usluge", "Izvještaji", "Naplata", "Pomoć", "Postavke",
     "Profil tvrtke", "Fakturiva",
 ]
 RECT = re.compile(r"^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$")
