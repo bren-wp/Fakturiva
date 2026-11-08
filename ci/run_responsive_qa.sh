@@ -40,7 +40,7 @@ set +e
 bash ci/capture_screenshots.sh 2>&1 | tee "$root/capture-first-attempt.log"
 capture_status=${PIPESTATUS[0]}
 # GitHub AVDs have intermittently lost ADB before the *first* capture on
-# landscape-640. Permit one genuine reboot-of-ADB retry only when there are
+# landscape-640 and phone-360. Permit one full emulator reboot only when there are
 # no screenshots to validate. A failed app/UI screen remains a hard failure
 # if the retry does not produce all twenty real accessibility-checked frames.
 captured_count="$(find "$QA_OUTPUT_DIR" -maxdepth 1 -name '*.png' | wc -l)"
@@ -53,7 +53,7 @@ if [ "$capture_status" -ne 0 ] && [ "$captured_count" -eq 0 ]; then
   timeout 120s adb wait-for-device || true
   boot_ready=false
   for attempt in $(seq 1 45); do
-    if [ "$(timeout 6s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r')" = "1" ]; then
+    if [[ "$(timeout 6s adb shell getprop sys.boot_completed 2>/dev/null)" == *1* ]]; then
       boot_ready=true
       break
     fi
