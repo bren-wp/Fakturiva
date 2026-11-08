@@ -12,6 +12,8 @@ import android.os.Build;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -3225,6 +3227,8 @@ public final class MainActivity extends Activity {
             printOptions()[Math.max(0,Math.min(printOptions().length-1,
                 prefs.getInt("default_paper",0)))],
             this::printerPreferences);
+        settingRow(options,"▣","USB termalni pisači",
+            "Ispis na priključenim ESC/POS pisačima",this::usbPrinterHelp);
         settingRow(options,"⌁","LAN receipt printer",
             prefs.getString("printer_host","").isEmpty()?
                 "Configure a local network printer":
@@ -3296,7 +3300,10 @@ public final class MainActivity extends Activity {
             ui("80 mm · Bluetooth ESC/POS (512 dots)"),
             ui("58 mm · LAN ESC/POS"),
             ui("80 mm · LAN ESC/POS (512 dots)"),
-            ui("80 mm · LAN ESC/POS (576 dots)")};
+            ui("80 mm · LAN ESC/POS (576 dots)"),
+            ui("58 mm · USB ESC/POS"),
+            ui("80 mm · USB ESC/POS (512 dots)"),
+            ui("80 mm · USB ESC/POS (576 dots)")};
     }
     private void printerPreferences(){
         String[] choices=printOptions();
@@ -3339,8 +3346,56 @@ public final class MainActivity extends Activity {
                         selected==10?ThermalReceipt.PAPER_80_COMPACT_DOTS:
                         ThermalReceipt.PAPER_80_DOTS;
                     editNetworkPrinter(documentId,dots);
+                }else if(selected>=12&&selected<=14){
+                    int dots=selected==12?ThermalReceipt.PAPER_58_DOTS:
+                        selected==13?ThermalReceipt.PAPER_80_COMPACT_DOTS:
+                        ThermalReceipt.PAPER_80_DOTS;
+                    showUsbPrinters(document,dots);
                 }
             }).show();
+    }
+    private void usbPrinterHelp(){
+        UsbManager manager=(UsbManager)getSystemService(USB_SERVICE);
+        int count=UsbReceiptPrinter.available(manager).size();
+        new AlertDialog.Builder(this)
+            .setTitle(ui("USB termalni pisači"))
+            .setMessage(ui("Priključite USB pisač preko OTG priključka. "
+                +"Podržani su USB Printer Class uređaji s izlaznim bulk endpointom "
+                +"koji razumiju ESC/POS. U dokumentu otvorite Ispis i odaberite "
+                +"USB 58/80 mm. Detektirani kompatibilni USB priključci: ")+count
+                +"\\n\\n"+ui("Ispis nije isto što i kartična naplata ili fiskalizacija."))
+            .setPositiveButton(ui("U redu"),null).show();
+    }
+    private void showUsbPrinters(Store.Document document,int dots){
+        UsbManager manager=(UsbManager)getSystemService(USB_SERVICE);
+        List<UsbDevice> devices=UsbReceiptPrinter.available(manager);
+        if(devices.isEmpty()){
+            new AlertDialog.Builder(this)
+                .setTitle(ui("USB termalni pisači"))
+                .setMessage(ui("Nije pronađen priključen USB Printer Class pisač. "
+                    +"Provjerite OTG kabel, podršku za ESC/POS i USB dozvolu."))
+                .setPositiveButton(ui("U redu"),null).show();
+            return;
+        }
+        devices.sort((a,b)->a.getDeviceName().compareTo(b.getDeviceName()));
+        String[] labels=new String[devices.size()];
+        for(int i=0;i<devices.size();i++){
+            UsbDevice device=devices.get(i);
+            String name=device.getProductName();
+            if(name==null||name.trim().isEmpty()) name="USB receipt printer";
+            labels[i]=name+" · "+String.format(Locale.ROOT,"%04X:%04X",
+                device.getVendorId(),device.getProductId());
+        }
+        new AlertDialog.Builder(this).setTitle(ui("Odaberite USB pisač"))
+            .setMessage(ui("Samo odabrani USB uređaj primit će podatke dokumenta. "
+                +"Korisnik mora potvrditi Android USB dozvolu."))
+            .setItems(labels,(dialog,which)->{
+                toast("Slanje na USB pisač…");
+                UsbReceiptPrinter.send(this,devices.get(which),document,dots,
+                    error->toast(error==null?
+                        "Podaci su poslani. Provjerite ispis na papiru.":error));
+            })
+            .setNegativeButton(ui("Odustani"),null).show();
     }
     private void networkPrinterSettings(){
         editNetworkPrinter(-1,ThermalReceipt.PAPER_58_DOTS);
