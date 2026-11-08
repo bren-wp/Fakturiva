@@ -16,7 +16,7 @@ import java.util.Calendar;
 /** Single-device storage. All document state transitions are transactional. */
 public final class Store extends SQLiteOpenHelper {
     private static final String DB_NAME = "fakturiva.db";
-    public static final int VERSION = 5;
+    public static final int VERSION = 6;
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
     private final Context appContext;
@@ -49,20 +49,20 @@ public final class Store extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE company (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, oib TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'UNSPECIFIED', unit TEXT NOT NULL DEFAULT 'kom')");
-        db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', client_address TEXT NOT NULL DEFAULT '', client_oib TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', issuer_address TEXT NOT NULL DEFAULT '', issuer_oib TEXT NOT NULL DEFAULT '', issuer_email TEXT NOT NULL DEFAULT '', issuer_iban TEXT NOT NULL DEFAULT '', issuer_tax_note TEXT NOT NULL DEFAULT '', client_email TEXT NOT NULL DEFAULT '', client_phone TEXT NOT NULL DEFAULT '', client_vat_id TEXT NOT NULL DEFAULT '', issuer_phone TEXT NOT NULL DEFAULT '', issuer_vat_id TEXT NOT NULL DEFAULT '', issuer_postal_code TEXT NOT NULL DEFAULT '', issuer_city TEXT NOT NULL DEFAULT '', issuer_country TEXT NOT NULL DEFAULT '', issuer_website TEXT NOT NULL DEFAULT '', issuer_bank_name TEXT NOT NULL DEFAULT '', issuer_swift TEXT NOT NULL DEFAULT '', issuer_registry TEXT NOT NULL DEFAULT '', issuer_business_unit TEXT NOT NULL DEFAULT '', issuer_operator TEXT NOT NULL DEFAULT '', issuer_payment_method TEXT NOT NULL DEFAULT '', issuer_payment_reference TEXT NOT NULL DEFAULT '', supply_date TEXT NOT NULL DEFAULT '', quote_title TEXT NOT NULL DEFAULT '')");
+        db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', client_address TEXT NOT NULL DEFAULT '', client_oib TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', issuer_address TEXT NOT NULL DEFAULT '', issuer_oib TEXT NOT NULL DEFAULT '', issuer_email TEXT NOT NULL DEFAULT '', issuer_iban TEXT NOT NULL DEFAULT '', issuer_tax_note TEXT NOT NULL DEFAULT '', client_email TEXT NOT NULL DEFAULT '', client_phone TEXT NOT NULL DEFAULT '', client_vat_id TEXT NOT NULL DEFAULT '', issuer_phone TEXT NOT NULL DEFAULT '', issuer_vat_id TEXT NOT NULL DEFAULT '', issuer_postal_code TEXT NOT NULL DEFAULT '', issuer_city TEXT NOT NULL DEFAULT '', issuer_country TEXT NOT NULL DEFAULT '', issuer_website TEXT NOT NULL DEFAULT '', issuer_bank_name TEXT NOT NULL DEFAULT '', issuer_swift TEXT NOT NULL DEFAULT '', issuer_registry TEXT NOT NULL DEFAULT '', issuer_business_unit TEXT NOT NULL DEFAULT '', issuer_operator TEXT NOT NULL DEFAULT '', issuer_payment_method TEXT NOT NULL DEFAULT '', issuer_payment_reference TEXT NOT NULL DEFAULT '', supply_date TEXT NOT NULL DEFAULT '', quote_title TEXT NOT NULL DEFAULT '', currency_code TEXT NOT NULL DEFAULT 'EUR', issuer_legal_form TEXT NOT NULL DEFAULT '', issuer_trading_name TEXT NOT NULL DEFAULT '', issuer_company_number TEXT NOT NULL DEFAULT '', issuer_register_authority TEXT NOT NULL DEFAULT '', issuer_tax_registration TEXT NOT NULL DEFAULT '', issuer_address_2 TEXT NOT NULL DEFAULT '', issuer_region TEXT NOT NULL DEFAULT '', issuer_payment_terms TEXT NOT NULL DEFAULT '', issuer_footer_note TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE lines (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), name TEXT NOT NULL, qty_milli INTEGER NOT NULL CHECK(qty_milli>0), unit_cents INTEGER NOT NULL CHECK(unit_cents>=0), tax_rate INTEGER NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), paid_on TEXT NOT NULL)");
         db.execSQL("CREATE TABLE sequences (type TEXT NOT NULL, year INTEGER NOT NULL, last_num INTEGER NOT NULL, PRIMARY KEY(type,year))");
         db.execSQL("CREATE INDEX idx_documents_type ON documents(type,created_at DESC)");
         db.execSQL("CREATE INDEX idx_documents_client ON documents(client_id)");
         db.execSQL("CREATE INDEX idx_payments_doc ON payments(document_id)");
-        for (String key : new String[]{"name","oib","address","email","iban","phone","tax_note","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference"}) {
+        for (String key : new String[]{"name","oib","address","email","iban","phone","tax_note","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","currency","legal_form","trading_name","company_number","register_authority","tax_registration","address_2","region","payment_terms","footer_note"}) {
             ContentValues v = new ContentValues(); v.put("key",key); v.put("value","");
             db.insertOrThrow("company",null,v);
         }
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldV,int newV) {
-        if(oldV<1||oldV>5||newV!=VERSION)throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
+        if(oldV<1||oldV>6||newV!=VERSION)throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
         if(oldV==1) {
             for(String column:new String[]{"client_name","client_address","client_oib","issuer_name","issuer_address","issuer_oib","issuer_email","issuer_iban","issuer_tax_note"})
                 db.execSQL("ALTER TABLE documents ADD COLUMN "+column+" TEXT NOT NULL DEFAULT ''");
@@ -88,6 +88,17 @@ public final class Store extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE catalog ADD COLUMN kind TEXT NOT NULL DEFAULT 'UNSPECIFIED'");
             db.execSQL("ALTER TABLE catalog ADD COLUMN unit TEXT NOT NULL DEFAULT 'kom'");
         }
+        if(oldV<=5){
+            db.execSQL("ALTER TABLE documents ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'EUR'");
+            for(String key:new String[]{"legal_form","trading_name","company_number",
+                "register_authority","tax_registration","address_2","region",
+                "payment_terms","footer_note"})
+                db.execSQL("ALTER TABLE documents ADD COLUMN issuer_"+key+" TEXT NOT NULL DEFAULT ''");
+            for(String key:new String[]{"currency","legal_form","trading_name","company_number",
+                "register_authority","tax_registration","address_2","region",
+                "payment_terms","footer_note"})
+                db.execSQL("INSERT OR IGNORE INTO company(key,value) VALUES('"+key+"','')");
+        }
     }
     public static final class Client {
         public long id; public String name, oib, address, email, phone, vatId;
@@ -101,8 +112,11 @@ public final class Store extends SQLiteOpenHelper {
     }
     public static final class Document {
         public long id,clientId,netCents,taxCents,totalCents;
-        public String type,number,clientName,clientAddress,clientOib,issueDate,dueDate,notes,status,quoteTitle;
+        public String type,number,clientName,clientAddress,clientOib,issueDate,dueDate,notes,status,quoteTitle,currencyCode;
         public String issuerName,issuerAddress,issuerOib,issuerEmail,issuerIban,issuerTaxNote;
+        public String issuerLegalForm,issuerTradingName,issuerCompanyNumber,
+            issuerRegisterAuthority,issuerTaxRegistration,issuerAddress2,issuerRegion,
+            issuerPaymentTerms,issuerFooterNote;
         public String clientEmail,clientPhone,clientVatId,issuerPhone,issuerVatId,issuerPostalCode,issuerCity,issuerCountry,issuerWebsite,issuerBankName,issuerSwift,issuerRegistry,issuerBusinessUnit,issuerOperator,issuerPaymentMethod,issuerPaymentReference,supplyDate;
         public List<Item> items = new ArrayList<>();
         public long paidCents;
@@ -124,7 +138,7 @@ public final class Store extends SQLiteOpenHelper {
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
         try{
             for(int i=0;i<keys.length;i++){
-                if(!java.util.Arrays.asList("name","oib","address","email","iban","phone","tax_note","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference").contains(keys[i]))
+                if(!java.util.Arrays.asList("name","oib","address","email","iban","phone","tax_note","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","currency","legal_form","trading_name","company_number","register_authority","tax_registration","address_2","region","payment_terms","footer_note").contains(keys[i]))
                     throw new IllegalArgumentException("Nepoznata postavka");
                 ContentValues v=new ContentValues();v.put("key",keys[i]);v.put("value",values[i].trim());
                 db.insertWithOnConflict("company",null,v,SQLiteDatabase.CONFLICT_REPLACE);
@@ -254,6 +268,7 @@ public final class Store extends SQLiteOpenHelper {
             }
             ContentValues doc=new ContentValues();
             doc.put("type",type);doc.put("client_id",clientId);
+            doc.put("currency_code",BillingCurrency.canonical(setting("currency")));
             doc.put("issue_date",issueDate);doc.put("due_date",dueDate);doc.put("supply_date",supplyDate);
             doc.put("notes",notes);doc.put("quote_title",QUOTE.equals(type)?
                 (quoteTitle==null?"":quoteTitle.trim()):"");doc.put("status",DRAFT);
@@ -264,7 +279,7 @@ public final class Store extends SQLiteOpenHelper {
                 doc.put("client_name",client.getString(0));doc.put("client_address",client.getString(1));doc.put("client_oib",client.getString(2));
                 doc.put("client_email",client.getString(3));doc.put("client_phone",client.getString(4));doc.put("client_vat_id",client.getString(5));
             }
-            for(String key:new String[]{"name","address","oib","email","iban","tax_note","phone","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference"})doc.put("issuer_"+key,setting(key));
+            for(String key:new String[]{"name","address","oib","email","iban","tax_note","phone","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","legal_form","trading_name","company_number","register_authority","tax_registration","address_2","region","payment_terms","footer_note"})doc.put("issuer_"+key,setting(key));
             long id=db.insertOrThrow("documents",null,doc);
             for(Item i:items) {
                 ContentValues v=new ContentValues();
@@ -330,7 +345,7 @@ public final class Store extends SQLiteOpenHelper {
     }
     public Document document(long id) {
         try(Cursor c=getReadableDatabase().rawQuery(
-            "SELECT d.id,d.type,d.number,d.client_id,d.client_name,d.client_address,d.client_oib,d.issue_date,d.due_date,d.notes,d.status,d.net_cents,d.tax_cents,d.total_cents,(SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE document_id=d.id),d.issuer_name,d.issuer_address,d.issuer_oib,d.issuer_email,d.issuer_iban,d.issuer_tax_note,d.client_email,d.client_phone,d.client_vat_id,d.issuer_phone,d.issuer_vat_id,d.issuer_postal_code,d.issuer_city,d.issuer_country,d.issuer_website,d.issuer_bank_name,d.issuer_swift,d.issuer_registry,d.issuer_business_unit,d.issuer_operator,d.issuer_payment_method,d.issuer_payment_reference,d.supply_date,d.quote_title FROM documents d WHERE d.id=?",
+            "SELECT d.id,d.type,d.number,d.client_id,d.client_name,d.client_address,d.client_oib,d.issue_date,d.due_date,d.notes,d.status,d.net_cents,d.tax_cents,d.total_cents,(SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE document_id=d.id),d.issuer_name,d.issuer_address,d.issuer_oib,d.issuer_email,d.issuer_iban,d.issuer_tax_note,d.client_email,d.client_phone,d.client_vat_id,d.issuer_phone,d.issuer_vat_id,d.issuer_postal_code,d.issuer_city,d.issuer_country,d.issuer_website,d.issuer_bank_name,d.issuer_swift,d.issuer_registry,d.issuer_business_unit,d.issuer_operator,d.issuer_payment_method,d.issuer_payment_reference,d.supply_date,d.quote_title,d.currency_code,d.issuer_legal_form,d.issuer_trading_name,d.issuer_company_number,d.issuer_register_authority,d.issuer_tax_registration,d.issuer_address_2,d.issuer_region,d.issuer_payment_terms,d.issuer_footer_note FROM documents d WHERE d.id=?",
             new String[]{String.valueOf(id)})) {
             if(!c.moveToFirst()) throw new IllegalArgumentException("Dokument ne postoji");
             Document d=new Document();d.id=c.getLong(0);d.type=c.getString(1);d.number=c.getString(2);
@@ -357,6 +372,12 @@ public final class Store extends SQLiteOpenHelper {
             d.issuerPaymentReference=c.getString(36);
             d.supplyDate=c.getString(37);
             d.quoteTitle=c.getString(38);
+            d.currencyCode=BillingCurrency.canonical(c.getString(39));
+            d.issuerLegalForm=c.getString(40);d.issuerTradingName=c.getString(41);
+            d.issuerCompanyNumber=c.getString(42);d.issuerRegisterAuthority=c.getString(43);
+            d.issuerTaxRegistration=c.getString(44);d.issuerAddress2=c.getString(45);
+            d.issuerRegion=c.getString(46);d.issuerPaymentTerms=c.getString(47);
+            d.issuerFooterNote=c.getString(48);
             try(Cursor l=getReadableDatabase().rawQuery("SELECT id,name,qty_milli,unit_cents,tax_rate FROM lines WHERE document_id=? ORDER BY id",new String[]{String.valueOf(id)})){
                 while(l.moveToNext()) { Item i=new Item();i.id=l.getLong(0);i.name=l.getString(1);i.qtyMilli=l.getLong(2);i.unitCents=l.getLong(3);i.taxRate=l.getInt(4);d.items.add(i); }
             }
@@ -394,7 +415,7 @@ public final class Store extends SQLiteOpenHelper {
             String code=(INVOICE.equals(type)?"R":"P")+"-"+year+"-"+String.format(java.util.Locale.ROOT,"%04d",num);
             ContentValues v=new ContentValues();v.put("number",code);v.put("status",INVOICE.equals(type)?ISSUED:SENT);
             // Freeze issuer identity and payment details at document confirmation time.
-            for(String key:new String[]{"name","address","oib","email","iban","tax_note","phone","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference"})v.put("issuer_"+key,setting(key));
+            for(String key:new String[]{"name","address","oib","email","iban","tax_note","phone","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","legal_form","trading_name","company_number","register_authority","tax_registration","address_2","region","payment_terms","footer_note"})v.put("issuer_"+key,setting(key));
             if(db.update("documents",v,"id=? AND status=?",new String[]{String.valueOf(id),DRAFT})!=1)
                 throw new IllegalStateException("Dokument se promijenio");
             db.setTransactionSuccessful();saved=true;
@@ -420,7 +441,15 @@ public final class Store extends SQLiteOpenHelper {
         Document d=document(quoteId);
         if(!QUOTE.equals(d.type) || DRAFT.equals(d.status) || VOID.equals(d.status))
             throw new IllegalStateException("Potvrdite ponudu prije pretvaranja");
-        return createDraft(INVOICE,d.clientId,d.issueDate,d.dueDate,d.supplyDate,"Prema ponudi "+d.number,d.items);
+        long id=createDraft(INVOICE,d.clientId,d.issueDate,d.dueDate,d.supplyDate,"Prema ponudi "+d.number,d.items);
+        // Converting an offer must not silently switch its currency.
+        SQLiteDatabase database=getWritableDatabase();
+        ContentValues currency=new ContentValues();
+        currency.put("currency_code",d.currencyCode);
+        if(database.update("documents",currency,"id=? AND status='DRAFT'",new String[]{String.valueOf(id)})!=1)
+            throw new IllegalStateException("Failed to preserve quote currency");
+        snapshotAfterWrite();
+        return id;
     }
     public long countMonth(String type,String yearMonth){
         if(!INVOICE.equals(type)&&!QUOTE.equals(type))throw new IllegalArgumentException("Nepoznati dokument");
@@ -447,17 +476,18 @@ public final class Store extends SQLiteOpenHelper {
     /** Individually logged payments; never infer a receipt from invoice status alone. */
     public static final class Payment {
         public long id,documentId,amountCents;
-        public String paidOn,invoiceNumber,clientName;
+        public String paidOn,invoiceNumber,clientName,currencyCode;
     }
     public List<Payment> payments() {
         ArrayList<Payment> out=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery(
-            "SELECT p.id,p.document_id,p.amount_cents,p.paid_on,COALESCE(d.number,'Nacrt'),d.client_name "+
+            "SELECT p.id,p.document_id,p.amount_cents,p.paid_on,COALESCE(d.number,'Nacrt'),d.client_name,d.currency_code "+
             "FROM payments p JOIN documents d ON d.id=p.document_id ORDER BY p.paid_on DESC,p.id DESC",null)){
             while(c.moveToNext()){
                 Payment item=new Payment();item.id=c.getLong(0);item.documentId=c.getLong(1);
                 item.amountCents=c.getLong(2);item.paidOn=c.getString(3);
-                item.invoiceNumber=c.getString(4);item.clientName=c.getString(5);out.add(item);
+                item.invoiceNumber=c.getString(4);item.clientName=c.getString(5);
+                item.currencyCode=BillingCurrency.canonical(c.getString(6));out.add(item);
             }
         }
         return out;
@@ -467,12 +497,16 @@ public final class Store extends SQLiteOpenHelper {
             "SELECT COALESCE(SUM(total_cents-(SELECT COALESCE(SUM(amount_cents),0) FROM payments p WHERE p.document_id=d.id)),0) "+
             "FROM documents d WHERE d.type='INVOICE' AND d.status IN ('ISSUED','PAID')",null);
     }
-    public long receivedCents() {
+    public long receivedCents(){return receivedCents("EUR");}
+    public long receivedCents(String currency){
         return DatabaseUtils.longForQuery(getReadableDatabase(),
-            "SELECT COALESCE(SUM(amount_cents),0) FROM payments",null);
+            "SELECT COALESCE(SUM(p.amount_cents),0) FROM payments p "+
+            "JOIN documents d ON d.id=p.document_id WHERE d.currency_code=?",
+            new String[]{BillingCurrency.canonical(currency)});
     }
     /** Twelve chronological monthly receipt totals, with zeroes for empty months. */
-    public long[] monthlyReceipts(){
+    public long[] monthlyReceipts(){return monthlyReceipts("EUR");}
+    public long[] monthlyReceipts(String currency){
         long[] values=new long[12];
         java.util.Calendar month=java.util.Calendar.getInstance();
         month.set(java.util.Calendar.DAY_OF_MONTH,1);
@@ -480,8 +514,9 @@ public final class Store extends SQLiteOpenHelper {
         java.text.SimpleDateFormat fmt=new java.text.SimpleDateFormat("yyyy-MM",java.util.Locale.ROOT);
         for(int i=0;i<values.length;i++){
             values[i]=DatabaseUtils.longForQuery(getReadableDatabase(),
-                "SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE substr(paid_on,1,7)=?",
-                new String[]{fmt.format(month.getTime())});
+                "SELECT COALESCE(SUM(p.amount_cents),0) FROM payments p JOIN documents d "+
+                "ON d.id=p.document_id WHERE substr(p.paid_on,1,7)=? AND d.currency_code=?",
+                new String[]{fmt.format(month.getTime()),BillingCurrency.canonical(currency)});
             month.add(java.util.Calendar.MONTH,1);
         }
         return values;
