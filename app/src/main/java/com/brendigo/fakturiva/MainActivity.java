@@ -156,13 +156,15 @@ public final class MainActivity extends Activity {
     private String docMoney(Store.Document d,long amount){
         return BillingCurrency.format(amount,d.currencyCode,selectedLocale());
     }
-    private String draftMoney(long amount){
-        String currency=selectedCurrency();
+    private String draftCurrency(){
         if(editingDraftId>0){
-            try{currency=db.document(editingDraftId).currencyCode;}
+            try{return db.document(editingDraftId).currencyCode;}
             catch(Exception ignored){}
         }
-        return BillingCurrency.format(amount,currency,selectedLocale());
+        return selectedCurrency();
+    }
+    private String draftMoney(long amount){
+        return BillingCurrency.format(amount,draftCurrency(),selectedLocale());
     }
     private int bg(){return dark?0xff0d182a:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
@@ -1633,7 +1635,7 @@ public final class MainActivity extends Activity {
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
         EditText qty=field("Količina",editing?
             Money.decimalQuantity(current.qtyMilli):"1");
-        EditText price=field("Jedinična cijena, EUR",editing?
+        EditText price=field("Unit price ("+draftCurrency()+")",editing?
             String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         qty.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -1643,7 +1645,10 @@ public final class MainActivity extends Activity {
         if(editing)for(int i=0;i<rates.length;i++)
             if(rates[i].equals(current.taxRate+"%"))tax.setSelection(i);
         fieldLabel(form,"Stavka",name);
-        List<Store.Item> catalog=db.products();
+        List<Store.Item> catalog=new ArrayList<>();
+        for(Store.Item item:db.products())
+            if(draftCurrency().equals(BillingCurrency.canonical(item.currencyCode)))
+                catalog.add(item);
         if(!catalog.isEmpty()){
             Spinner product=new Spinner(this);
             ArrayList<String> options=new ArrayList<>();
@@ -2057,7 +2062,7 @@ public final class MainActivity extends Activity {
         EditText amount=field("Iznos uplate",
             String.format(selectedLocale(),"%.2f",d.outstanding()/100.0));
         amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        fieldLabel(form,"Iznos u EUR",amount);
+        fieldLabel(form,"Amount ("+d.currencyCode+")",amount);
         EditText paidOn=field("Datum uplate",later(0));
         dateInput(paidOn);fieldLabel(form,"Datum uplate",paidOn);
         AlertDialog dialog=new AlertDialog.Builder(this)
@@ -2624,12 +2629,13 @@ public final class MainActivity extends Activity {
                 "PRODUCT".equals(item.kind)?"Proizvod":"Nerazvrstano";
             TextView hint=label(kind+" · 1 "+item.unit,11,sub(),false);
             hint.setSingleLine(true);description.addView(hint);
-            TextView amount=label(money(item.unitCents),12,ink(),true);
+            TextView amount=label(BillingCurrency.format(item.unitCents,
+            item.currencyCode,selectedLocale()),12,ink(),true);
             amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
             row.addView(amount);
             row.setTag(item);
             row.setFocusable(true);row.setContentDescription(item.name+", "+kind+
-                ", "+money(item.unitCents)+", uredi stavku");
+                ", "+BillingCurrency.format(item.unitCents,item.currencyCode,selectedLocale())+", uredi stavku");
             row.setOnClickListener(v->editProduct(item));
             grouped.addView(row);
         }
@@ -2722,7 +2728,8 @@ public final class MainActivity extends Activity {
         boolean editing=current!=null;
         LinearLayout form=vertical();pad(form,18,5);
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
-        EditText price=field("Jedinična cijena (EUR)",editing?
+        EditText price=field("Unit price ("+(editing?
+            BillingCurrency.canonical(current.currencyCode):selectedCurrency())+")",editing?
             String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] kinds={"Odaberite vrstu","Usluga","Proizvod","Nerazvrstano"};
