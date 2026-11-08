@@ -31,6 +31,8 @@ jobs:
         run: php web/tests/web-auth-smoke.php
       - name: Verify HTTPS-only API handling, auth and account deletion over HTTP loopback
         run: bash web/tests/http-smoke.sh
+      - name: Verify public web registration, PIN login, CSRF and account deletion over HTTP fixture
+        run: bash web/tests/web-form-http.sh
       - name: Verify no keys or test credentials were checked in
         run: |
           if git ls-files web/storage | grep -E '/secret\.php$|/accounts/.+\.json$|/index/.+\.json$|/limits/.+\.json$'; then
