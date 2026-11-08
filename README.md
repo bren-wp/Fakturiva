@@ -84,9 +84,9 @@ Ovo su **autentične snimke Android aplikacije**, a ne dizajnerske makete. Sniml
 
 [**Sva GitHub izdanja i datoteke za preuzimanje**](https://github.com/bren-wp/Fakturiva/releases)
 
-**Novo:** [Fakturiva v0.15.0-preview.1 — Android pretpregled](https://github.com/bren-wp/Fakturiva/releases/tag/v0.15.0-preview.1)
+**Novo:** [Fakturiva v0.16.0-preview.1 — Android pretpregled](https://github.com/bren-wp/Fakturiva/releases/tag/v0.16.0-preview.1)
 
-**U izdanju v0.15:** dodatno polirani nativni zasloni **15 — Izvještaji**, **16 — Naplata** i **17 — eRačuni**. Izvještaji imaju čitljiviji odabir razdoblja i kompaktnije kartice, Naplata bolje poravnane filtre i popis, a eRačuni pregledniju statusnu poruku. Stvarni financijski izračuni, CSV izvoz i lokalni podaci ostaju očuvani. Integracija eRačuna i fiskalizacija još nisu dostupne.
+**U izdanju v0.16:** polirani nativni zasloni **18 — Postavke**, **19 — Profil tvrtke** i **20 — Tamna tema**. Prilagođeni su razmaci svih postavki, preglednost obrasca tvrtke i raspored tamne početne stranice. Sva poslovna polja, maskiranje OIB-a i telefona, sigurnosne kopije te stvarni financijski podaci ostaju funkcionalni. Poboljšan je i oporavak emulatora tijekom responsive testiranja.
 
 | Datoteka | Namjena |
 | :--- | :--- |
