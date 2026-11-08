@@ -3278,16 +3278,20 @@ public final class MainActivity extends Activity {
         place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note",
             "legal_form","trading_name","company_number","register_authority","tax_registration",
-            "address_2","region","payment_terms","footer_note"};
+            "address_2","region","payment_terms","footer_note","contact_person",
+            "bank_account_number","bank_routing_number","bank_sort_code",
+            "bank_address","invoice_reference"};
         String[] labels={"Legal business name","Tax ID (optional)","VAT ID (optional)","Street address","Postal code","City","Country","Email","Phone","Website","IBAN (optional)","Bank name","BIC / SWIFT","Register reference (optional)","Business unit","Operator reference","Payment method","Payment reference","Tax or legal note",
             "Legal form (Ltd, Inc, LLC, GmbH, d.o.o., sole trader...)","Trading name (optional)",
             "Company registration number","Registering authority","Tax registration details",
-            "Additional address line","State / province / region","Payment terms","Invoice footer note"};
+            "Additional address line","State / province / region","Payment terms","Invoice footer note",
+            "Contact person","Bank account number (non-IBAN)","Bank routing number / ABA",
+            "Sort code / branch code","Bank address","Purchase order / invoice reference"};
         EditText[] fields=new EditText[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
-        int[][] sections={{0,19,20,1,3,24,6,7,8},
-            {10,11,12,16,17,26},
-            {2,4,5,9,13,14,15,18,21,22,23,25,27}};
+        int[][] sections={{0,19,20,1,3,24,6,7,8,28},
+            {10,11,12,16,17,26,29,30,31,32},
+            {2,4,5,9,13,14,15,18,21,22,23,25,27,33}};
         String[] sectionNames={"Company and legal identity","Payment and bank details","Additional invoice details"};
         for(int group=0;group<sections.length;group++){
             LinearLayout card=group==0?form:card();
