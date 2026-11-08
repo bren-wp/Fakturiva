@@ -11,10 +11,11 @@ spec.loader.exec_module(module)
 
 
 def ui(title_package="com.android.systemui",title="Viewing full screen",
-       button_package="com.android.systemui",button="Got it"):
+       button_package="com.android.systemui",button="Got it",
+       title_resource="com.android.systemui:id/immersive_cling_title"):
     root=ET.Element("hierarchy")
     ET.SubElement(root,"node",{"package":title_package,"text":title,
-        "resource-id":"com.android.systemui:id/immersive_cling_title"})
+        "resource-id":title_resource})
     ET.SubElement(root,"node",{"package":button_package,"text":button,
         "resource-id":"android:id/ok","bounds":"[600,300][780,450]"})
     return root
@@ -24,7 +25,11 @@ class FullscreenPromptTest(unittest.TestCase):
     def test_android16_systemui_prompt(self):
         self.assertEqual((690,375),module.acknowledgment(ui()))
     def test_unrelated_system_dialog_is_never_dismissed(self):
-        self.assertIsNone(module.acknowledgment(ui(title="Permission required")))
+        self.assertIsNone(module.acknowledgment(ui(title="Permission required",
+            title_resource="android:id/alertTitle")))
+    def test_android16_text_without_legacy_resource(self):
+        self.assertEqual((690,375),module.acknowledgment(
+            ui(title_resource="android:id/alertTitle")))
     def test_app_owned_button_is_never_tapped(self):
         self.assertIsNone(module.acknowledgment(ui(button_package="com.brendigo.fakturiva")))
     def test_app_owned_title_is_not_a_system_prompt(self):
