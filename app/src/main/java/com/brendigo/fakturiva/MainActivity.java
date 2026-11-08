@@ -3385,7 +3385,7 @@ public final class MainActivity extends Activity {
                         UsbReceiptPrinter.send(this,selected,document,dots,
                             error->toast(error==null?
                                 ui("Podaci su poslani. Provjerite ispis na papiru."):
-                                error));
+                                ui(error)));
                     }).show();
             })
             .setNegativeButton(ui("Odustani"),null).show();
