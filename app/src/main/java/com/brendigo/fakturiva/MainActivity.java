@@ -782,8 +782,9 @@ public final class MainActivity extends Activity {
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
-        // Keep the title's baseline unchanged while providing a 48dp
-        // accessible hit target for the arrow shown in both original homes.
+        // A 48dp-tall arrow pushed the quick-action cards and recent
+        // documents below their original y positions. Keep a broad 48dp
+        // horizontal target, but a compact 36dp visual row instead.
         gap(body,1);
         LinearLayout quickHeader=horizontal();
         quickHeader.addView(label("Brze radnje",18,ink(),true),
@@ -792,9 +793,13 @@ public final class MainActivity extends Activity {
         moreActions.setGravity(Gravity.CENTER);
         moreActions.setContentDescription("Otvori sve brze radnje");
         moreActions.setMinimumWidth(dp(48));
-        moreActions.setMinimumHeight(dp(48));
-        quickHeader.addView(moreActions,lp(48,48));
+        moreActions.setMinimumHeight(dp(36));
+        quickHeader.addView(moreActions,lp(48,36));
         moreActions.setOnClickListener(v->showQuickActions());
+        // Make the entire title row another comfortable way to open the
+        // same fully functional menu, not just the compact right chevron.
+        quickHeader.setContentDescription("Otvori sve brze radnje");
+        quickHeader.setOnClickListener(v->showQuickActions());
         place(body,quickHeader);
         gap(body,1);
         LinearLayout fast=horizontal();
