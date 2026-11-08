@@ -30,6 +30,12 @@ Settings → Printers and paper lets users choose a default format and open Andr
 
 Additional printer/SDK and Croatian POS acquirer boundary matrix: [PRINTER_VENDOR_AND_POS_MATRIX.md](PRINTER_VENDOR_AND_POS_MATRIX.md).
 
+### SUNMI built-in printer (development integration)
+
+On supported SUNMI Android devices, Fakturiva also exposes the **official SUNMI inner-printer SDK** in the printing dialog. The printer service reports its paper width, and the app renders the same raster receipt as Bluetooth/LAN/USB. The implementation buffers bounded Binder requests and does not replay uncertain partial output during cleanup. Non-SUNMI Android devices do not display this option. Compatible SUNMI models and real printer firmware **have not been certified**. This is printer-only functionality; it does not authorize card transactions or fiscalization.
+
+Full vendor matrix: [POS_INTEGRATION_MATRIX.md](POS_INTEGRATION_MATRIX.md).
+
 ## Thermal output
 
 Receipts contain the saved document number or a clearly marked **DRAFT — NOT ISSUED** status, seller and customer identity, international company/tax details, descriptions, quantities, unit prices, tax rate, totals and currency, payment status, optional bank details and business notes. Missing optional fields are omitted, not fabricated.
