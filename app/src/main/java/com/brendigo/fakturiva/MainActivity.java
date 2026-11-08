@@ -167,9 +167,10 @@ public final class MainActivity extends Activity {
     }
     private TextView label(String s,int size,int color,boolean strong){TextView t=new TextView(this);t.setText(s);
         t.setTextColor(color);t.setTextSize(size);t.setFontFeatureSettings("kern");
-        // Reference images use Inter. Constrain typography experiments to
-        // dashboard 04/20 and document preview 08/11, not all other forms.
-        t.setTypeface(("home".equals(screen)||"detail".equals(screen))
+        // Inter belongs to the original design on the highest-deviation
+        // dashboard, reports and document-preview screens.
+        t.setTypeface(("home".equals(screen)||"detail".equals(screen)||
+            "reports".equals(screen))
             ?referenceTypeface(strong)
             :Typeface.create("sans-serif",strong?Typeface.BOLD:Typeface.NORMAL));
         t.setGravity(Gravity.CENTER_VERTICAL);return t;}
@@ -2773,17 +2774,34 @@ public final class MainActivity extends Activity {
         place(body,header);gap(body,15);
 
         LinearLayout period=horizontal();period.setGravity(Gravity.CENTER_VERTICAL);
-        TextView picker=label("▣  "+month+"  ›",12,ink(),true);
-        picker.setSingleLine(true);
-        picker.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        pad(picker,10,10);
+        // On a 393dp reference the month control is compact, NOT the whole
+        // remaining row. Constrain it while retaining an ellipsis on mini phones.
+        int windowDp=Math.round(getResources().getDisplayMetrics().widthPixels/
+            getResources().getDisplayMetrics().density);
+        int pickerWidth=Math.max(96,Math.min(155,
+            windowDp-36-8-(currentMonth?97:112)-12));
+        LinearLayout picker=horizontal();
         picker.setBackground(outlined(panel()));
-        LinearLayout.LayoutParams periodLp=new LinearLayout.LayoutParams(0,-2,1);
+        picker.setPadding(dp(10),dp(6),dp(10),dp(6));
+        picker.setMinimumHeight(dp(40));
+        ImageView monthIcon=icon(R.drawable.ic_calendar,sub());
+        picker.addView(monthIcon,lp(18,18));
+        TextView monthText=label(month,12,ink(),true);
+        monthText.setSingleLine(true);
+        monthText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams monthNameLp=new LinearLayout.LayoutParams(0,-2,1);
+        monthNameLp.leftMargin=dp(7);
+        picker.addView(monthText,monthNameLp);
+        TextView nextMonth=label("›",18,sub(),true);
+        nextMonth.setGravity(Gravity.CENTER);
+        picker.addView(nextMonth,lp(11,20));
+        LinearLayout.LayoutParams periodLp=lp(pickerWidth,-2);
         periodLp.rightMargin=dp(8);
         period.addView(picker,periodLp);
         picker.setContentDescription("Odaberi mjesec izvještaja: "+month);
+        picker.setFocusable(true);
         picker.setOnClickListener(v->reportPeriodPicker());
-        // The month control takes the remaining width; no forced line wrap.
+        period.addView(new View(this),new LinearLayout.LayoutParams(0,dp(1),1));
         TextView current=label(currentMonth?"Ovaj mjesec":"Na ovaj mjesec",11,BLUE,true);
         current.setGravity(Gravity.CENTER);
         current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
