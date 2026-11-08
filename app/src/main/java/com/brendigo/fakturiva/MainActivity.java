@@ -3209,22 +3209,22 @@ public final class MainActivity extends Activity {
     }
     private String[] printOptions(){
         String[] system=SystemInvoicePrinter.formats();
-        return new String[]{system[0],system[1],system[2],system[3],
-            "58 mm · Bluetooth ESC/POS","80 mm · Bluetooth ESC/POS"};
+        return new String[]{ui(system[0]),ui(system[1]),ui(system[2]),ui(system[3]),
+            ui("58 mm · Bluetooth ESC/POS"),ui("80 mm · Bluetooth ESC/POS")};
     }
     private void printerPreferences(){
         String[] choices=printOptions();
         int preferred=Math.max(0,Math.min(choices.length-1,
             prefs.getInt("default_paper",0)));
         new AlertDialog.Builder(this)
-            .setTitle("Printers and paper")
+            .setTitle(ui("Printers and paper"))
             .setSingleChoiceItems(choices,preferred,(dialog,which)->{
                 prefs.edit().putInt("default_paper",which).apply();
                 dialog.dismiss();settings();
             })
-            .setNeutralButton("Pair Bluetooth printer",(dialog,which)->
+            .setNeutralButton(ui("Pair Bluetooth printer"),(dialog,which)->
                 startActivity(new Intent("android.settings.BLUETOOTH_SETTINGS")))
-            .setNegativeButton("Cancel",null).show();
+            .setNegativeButton(ui("Cancel"),null).show();
     }
     private void showPrinterDialog(long documentId){
         Store.Document document;
@@ -3233,10 +3233,10 @@ public final class MainActivity extends Activity {
         int preferred=Math.max(0,Math.min(choices.length-1,
             prefs.getInt("default_paper",0)));
         int[] choice={preferred};
-        new AlertDialog.Builder(this).setTitle("Print invoice / quote")
+        new AlertDialog.Builder(this).setTitle(ui("Print invoice / quote"))
             .setSingleChoiceItems(choices,preferred,(dialog,which)->choice[0]=which)
-            .setNegativeButton("Cancel",null)
-            .setPositiveButton("Print",(dialog,which)->{
+            .setNegativeButton(ui("Cancel"),null)
+            .setPositiveButton(ui("Print"),(dialog,which)->{
                 prefs.edit().putInt("default_paper",choice[0]).apply();
                 if(choice[0]<4){
                     try{SystemInvoicePrinter.print(this,document,choice[0]);}
@@ -3276,8 +3276,8 @@ public final class MainActivity extends Activity {
             BluetoothAdapter adapter=manager==null?null:manager.getAdapter();
             if(adapter==null){toast("Bluetooth is unavailable on this device.");return;}
             if(!adapter.isEnabled()){
-                new AlertDialog.Builder(this).setTitle("Bluetooth is disabled")
-                    .setMessage("Enable Bluetooth and pair an ESC/POS printer in Android settings.")
+                new AlertDialog.Builder(this).setTitle(ui("Bluetooth is disabled"))
+                    .setMessage(ui("Enable Bluetooth and pair an ESC/POS printer in Android settings."))
                     .setPositiveButton("Bluetooth settings",(dialog,which)->
                         startActivity(new Intent("android.settings.BLUETOOTH_SETTINGS")))
                     .setNegativeButton("Cancel",null).show();
@@ -3287,8 +3287,8 @@ public final class MainActivity extends Activity {
             devices.sort((a,b)->String.valueOf(a.getName()).compareToIgnoreCase(
                 String.valueOf(b.getName())));
             if(devices.isEmpty()){
-                new AlertDialog.Builder(this).setTitle("No paired Bluetooth printers")
-                    .setMessage("First pair a compatible Bluetooth Classic ESC/POS receipt printer in Android settings.")
+                new AlertDialog.Builder(this).setTitle(ui("No paired Bluetooth printers"))
+                    .setMessage(ui("First pair a compatible Bluetooth Classic ESC/POS receipt printer in Android settings."))
                     .setPositiveButton("Bluetooth settings",(dialog,which)->
                         startActivity(new Intent("android.settings.BLUETOOTH_SETTINGS")))
                     .setNegativeButton("Cancel",null).show();
@@ -3298,13 +3298,13 @@ public final class MainActivity extends Activity {
             for(int i=0;i<names.length;i++){
                 BluetoothDevice device=devices.get(i);
                 String name=device.getName();
-                names[i]=name==null||name.trim().isEmpty()?"Paired Bluetooth device":name;
+                names[i]=name==null||name.trim().isEmpty()?ui("Paired Bluetooth device"):name;
                 String address=device.getAddress();
                 if(address!=null&&address.length()>=5)
                     names[i]+=" · "+address.substring(address.length()-5);
             }
             Store.Document document=db.document(documentId);
-            new AlertDialog.Builder(this).setTitle("Choose ESC/POS printer")
+            new AlertDialog.Builder(this).setTitle(ui("Choose ESC/POS printer"))
                 .setItems(names,(dialog,index)->{
                     toast("Sending receipt to printer…");
                     try{
