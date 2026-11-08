@@ -784,7 +784,7 @@ public final class MainActivity extends Activity {
             double change=100.0*(monthly[11]-monthly[10])/(double)monthly[10];
             if(Double.isFinite(change)){
                 TextView delta=label((change>=0?"↗ +":"↘ ")+
-                    String.format(Locale.forLanguageTag("hr-HR"),"%.1f%%",change),
+                    String.format(selectedLocale(),"%.1f%%",change),
                     11,change>=0?0xff79e7c6:0xffffb6a9,true);
                 delta.setGravity(Gravity.CENTER);
                 delta.setBackground(shape(0xff314c82,13));pad(delta,7,5);
@@ -1634,7 +1634,7 @@ public final class MainActivity extends Activity {
         EditText qty=field("Količina",editing?
             Money.decimalQuantity(current.qtyMilli):"1");
         EditText price=field("Jedinična cijena, EUR",editing?
-            String.format(Locale.forLanguageTag("hr-HR"),"%.2f",current.unitCents/100.0):"0,00");
+            String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         qty.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] rates={"25%","13%","5%","0%"};
@@ -1658,7 +1658,7 @@ public final class MainActivity extends Activity {
                     if(pos<=0)return;
                     Store.Item item=catalog.get(pos-1);
                     name.setText(item.name);
-                    price.setText(String.format(Locale.forLanguageTag("hr-HR"),
+                    price.setText(String.format(selectedLocale(),
                         "%.2f",item.unitCents/100.0));
                     for(int j=0;j<rates.length;j++)
                         if(rates[j].equals(item.taxRate+"%"))tax.setSelection(j);
@@ -2055,7 +2055,7 @@ public final class MainActivity extends Activity {
         LinearLayout form=vertical();pad(form,17,7);
         form.addView(label("Preostalo za naplatu: "+docMoney(d,d.outstanding()),14,ink(),true));
         EditText amount=field("Iznos uplate",
-            String.format(Locale.forLanguageTag("hr-HR"),"%.2f",d.outstanding()/100.0));
+            String.format(selectedLocale(),"%.2f",d.outstanding()/100.0));
         amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         fieldLabel(form,"Iznos u EUR",amount);
         EditText paidOn=field("Datum uplate",later(0));
@@ -2723,7 +2723,7 @@ public final class MainActivity extends Activity {
         LinearLayout form=vertical();pad(form,18,5);
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
         EditText price=field("Jedinična cijena (EUR)",editing?
-            String.format(Locale.forLanguageTag("hr-HR"),"%.2f",current.unitCents/100.0):"0,00");
+            String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] kinds={"Odaberite vrstu","Usluga","Proizvod","Nerazvrstano"};
         Spinner kind=new Spinner(this);
@@ -2774,7 +2774,7 @@ public final class MainActivity extends Activity {
         pad(body,18,16);
         String yearMonth=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
             .format(reportMonth.getTime());
-        String month=new SimpleDateFormat("LLLL yyyy.",Locale.forLanguageTag("hr-HR"))
+        String month=new SimpleDateFormat("LLLL yyyy.",selectedLocale())
             .format(reportMonth.getTime());
         if(!month.isEmpty())month=Character.toUpperCase(month.charAt(0))+month.substring(1);
         Calendar previous=(Calendar)reportMonth.clone();
@@ -2859,7 +2859,7 @@ public final class MainActivity extends Activity {
         long previousCents=db.invoicedCentsMonth(previousKey,selectedCurrency());
         if(previousCents>0){
             double pct=(totals[0]-previousCents)*100d/previousCents;
-            String trend=String.format(Locale.forLanguageTag("hr-HR"),
+            String trend=String.format(selectedLocale(),
                 "%s%.1f %%",pct>0?"+":"",pct);
             revenue.addView(label(trend+"  u odnosu na prethodni mjesec",11,
                 pct>=0?0xff13a884:RED,true));
@@ -3543,10 +3543,10 @@ public final class MainActivity extends Activity {
                 if(pendingReportCsvMonth==null)
                     throw new IllegalStateException("Mjesec izvještaja nije poznat. Ponovite izvoz.");
                 long[] summary=reportMetrics(db.documents(Store.INVOICE),
-                    db.payments(),pendingReportCsvMonth);
+                    db.payments(),pendingReportCsvMonth,selectedCurrency());
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
                     if(out==null)throw new IllegalStateException("Datoteka nije dostupna");
-                    ReportCsv.write(pendingReportCsvMonth,summary,out);
+                    ReportCsv.write(pendingReportCsvMonth,summary,selectedCurrency(),out);
                 }
                 toast("Mjesečni izvještaj uspješno spremljen");
             }else if(code==BACKUP_EXPORT){
