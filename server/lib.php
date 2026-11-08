@@ -155,6 +155,9 @@ function accountByName(string $username): ?array {
 function requirePassphrase(string $password): void {
     if(strlen($password)<12||strlen($password)>256)
         fail(422,'Use a dedicated server passphrase of 12–256 bytes');
+    // Bcrypt truncates input after 72 bytes on hosts without Argon2id.
+    if(!defined('PASSWORD_ARGON2ID') && strlen($password)>72)
+        fail(422,'This host supports passphrases of at most 72 bytes');
 }
 function mintToken(array &$account): string {
     $random=bin2hex(random_bytes(32));
@@ -218,6 +221,7 @@ function signUp(string $username,string $password,string $address): array {
     });
 }
 function signIn(string $username,string $password,string $address): array {
+    requirePassphrase($password);
     return transaction(function() use($username,$password,$address): array {
         rateLimit($address,false);
         $account=accountByName($username);
