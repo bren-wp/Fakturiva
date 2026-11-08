@@ -488,15 +488,15 @@ public final class MainActivity extends Activity {
         mark.setTranslationX(dp(.67f));
         mark.setTranslationY(dp(3.67f));
         TextView name=label("Fakturiva",44,WHITE,true);name.setGravity(Gravity.CENTER);
-        name.setTextScaleX(.989f);
+        name.setTextScaleX(.982f);
         // The design uses a heavier headline than Android Roboto Bold.
         // Apply native paint emboldening rather than embedding a mockup.
         name.getPaint().setFakeBoldText(true);
-        name.setTranslationY(-dp(.33f));
+        name.setTranslationY(dp(.67f));
         place(center,name);gap(center,17);
         TextView subtitle=label("Računi i ponude, jednostavno.",13,0xffbdcde1,false);
-        subtitle.setTextScaleX(.978f);
-        subtitle.setTranslationY(-dp(1f));
+        subtitle.setTextScaleX(.994f);
+        subtitle.setTranslationY(-dp(.67f));
         subtitle.setGravity(Gravity.CENTER);place(center,subtitle);
         FrameLayout.LayoutParams middle=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
         middle.leftMargin=dp(18);middle.rightMargin=dp(18);frame.addView(center,middle);
@@ -513,7 +513,8 @@ public final class MainActivity extends Activity {
         TextView text=label("Vaše poslovanje. Jednostavnije.",12,0xff9fb5ce,false);
         // Source footer spans 437 px rather than the old 512 px. Keep the
         // native TextView and real accessibility content instead of a bitmap.
-        text.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,10.25f);
+        text.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,10f);
+        text.setTextScaleX(1.055f);
         text.setGravity(Gravity.CENTER);place(bottom,text);
         FrameLayout.LayoutParams down=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
         down.bottomMargin=dp(57);frame.addView(bottom,down);
@@ -543,35 +544,60 @@ public final class MainActivity extends Activity {
         pad(body,28,27);
         LinearLayout brand=horizontal();
         ImageView mark=new ImageView(this);
-        mark.setImageResource(R.drawable.brand_mark);brand.addView(mark,lp(43,43));
+        mark.setImageResource(R.drawable.brand_mark);brand.addView(mark,lp(40,40));
+        // Reference masthead icon is 120px at 480dpi, not 129px.
+        mark.setTranslationX(-dp(1));
         TextView brandName=label("Fakturiva",24,NAVY,true);
-        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(5);
+        brandName.setTextScaleX(.946f);
+        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(8);
         brand.addView(brandName,brandLp);
-        place(body,brand);gap(body,19);
+        place(body,brand);gap(body,22);
         body.addView(new WelcomeIllustration(this),lp(-1,345));gap(body,30);
-        place(body,label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true));gap(body,11);
+        TextView eyebrow=label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true);
+        eyebrow.setLetterSpacing(.085f);
+        eyebrow.setTranslationX(dp(1));
+        place(body,eyebrow);gap(body,11);
         TextView heading=label("Manje papirologije.\nViše vremena za posao.",26,NAVY,true);
         // Narrow Roboto slightly to follow the supplied Inter-based line widths.
-        heading.setTextScaleX(.977f);
-        heading.setLineSpacing(dp(3),1.0f);
-        place(body,heading);gap(body,11);
-        TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",13,MUTED,false);
-        info.setLineSpacing(dp(3),1.0f);place(body,info);
-        gap(body,19);
+        heading.setTextScaleX(.963f);
+        heading.getPaint().setFakeBoldText(true);
+        heading.setLineSpacing(dp(2),1.0f);
+        heading.setTranslationX(dp(1));
+        heading.setTranslationY(-dp(.67f));
+        place(body,heading);gap(body,14);
+        TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",12,MUTED,false);
+        info.setTextScaleX(.97f);
+        info.setTranslationX(dp(1));
+        info.setLineSpacing(dp(4),1.0f);place(body,info);
+        gap(body,21);
         LinearLayout dots=horizontal();
         for(int n=0;n<3;n++){
             View dot=new View(this);
             dot.setBackground(shape(n==0?BLUE:0xffdbe2ef,7));
             LinearLayout.LayoutParams p=lp(n==0?23:7,7);p.rightMargin=dp(6);dots.addView(dot,p);
         }
-        place(body,dots);gap(body,23);
-        button(body,"›  Započni",()->securityScreen(false,false));
-        gap(body,0);
+        place(body,dots);gap(body,22);
+        // Match the reference CTA's 144px height, inset, rounded corners
+        // and central arrow/text alignment. Keep the original real action.
+        LinearLayout startButton=horizontal();startButton.setGravity(Gravity.CENTER);
+        startButton.setBackground(shape(BLUE,15));startButton.setElevation(dp(8));
+        TextView startArrow=label("›",23,WHITE,true);
+        startArrow.setGravity(Gravity.CENTER);
+        startButton.addView(startArrow,lp(21,-2));
+        TextView startText=label("Započni",15,WHITE,true);
+        LinearLayout.LayoutParams startTextLp=lp(-2,-2);
+        startTextLp.leftMargin=dp(7);
+        startButton.addView(startText,startTextLp);
+        startButton.setContentDescription(ui("Započni"));
+        startButton.setOnClickListener(v->securityScreen(false,false));
+        LinearLayout.LayoutParams startLp=lp(-1,48);
+        startLp.leftMargin=dp(1);startLp.rightMargin=dp(1);
+        body.addView(startButton,startLp);
         // Restore the split muted/blue login line from the owner's reference.
         // Both visible segments share a single accessible tap target.
         LinearLayout account=horizontal();
         account.setGravity(Gravity.CENTER);
-        account.setMinimumHeight(dp(44));
+        account.setMinimumHeight(dp(42));
         account.addView(label("Već imate račun? ",11,MUTED,false));
         TextView signIn=label("Prijavite se",11,BLUE,true);
         account.addView(signIn);
@@ -718,7 +744,7 @@ public final class MainActivity extends Activity {
             p.setColor(0xffd6e4fb);canvas.drawCircle(170,164,120,p);
             // Raise the invoice sheet ~6 design units to match the owner's
             // reference without changing the original illustration bitmap.
-            canvas.save();canvas.translate(0,-6);canvas.rotate(-5,170,174);
+            canvas.save();canvas.translate(0,-10);canvas.rotate(-5,170,174);
             p.setColor(0x330f2e72);p.setShadowLayer(19,0,16,0x330f2e72);
             canvas.drawRoundRect(74,63,281,288,20,20,p);p.clearShadowLayer();
             p.setColor(Color.WHITE);canvas.drawRoundRect(74,63,281,288,20,20,p);
