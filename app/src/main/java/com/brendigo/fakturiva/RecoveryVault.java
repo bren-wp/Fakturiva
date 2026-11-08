@@ -39,7 +39,9 @@ public final class RecoveryVault {
     private RecoveryVault(){}
 
     private static File directory(Context ctx){
-        String id=LocalAccounts.activeId();
+        return directory(ctx,LocalAccounts.activeId());
+    }
+    private static File directory(Context ctx,String id){
         File dir;
         if(id==null){
             // Legacy/test mode only. Authenticated accounts never read this path.
@@ -150,7 +152,9 @@ public final class RecoveryVault {
         try{compressed=gzip(plain);}finally{Arrays.fill(plain,(byte)0);}
         byte[] sealed;
         try{sealed=seal(compressed);}finally{Arrays.fill(compressed,(byte)0);}
-        File dir=directory(ctx),tmp=new File(dir,"recovery-tmp.fv");
+        // Bind each snapshot to the Store that produced it, even if an
+        // Activity is recreated or a different user signs in concurrently.
+        File dir=directory(ctx,store.profileId()),tmp=new File(dir,"recovery-tmp.fv");
         try(FileOutputStream out=new FileOutputStream(tmp)){
             out.write(sealed);out.flush();out.getFD().sync();
         }finally{Arrays.fill(sealed,(byte)0);}
