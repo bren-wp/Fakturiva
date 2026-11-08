@@ -19,19 +19,22 @@ import java.io.OutputStream;
  * networks, collect printer credentials or send data to a remote server.
  */
 public final class SystemInvoicePrinter {
-    public static final int A4=0, LETTER=1, A5=2, LEGAL=3;
+    public static final int A4=0, LETTER=1, A5=2, LEGAL=3, A3=4, A6=5;
     private SystemInvoicePrinter(){}
 
     public static String[] formats(){
         return new String[]{"A4 · Android printer","US Letter · Android printer",
-            "A5 · Android printer","US Legal · Android printer"};
+            "A5 · Android printer","US Legal · Android printer",
+            "A3 · Android printer","A6 · Android printer"};
     }
-    public static boolean supports(int format){return format>=A4&&format<=LEGAL;}
+    public static boolean supports(int format){return format>=A4&&format<=A6;}
     static int[] pdfSize(int format){
         switch(format){
             case LETTER:return new int[]{612,792};
             case A5:return new int[]{420,595};
             case LEGAL:return new int[]{612,1008};
+            case A3:return new int[]{842,1191};
+            case A6:return new int[]{298,420};
             case A4:return new int[]{595,842};
             default:throw new IllegalArgumentException("Unknown paper size");
         }
@@ -41,6 +44,8 @@ public final class SystemInvoicePrinter {
             case LETTER:return PrintAttributes.MediaSize.NA_LETTER;
             case A5:return PrintAttributes.MediaSize.ISO_A5;
             case LEGAL:return PrintAttributes.MediaSize.NA_LEGAL;
+            case A3:return PrintAttributes.MediaSize.ISO_A3;
+            case A6:return PrintAttributes.MediaSize.ISO_A6;
             case A4:
             default:return PrintAttributes.MediaSize.ISO_A4;
         }
