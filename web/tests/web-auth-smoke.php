@@ -65,8 +65,8 @@ $api=signUp($apiUser,$serverPassB,$ip);
 $link=webLinkAndroidAccount($apiUser,$serverPassB,$pinB,$ip);
 assertWeb($link['id']===explode('.',$api['token'])[0],
     'Linking Android account created a duplicate tenant');
-assertWeb(webLogin($apiUser,$pinB,$ip)['username']===$apiUser,
-    'Linked Android PIN login failed');
-webDeleteAccount($link['id'],$link['token'],$pinB);
+$linkedLogin=webLogin($apiUser,$pinB,$ip);
+assertWeb($linkedLogin['username']===$apiUser,'Linked Android PIN login failed');
+webDeleteAccount($link['id'],$linkedLogin['token'],$pinB);
 webDeleteAccount($b['id'],$b['token'],$pinB);
 echo "Web PIN register/login, tenant isolation, separate Android passphrase, link and deletion: OK\n";
