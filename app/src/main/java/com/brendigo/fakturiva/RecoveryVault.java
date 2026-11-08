@@ -39,9 +39,42 @@ public final class RecoveryVault {
     private RecoveryVault(){}
 
     private static File directory(Context ctx){
-        File dir=new File(ctx.getFilesDir(),"recovery");
+        String id=LocalAccounts.activeId();
+        File dir;
+        if(id==null){
+            // Legacy/test mode only. Authenticated accounts never read this path.
+            dir=new File(ctx.getFilesDir(),"recovery");
+        }else{
+            if(!LocalAccounts.validProfileId(id))
+                throw new SecurityException("Neispravan lokalni profil");
+            dir=new File(new File(ctx.getFilesDir(),"recovery-profiles"),id);
+        }
         if(!dir.exists()&&!dir.mkdirs())throw new IllegalStateException("Nije moguće stvoriti mapu za oporavak");
         return dir;
+    }
+
+    /** Remove only the named profile's recovery snapshots; never access another profile. */
+    public static synchronized void deleteProfile(Context ctx,String id) {
+        if(!LocalAccounts.validProfileId(id))
+            throw new IllegalArgumentException("Neispravan lokalni profil");
+        File dir=new File(new File(ctx.getFilesDir(),"recovery-profiles"),id);
+        if(!dir.exists())return;
+        File[] files=dir.listFiles();
+        if(files==null)throw new IllegalStateException("Nije moguće pročitati kopije profila");
+        for(File f:files){
+            if(!f.isFile() || !f.delete())
+                throw new IllegalStateException("Nije moguće ukloniti sigurnosnu kopiju profila");
+        }
+        if(!dir.delete())throw new IllegalStateException("Nije moguće ukloniti podatke profila");
+    }
+
+    /** Bring forward a legacy unfinished draft into the *first* profile only. */
+    public static synchronized void migrateLegacyDraft(Context ctx) throws Exception {
+        if(LocalAccounts.activeId()==null)
+            throw new SecurityException("Prije migracije odaberite korisnički profil");
+        File old=new File(new File(ctx.getFilesDir(),"recovery"),"working-draft.fv");
+        if(!old.isFile())return;
+        copyAtomically(old,workingFile(ctx));
     }
     private static File file(File dir,int index){return new File(dir,PREFIX+index+".fv");}
     private static SecretKey secretKey() throws Exception{
