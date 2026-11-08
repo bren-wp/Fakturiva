@@ -319,6 +319,7 @@ public final class MainActivity extends Activity {
                     documents(d.type);
                 }catch(Exception e){home();}
                 break;
+            case "local_accounts":settings();break;
             case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":case "about":settings();break;
             default:home();
@@ -464,7 +465,17 @@ public final class MainActivity extends Activity {
             navigate("home");
         }catch(Exception e){error(e);damagedDatabase(e);}
     }
+    /** Only the debug emulator's screenshot harness may navigate without a PIN. */
+    private boolean runScreenshotModeOnly(){
+        return db!=null &&
+            (getApplicationInfo().flags &
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0 &&
+            "com.brendigo.fakturiva.SCREENSHOT".equals(getIntent().getAction());
+    }
     private void navigate(String dest){
+        if(db==null || (LocalAccounts.activeId()==null && !runScreenshotModeOnly())){
+            openExistingLocalAccess();return;
+        }
         filter="Svi";
         documentSearchQuery="";
         switch(dest){
@@ -688,6 +699,291 @@ public final class MainActivity extends Activity {
             else registrationScreen();
         }catch(Exception e){accountStorageError(e);}
     }
+    /** Local registration modeled on the supplied white/blue reference. */
+    private void registrationScreen(){
+        enteredLocalPin.setLength(0);
+        setup("local_register",false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
+        pad(body,25,60);
+        localBrand();gap(body,25);
+        place(body,label("Registracija",30,NAVY,true));gap(body,9);
+        place(body,label("Kreirajte novi račun i započnite s poslovanjem.",
+            14,MUTED,false));
+        gap(body,62);
+        place(body,label("Korisničko ime",14,0xff53627b,true));gap(body,10);
+        EditText username=field("ime@tvrtka.hr","");
+        username.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        username.setTextSize(17);username.setMinimumHeight(dp(54));
+        place(body,username);
+        gap(body,19);
+        place(body,label("PIN",14,NAVY,true));gap(body,10);
+        EditText pin=field("4–6 znamenki","");
+        pin.setInputType(InputType.TYPE_CLASS_NUMBER|
+            InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pin.setFilters(new android.text.InputFilter[]{
+            new android.text.InputFilter.LengthFilter(6)});
+        pin.setTextSize(18);pin.setMinimumHeight(dp(54));
+        place(body,pin);gap(body,10);
+        place(body,label("ⓘ  Unesite sigurnosni PIN (4–6 znamenki).",
+            12,0xff64738d,false));
+        gap(body,48);
+        TextView submit=action("♙   Registracija",BLUE,true,()->{
+            char[] digits=pin.getText().toString().toCharArray();
+            try{
+                boolean first=!LocalAccounts.hasAccounts(this);
+                String id=LocalAccounts.register(this,username.getText().toString(),digits);
+                pin.setText("");
+                if(first&&getDatabasePath("fakturiva.db").isFile()){
+                    // Explicitly reserve the legacy database for the first
+                    // profile; later accounts can never claim its records.
+                    prefs.edit().putString("legacy_owner",id).commit();
+                }
+                openLocalSession(id);
+            }catch(Exception e){toast(e.getMessage()==null?
+                "Registracija nije uspjela":e.getMessage());}
+            finally{Arrays.fill(digits,'\\0');}
+        });
+        submit.setContentDescription("Registracija lokalnog korisničkog računa");
+        place(body,submit);gap(body,46);
+        TextView login=label("Već imate račun?  Prijavite se",14,BLUE,true);
+        login.setGravity(Gravity.CENTER);
+        login.setMinimumHeight(dp(48));
+        login.setOnClickListener(v->openExistingLocalAccess());
+        place(body,login);
+        gap(body,64);
+        localPrivacyFooter();
+    }
+
+    private void localBrand(){
+        ImageView image=new ImageView(this);
+        image.setImageResource(R.drawable.brand_mark);
+        LinearLayout.LayoutParams mark=lp(72,72);
+        body.addView(image,mark);
+    }
+
+    private void localPrivacyFooter(){
+        TextView footer=label("◇  Zaštita vaših poslovnih podataka",12,
+            0xff7b8ba5,false);
+        footer.setGravity(Gravity.CENTER);
+        place(body,footer);gap(body,16);
+    }
+
+    private void loginPinScreen(){
+        try{
+            String[] names=LocalAccounts.names(this);
+            if(names.length==0){registrationScreen();return;}
+            String last=prefs.getString("local_last_user",names[0]);
+            boolean found=false;
+            for(String n:names)if(n.equals(last))found=true;
+            if(!found)last=names[0];
+            loginUsername=last;
+            enteredLocalPin.setLength(0);
+            setup("local_login",false);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
+            pad(body,25,59);
+            localBrand();gap(body,26);
+            place(body,label("Prijava PIN-om",30,NAVY,true));gap(body,9);
+            place(body,label("Unesite svoj sigurnosni PIN za pristup računu.",
+                14,MUTED,false));gap(body,44);
+            TextView chosen=label("Korisnik: "+loginUsername+(names.length>1?"  ▾":""),
+                12,0xff63718a,false);
+            chosen.setMinimumHeight(dp(40));
+            if(names.length>1){
+                chosen.setContentDescription("Odaberite korisnički račun");
+                chosen.setOnClickListener(v->
+                    new AlertDialog.Builder(this).setTitle("Korisnički račun")
+                        .setItems(names,(dialog,which)->{
+                            loginUsername=names[which];
+                            chosen.setText("Korisnik: "+loginUsername+"  ▾");
+                            enteredLocalPin.setLength(0);
+                            loginPinScreen();
+                        }).show());
+            }
+            place(body,chosen);gap(body,18);
+            place(body,label("PIN",14,0xff65748d,true));gap(body,9);
+            LinearLayout masked=horizontal();
+            masked.setBackground(outlined(WHITE));pad(masked,19,10);
+            TextView dots=label("",24,NAVY,true);
+            dots.setGravity(Gravity.CENTER_VERTICAL);
+            masked.addView(dots,new LinearLayout.LayoutParams(0,dp(44),1));
+            TextView lock=label("♙",22,0xff7e8fa7,true);
+            masked.addView(lock);
+            masked.setContentDescription("Sigurnosni PIN, skriveni unos");
+            place(body,masked);gap(body,28);
+            int[][] keys={{1,2,3},{4,5,6},{7,8,9},{-1,0,-2}};
+            for(int[] row:keys){
+                LinearLayout line=horizontal();
+                for(int number:row){
+                    TextView key=label(number==-1?"⌫":number==-2?"":String.valueOf(number),
+                        27,NAVY,true);
+                    key.setGravity(Gravity.CENTER);
+                    key.setBackground(shape(0xffedf1f9,14));
+                    key.setFocusable(number!=-2);
+                    key.setClickable(number!=-2);
+                    key.setContentDescription(number==-1?"Obriši PIN znamenku":
+                        number==-2?"":("Znamenka "+number));
+                    if(number==-1)key.setOnClickListener(v->{
+                        if(enteredLocalPin.length()>0)
+                            enteredLocalPin.deleteCharAt(enteredLocalPin.length()-1);
+                        updatePinDots(dots);
+                    });
+                    else if(number>=0)key.setOnClickListener(v->{
+                        if(enteredLocalPin.length()<6)
+                            enteredLocalPin.append((char)('0'+number));
+                        updatePinDots(dots);
+                    });
+                    LinearLayout.LayoutParams keyParams=new LinearLayout.LayoutParams(0,dp(53),1);
+                    keyParams.leftMargin=dp(3);keyParams.rightMargin=dp(3);
+                    line.addView(key,keyParams);
+                    if(number==-2)key.setVisibility(View.INVISIBLE);
+                }
+                place(body,line);gap(body,7);
+            }
+            gap(body,26);
+            TextView submit=action("›   Prijavi se",BLUE,true,()->{
+                char[] digits=enteredLocalPin.toString().toCharArray();
+                try{
+                    String id=LocalAccounts.verify(this,loginUsername,digits);
+                    enteredLocalPin.setLength(0);
+                    openLocalSession(id);
+                }catch(Exception error){
+                    enteredLocalPin.setLength(0);
+                    updatePinDots(dots);
+                    toast(error.getMessage()==null?
+                        "Neuspješna provjera sigurnosnog PIN-a":error.getMessage());
+                }finally{Arrays.fill(digits,'\\0');}
+            });
+            submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
+            place(body,submit);gap(body,37);
+            localPrivacyFooter();
+            TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
+            next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
+            next.setOnClickListener(v->registrationScreen());
+            place(body,next);
+        }catch(Exception e){accountStorageError(e);}
+    }
+
+    private void updatePinDots(TextView dots){
+        StringBuilder masked=new StringBuilder();
+        for(int i=0;i<enteredLocalPin.length();i++)masked.append("● ");
+        dots.setText(masked.toString());
+    }
+
+    /** Prevent opening any business table before local authorization. */
+    private void openLocalSession(String verifiedId){
+        try{
+            if(db!=null){db.close();db=null;}
+            LocalAccounts.unlock(this,verifiedId);
+            db=new Store(this,verifiedId);
+            try(android.database.Cursor check=
+                db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
+                if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
+                    throw new IllegalStateException("Neuspjela provjera baze");
+            }
+            // One-time upgrade from the previous single-device data model.
+            // Never migrate those documents into a second user's database.
+            if(verifiedId.equals(prefs.getString("legacy_owner","")) &&
+                !prefs.getBoolean("legacy_imported",false) &&
+                getDatabasePath("fakturiva.db").isFile() &&
+                db.count("clients")==0 && db.count("documents")==0){
+                Store legacy=new Store(this);
+                JSONObject snapshot;
+                try{snapshot=legacy.backup();}finally{legacy.close();}
+                db.restore(snapshot); // validated and crash-safe, never silent merge
+                RecoveryVault.migrateLegacyDraft(this);
+                if(!prefs.edit().putBoolean("legacy_imported",true).commit())
+                    throw new IllegalStateException("Migracija nije potvrđena");
+            }
+            prefs.edit().putString("local_last_user",LocalAccounts.activeName())
+                .putBoolean("welcomed",true).apply();
+            if(prefs.getBoolean("device_lock",false))
+                securityScreen(true,false);
+            else{
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                navigate("home");offerWorkingDraftRecovery();
+            }
+        }catch(Exception e){
+            if(db!=null){db.close();db=null;}
+            LocalAccounts.lock();
+            accountStorageError(e);
+        }
+    }
+
+    private void accountStorageError(Exception error){
+        android.util.Log.e("FakturivaAuth","Local account storage unavailable",error);
+        setup("account_error",false);
+        root.setBackgroundColor(WHITE);
+        pad(body,25,60);
+        place(body,label("Računi nisu dostupni",23,NAVY,true));
+        gap(body,12);
+        place(body,label("Nije moguće sigurno otvoriti lokalne podatke. "+
+            "Podaci neće biti automatski izbrisani ni zamijenjeni. "+
+            "Provjerite uređaj i postojeće sigurnosne kopije.",14,MUTED,false));
+        gap(body,25);
+        button(body,"Ponovno pokušaj",this::openExistingLocalAccess);
+    }
+
+    private void localAccountSettings(){
+        if(LocalAccounts.activeId()==null){loginPinScreen();return;}
+        setup("local_accounts",true);
+        toolbar("Korisnički računi","Lokalna pohrana · bez vanjskih servisa",true);
+        LinearLayout info=card();
+        place(info,label("Prijavljen: "+LocalAccounts.activeName(),16,ink(),true));
+        gap(info,9);
+        place(info,label("Svaki profil ima zasebnu bazu računa, ponuda i klijenata "+
+            "te odvojene šifrirane sigurnosne kopije.",12,sub(),false));
+        place(body,info);gap(body,15);
+        button(body,"Odjava s uređaja",()->new AlertDialog.Builder(this)
+            .setTitle("Odjava").setMessage("Odjaviti lokalni korisnički račun?")
+            .setNegativeButton("Odustani",null)
+            .setPositiveButton("Odjavi se",(dialog,which)->signOutLocal()).show());
+        gap(body,12);
+        secondary(body,"Dodaj lokalni korisnički račun",()->registrationScreen());
+        gap(body,22);
+        secondary(body,"Trajno izbriši ovaj lokalni račun",()->{
+            EditText secret=field("PIN za potvrdu brisanja","");
+            secret.setInputType(InputType.TYPE_CLASS_NUMBER|
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            new AlertDialog.Builder(this).setTitle("Brisanje lokalnog računa")
+                .setMessage("Ovo trajno briše lokalnu bazu i lokalne sigurnosne "+
+                    "kopije trenutačnog profila. Prethodno izvezite kopiju. "+
+                    "Ne briše udaljeni račun na vašem hostingu.")
+                .setView(secret).setNegativeButton("Odustani",null)
+                .setPositiveButton("Trajno izbriši",(d,w)->{
+                    char[] code=secret.getText().toString().toCharArray();
+                    String id=LocalAccounts.activeId();
+                    try{
+                        if(!id.equals(LocalAccounts.verify(this,
+                            LocalAccounts.activeName(),code)))
+                            throw new SecurityException("Neispravan profil");
+                        if(db!=null){db.close();db=null;}
+                        LocalAccounts.delete(this,LocalAccounts.activeName(),code);
+                        if(id.equals(prefs.getString("legacy_owner",""))){
+                            // Keep legacy migration from repopulating a new account.
+                            getApplicationContext().deleteDatabase("fakturiva.db");
+                            prefs.edit().remove("legacy_owner").putBoolean(
+                                "legacy_imported",true).apply();
+                        }
+                        loginPinScreen();
+                    }catch(Exception e){
+                        if(LocalAccounts.activeId()!=null && db==null)
+                            db=new Store(this,id);
+                        toast(e.getMessage()==null?"Brisanje nije uspjelo":e.getMessage());
+                    }finally{Arrays.fill(code,'\\0');}
+                }).show();
+        });
+    }
+
+    private void signOutLocal(){
+        enteredLocalPin.setLength(0);
+        if(db!=null){db.close();db=null;}
+        LocalAccounts.lock();
+        loginPinScreen();
+    }
+
     /**
      * Screen 03 is real offline protection, never fake cloud authentication.
      * The operating system verifies credentials: we store no PIN or biometrics.
