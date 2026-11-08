@@ -83,6 +83,17 @@ Fakturiva je namijenjena i obrtima, samostalnim djelatnostima, d.o.o., j.d.o.o.,
 
 **Jezici:** nova osnova koristi engleski kao zadani jezik, a korisnik u Postavkama može izabrati hrvatski. Pripremljen je popis **31 ciljnog jezika**, ali cjelovito prevođenje svih zaslona, obrazaca, dijaloga, PDF-a i sistemskih poruka još **nije dovršeno**, pa se ostali jezici ne prikazuju kao podržani. I dio engleskog/hrvatskog sučelja još zahtijeva lekturu i uklanjanje preostalih neprevedenih tekstova. [Pravila objave prijevoda](docs/INTERNATIONALIZATION_QA.md).
 
+### Ispis računa i ponuda — razvojna grana
+
+Za praktičan rad dodan je ispis računa i ponuda na dvije vrste pisača:
+
+- **Bluetooth termalni ESC/POS pisači:** uparivanje kroz Android, odabir uređaja i termalni ispis na **58 mm** ili **80 mm**. Ispisuje se stavke, porez, iznos s izvornom valutom i podaci izdavatelja/klijenta. Za podršku je potreban **Bluetooth Classic SPP i ESC/POS raster**; podrška ne obuhvaća automatski sve Bluetooth/BLE uređaje.
+- **Android pisači:** izbor preko Androidova sustava ispisa, uz PDF za **A4, A5, US Letter i Legal**. Wi-Fi/USB uređaji rade ako ih podržava instalirani Android print servis.
+
+Format se može birati u Postavkama ili pri ispisu pojedinog računa. **Platni POS terminali za kartična plaćanja ne naplaćuju kartice ovom funkcijom** — njihove integracije zahtijevaju odgovarajući SDK i odobrenje pružatelja usluge. Stvarna podrška za pojedine modele pisača mora se potvrditi na fizičkom hardveru.
+
+[**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md)
+
 Ove značajke **još nisu dio posljednjeg objavljenog izdanja** v0.17.0-preview.1. Trenutačna aplikacija nije certificirana za automatsko ispunjavanje zakonskih obveza bilo koje države; korisnik provjerava obvezne podatke i računovodstvene zahtjeve u svojoj jurisdikciji.
 
 ---
