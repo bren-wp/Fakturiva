@@ -251,16 +251,15 @@ public final class MainActivity extends Activity {
         LinearLayout heading=vertical();TextView t=label(title,23,ink(),true);place(heading,t);
         if(subtitle!=null){TextView st=label(subtitle,11,sub(),false);place(heading,st);}
         row.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        // Document previews already show an actionable menu beside the
-        // document status. Do not draw a second, redundant overflow button.
-        if(!"detail".equals(screen)){
-            TextView more=label("•••",15,sub(),true);
-            more.setGravity(Gravity.CENTER);
-            more.setBackground(shape(panel(),12));
-            more.setContentDescription("Otvori postavke");
-            row.addView(more,lp(44,44));
-            more.setOnClickListener(v->navigate("settings"));
-        }
+        // The original preview has TWO purposeful overflow controls:
+        // this toolbar button opens settings; the status-row menu opens
+        // document-specific PDF actions. Keep both like the source design.
+        TextView more=label("•••",15,sub(),true);
+        more.setGravity(Gravity.CENTER);
+        more.setBackground(shape(panel(),12));
+        more.setContentDescription("Otvori postavke");
+        row.addView(more,lp(44,44));
+        more.setOnClickListener(v->navigate("settings"));
         place(body,row);gap(body,18);
     }
     private ImageView icon(int id,int tint){
@@ -781,8 +780,18 @@ public final class MainActivity extends Activity {
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
         gap(body,dark?14:14);
-        place(body,label("Brze radnje",18,ink(),true));
-        gap(body,11);
+        LinearLayout quickHeader=horizontal();
+        quickHeader.addView(label("Brze radnje",18,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        TextView moreActions=label("›",24,BLUE,true);
+        moreActions.setGravity(Gravity.CENTER);
+        moreActions.setContentDescription("Otvori sve brze radnje");
+        moreActions.setMinimumWidth(dp(48));
+        moreActions.setMinimumHeight(dp(48));
+        quickHeader.addView(moreActions,lp(48,48));
+        moreActions.setOnClickListener(v->showQuickActions());
+        place(body,quickHeader);
+        gap(body,1);
         LinearLayout fast=horizontal();
         quick(fast,"＋","Novi račun",()->newDocument(Store.INVOICE));
         quick(fast,"▣","Nova ponuda",()->newDocument(Store.QUOTE));
@@ -808,6 +817,22 @@ public final class MainActivity extends Activity {
             gap(body,15);
             place(body,label(db.backupWarning(),12,RED,true));
         }
+    }
+    private void showQuickActions(){
+        String[] names={"Novi račun","Nova ponuda","Novi klijent",
+            "Artikli i usluge","Izvještaji","Naplata"};
+        new AlertDialog.Builder(this).setTitle("Brze radnje")
+            .setItems(names,(dialog,which)->{
+                switch(which){
+                    case 0:newDocument(Store.INVOICE);break;
+                    case 1:newDocument(Store.QUOTE);break;
+                    case 2:addClient();break;
+                    case 3:catalog();break;
+                    case 4:reports();break;
+                    case 5:payments();break;
+                    default:break;
+                }
+            }).setNegativeButton("Zatvori",null).show();
     }
     private void showNotifications(){
         ArrayList<Store.Document> open=new ArrayList<>();
@@ -1817,13 +1842,13 @@ public final class MainActivity extends Activity {
         masthead.setGravity(Gravity.CENTER_VERTICAL);
         masthead.setMinimumHeight(dp(Store.INVOICE.equals(d.type)?29:32));
         ImageView brand=new ImageView(this);
-        brand.setImageResource(Store.INVOICE.equals(d.type)?
-            R.drawable.ic_document_invoice_mark:R.drawable.brand_mark);
-        masthead.addView(brand,lp(Store.INVOICE.equals(d.type)?19:32,
-            Store.INVOICE.equals(d.type)?19:32));
+        // Both original paper references use the same small blue document
+        // motif; the large square app launcher mark belongs to app branding.
+        brand.setImageResource(R.drawable.ic_document_invoice_mark);
+        masthead.addView(brand,lp(19,19));
         TextView brandTitle=label("Fakturiva",18,NAVY,true);
         LinearLayout.LayoutParams brandText=new LinearLayout.LayoutParams(0,-2,1);
-        brandText.leftMargin=dp(Store.INVOICE.equals(d.type)?5:7);
+        brandText.leftMargin=dp(5);
         masthead.addView(brandTitle,brandText);
         LinearLayout docType=vertical();
         docType.setGravity(Gravity.RIGHT);
