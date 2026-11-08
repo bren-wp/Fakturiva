@@ -179,7 +179,7 @@ public final class UiStrings {
         EN.put("Sažetak računa","Invoice summary");
         EN.put("Sažetak ponude","Quote summary");
         EN.put("Osnovica","Subtotal");
-        EN.put("PDV","VAT");
+        EN.put("PDV","Tax");
         EN.put("UKUPNO","TOTAL");
         EN.put("Pregled dokumenta","Document preview");
         EN.put("Provjera i potvrda","Review and confirm");
@@ -263,6 +263,7 @@ public final class UiStrings {
         HR.put("Company details saved","Podaci tvrtke su spremljeni");
         HR.put("Invoice and quote issuer","Izdavatelj računa i ponuda");
         HR.put("Company details","Podaci o tvrtki");
+        HR.put("Unit price before tax","Jedinična cijena bez poreza");
         HR.put("Contact person","Kontakt osoba");
         HR.put("Bank account number (non-IBAN)","Broj bankovnog računa (izvan IBAN sustava)");
         HR.put("Bank routing number / ABA","Bankovni routing/ABA broj");
