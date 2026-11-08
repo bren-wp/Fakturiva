@@ -40,10 +40,10 @@ public final class PaymentsCsv {
         // UTF-8 BOM is intentional for desktop Excel's Croatian locale.
         output.write(new byte[]{(byte)0xef,(byte)0xbb,(byte)0xbf});
         Writer out=new OutputStreamWriter(output,StandardCharsets.UTF_8);
-        out.write("Broj računa;Klijent;Datum uplate;Iznos EUR\r\n");
+        out.write("Invoice;Client;Payment date;Amount;Currency\r\n");
         for(Store.Payment p:payments){
             out.write(cell(p.invoiceNumber)+";"+cell(p.clientName)+";"+
-                cell(p.paidOn)+";"+cell(java.math.BigDecimal.valueOf(p.amountCents,2).toPlainString().replace('.',','))+"\r\n");
+                cell(p.paidOn)+";"+cell(java.math.BigDecimal.valueOf(p.amountCents,2).toPlainString().replace('.',','))+";"+cell(BillingCurrency.canonical(p.currencyCode))+"\r\n");
         }
         out.flush();
     }
