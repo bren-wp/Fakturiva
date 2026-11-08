@@ -62,7 +62,7 @@ public final class PdfMaker {
     private void footer(){
         paint.setColor(RULE);paint.setStrokeWidth(0.7f);
         canvas.drawLine(M,H-60,RIGHT,H-60,paint);
-        text("Fakturiva · lokalno izrađen PDF · nije eRačun ni dokaz fiskalizacije",M,H-44,8,GRAY,false);
+        text("Fakturiva",M,H-44,8,GRAY,false);
         right("Str. "+pageNumber,RIGHT,H-44,8,GRAY,false);
     }
     private void newPage(){
@@ -166,7 +166,7 @@ public final class PdfMaker {
         lines.add(safe(d.issuerName));
         add(lines,"Adresa",d.issuerAddress);
         add(lines,"Mjesto",join(d.issuerPostalCode,d.issuerCity,d.issuerCountry));
-        add(lines,"OIB",d.issuerOib);add(lines,"PDV ID",d.issuerVatId);
+        add(lines,"Porezni broj",d.issuerOib);add(lines,"PDV ID",d.issuerVatId);
         add(lines,"E-mail",d.issuerEmail);add(lines,"Telefon",d.issuerPhone);
         add(lines,"Web",d.issuerWebsite);
         return lines.toArray(new String[0]);
@@ -175,7 +175,7 @@ public final class PdfMaker {
         ArrayList<String> lines=new ArrayList<>();
         lines.add(safe(d.clientName));
         add(lines,"Adresa",d.clientAddress);
-        add(lines,"OIB",d.clientOib);add(lines,"PDV ID",d.clientVatId);
+        add(lines,"Porezni broj",d.clientOib);add(lines,"PDV ID",d.clientVatId);
         add(lines,"E-mail",d.clientEmail);add(lines,"Telefon",d.clientPhone);
         return lines.toArray(new String[0]);
     }
