@@ -45,13 +45,28 @@ capture_status=${PIPESTATUS[0]}
 # if the retry does not produce all twenty real accessibility-checked frames.
 captured_count="$(find "$QA_OUTPUT_DIR" -maxdepth 1 -name '*.png' | wc -l)"
 if [ "$capture_status" -ne 0 ] && [ "$captured_count" -eq 0 ]; then
-  echo "::warning::Emulator startup failed before screen 01; restarting ADB once"
-  timeout 10s adb kill-server || true
-  timeout 15s adb start-server || true
-  timeout 45s adb wait-for-device || true
-  sleep 8
-  bash ci/capture_screenshots.sh 2>&1 | tee "$root/capture-retry.log"
-  capture_status=${PIPESTATUS[0]}
+  echo "::warning::Android emulator failed before the first screenshot; rebooting test AVD once"
+  # Restarting the ADB daemon alone does not repair a stuck SystemUI/
+  # UiAutomator service. A full disposable AVD reboot also prevents us from
+  # confusing a system overlay with a Fakturiva screen.
+  timeout 15s adb reboot || true
+  timeout 120s adb wait-for-device || true
+  boot_ready=false
+  for attempt in $(seq 1 45); do
+    if [ "$(timeout 6s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r')" = "1" ]; then
+      boot_ready=true
+      break
+    fi
+    sleep 2
+  done
+  if [ "$boot_ready" = true ]; then
+    sleep 12
+    bash ci/capture_screenshots.sh 2>&1 | tee "$root/capture-retry.log"
+    capture_status=${PIPESTATUS[0]}
+  else
+    echo "::error::Emulator did not finish boot after one recovery reboot"
+    capture_status=1
+  fi
 fi
 python3 ci/verify_responsive_capture.py \
   "$QA_OUTPUT_DIR" "$profile" "$width" "$height" "$density" "$font"
