@@ -55,6 +55,8 @@ public final class MainActivity extends Activity {
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
     private static final int BLUETOOTH_PRINT_PERMISSION_REQUEST=108;
     private Store db; private SharedPreferences prefs;
+    private String loginUsername="";
+    private final StringBuilder enteredLocalPin=new StringBuilder();
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
     private FrameLayout adaptiveNavContainer;
@@ -81,7 +83,8 @@ public final class MainActivity extends Activity {
     private final SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT);
 
     @Override public void onCreate(Bundle b){super.onCreate(b);
-        db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
+        LocalAccounts.lock();
+        prefs=getSharedPreferences("ui",MODE_PRIVATE);
         // Android 13+ gesture back bypasses deprecated Activity.onBackPressed.
         // Use the platform callback so no AndroidX runtime dependency is needed.
         if(android.os.Build.VERSION.SDK_INT>=33){
@@ -101,15 +104,9 @@ public final class MainActivity extends Activity {
             securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
         if(runScreenshotHarness())return;
-        try{
-            try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
-                if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
-                    throw new IllegalStateException("Neuspjela provjera baze");
-            }
-            // Show the branded launch screen on every cold start. New users
-            // continue to onboarding; returning users go to their live home.
-            splash(true);
-        }catch(Exception openError){damagedDatabase(openError);}
+        // Never open private financial data before authenticating a local account.
+        // The old single-device database is migrated only after first registration.
+        splash(true);
     }
     @Override protected void onSaveInstanceState(Bundle outState){
         outState.putLong("pendingPdfId",pendingPdfId);
@@ -123,8 +120,9 @@ public final class MainActivity extends Activity {
         super.onSaveInstanceState(outState);
     }
     @Override protected void onStop(){
-        if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen))
-            saveWorkingDraft();
+        if(db!=null&&("new_doc".equals(screen)||"edit_items".equals(screen)||
+            "review".equals(screen)))saveWorkingDraft();
+        if("local_login".equals(screen))enteredLocalPin.setLength(0);
         super.onStop();
     }
     /** Allows debug-only emulator screenshots without introducing preview screens in release builds. */
@@ -146,6 +144,7 @@ public final class MainActivity extends Activity {
             return false;
         }
         try{
+            db=new Store(this); // Debug-only sample store; never used by release login.
             Class<?> harness=Class.forName("com.brendigo.fakturiva.ScreenshotHarness");
             harness.getMethod("show",MainActivity.class,String.class)
                 .invoke(null,this,getIntent().getStringExtra("screen"));
@@ -159,7 +158,9 @@ public final class MainActivity extends Activity {
         if(android.os.Build.VERSION.SDK_INT>=33&&systemBackCallback!=null)
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
         if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
-        db.close();super.onDestroy();
+        if(db!=null)db.close();
+        enteredLocalPin.setLength(0);
+        super.onDestroy();
     }
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
     private String selectedLanguage(){
@@ -449,15 +450,16 @@ public final class MainActivity extends Activity {
         try{
             JSONObject snapshot=RecoveryVault.read(this,0);
             db.close();
-            File old=getDatabasePath("fakturiva.db");
+            File old=getDatabasePath(db.databaseFileName());
             File location=new File(getFilesDir(),"damaged-db-"+System.currentTimeMillis());
             if(!location.mkdirs())throw new IllegalStateException("Nema mjesta za spremanje oštećene baze");
             for(String suffix:new String[]{"","-wal","-shm","-journal"}){
                 File original=new File(old.getAbsolutePath()+suffix);
-                if(original.exists()&&!original.renameTo(new File(location,"fakturiva.db"+suffix)))
+                if(original.exists()&&!original.renameTo(
+                    new File(location,db.databaseFileName()+suffix)))
                     throw new IllegalStateException("Nije moguće sigurno arhivirati bazu");
             }
-            db=new Store(this);db.restore(snapshot);
+            db=new Store(this,LocalAccounts.activeId());db.restore(snapshot);
             toast("Oporavak je dovršen. Pregledajte dokumente i izvezite novu kopiju.");
             navigate("home");
         }catch(Exception e){error(e);damagedDatabase(e);}
@@ -597,14 +599,11 @@ public final class MainActivity extends Activity {
     /** Launch navigation respects first-run state and never invents a cloud login. */
     private void finishSplash(){
         if(!"splash".equals(screen)||isFinishing()||isDestroyed())return;
-        if(prefs.getBoolean("welcomed",false)){
-            if(prefs.getBoolean("device_lock",false))securityScreen(true,false);
-            else{
-                navigate("home");
-                offerWorkingDraftRecovery();
-            }
-        }else{
-            welcome();
+        try{
+            if(LocalAccounts.hasAccounts(this))loginPinScreen();
+            else welcome();
+        }catch(Exception e){
+            accountStorageError(e);
         }
     }
     private void welcome(){
@@ -666,7 +665,7 @@ public final class MainActivity extends Activity {
         startTextLp.leftMargin=dp(7);
         startButton.addView(startText,startTextLp);
         startButton.setContentDescription(ui("Započni"));
-        startButton.setOnClickListener(v->securityScreen(false,false));
+        startButton.setOnClickListener(v->registrationScreen());
         LinearLayout.LayoutParams startLp=lp(-1,48);
         startLp.leftMargin=dp(1);startLp.rightMargin=dp(1);
         body.addView(startButton,startLp);
@@ -682,14 +681,12 @@ public final class MainActivity extends Activity {
         account.setOnClickListener(v->openExistingLocalAccess());
         place(body,account);gap(body,15);
     }
-    /** Local access only: Fakturiva has no fictitious cloud account. */
+    /** Account selection always precedes access to any locally stored invoice. */
     private void openExistingLocalAccess(){
-        if(prefs.getBoolean("welcomed",false)){
-            if(prefs.getBoolean("device_lock",false))securityScreen(true,false);
-            else home();
-        }else{
-            securityScreen(false,false);
-        }
+        try{
+            if(LocalAccounts.hasAccounts(this))loginPinScreen();
+            else registrationScreen();
+        }catch(Exception e){accountStorageError(e);}
     }
     /**
      * Screen 03 is real offline protection, never fake cloud authentication.
@@ -3314,6 +3311,9 @@ public final class MainActivity extends Activity {
             "Profil izdavatelja za nove PDF dokumente",this::company);
         settingRow(options,"?","Pomoć i upute",
             "Računi, ponude i načini rada",this::guide);
+        settingRow(options,"♙","Korisnički računi",
+            LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
+            this::localAccountSettings);
         settingRow(options,"◈","Sigurnost",
             prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"PIN i privatnost",
             ()->securityScreen(false,true));
@@ -4025,7 +4025,11 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
-        if("security_unlock".equals(screen))finish();
+        if("local_login".equals(screen)||"local_register".equals(screen)){
+            enteredLocalPin.setLength(0);
+            if("local_register".equals(screen))welcome();else finish();
+        }
+        else if("security_unlock".equals(screen))finish();
         else if("security_setup".equals(screen)){
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
             if(securityFromSettings)settings();else welcome();
