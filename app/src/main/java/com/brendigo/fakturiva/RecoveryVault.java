@@ -70,6 +70,20 @@ public final class RecoveryVault {
         if(!dir.delete())throw new IllegalStateException("Nije moguće ukloniti podatke profila");
     }
 
+    /** Wipe pre-account recovery snapshots when their migrated owner is deleted. */
+    public static synchronized void deleteLegacyCopies(Context ctx) {
+        File dir=new File(ctx.getFilesDir(),"recovery");
+        if(!dir.exists())return;
+        File[] files=dir.listFiles();
+        if(files==null)throw new IllegalStateException("Ne mogu pročitati stare kopije");
+        for(File file:files){
+            if(!file.isFile()||!file.delete())
+                throw new IllegalStateException("Nije moguće ukloniti staru kopiju");
+        }
+        if(!dir.delete())
+            throw new IllegalStateException("Nije moguće ukloniti stare kopije");
+    }
+
     /** Bring forward a legacy unfinished draft into the *first* profile only. */
     public static synchronized void migrateLegacyDraft(Context ctx) throws Exception {
         if(LocalAccounts.activeId()==null)
