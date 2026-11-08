@@ -37,8 +37,22 @@ trap 'kill "$live_log_pid" 2>/dev/null || true' EXIT
 # A real emulator takes the requested px/density and font scale. Screens
 # 01–20 must each launch and produce a unique screenshot plus UI hierarchy.
 set +e
-bash ci/capture_screenshots.sh
-capture_status=$?
+bash ci/capture_screenshots.sh 2>&1 | tee "$root/capture-first-attempt.log"
+capture_status=${PIPESTATUS[0]}
+# GitHub AVDs have intermittently lost ADB before the *first* capture on
+# landscape-640. Permit one genuine reboot-of-ADB retry only when there are
+# no screenshots to validate. A failed app/UI screen remains a hard failure
+# if the retry does not produce all twenty real accessibility-checked frames.
+captured_count="$(find "$QA_OUTPUT_DIR" -maxdepth 1 -name '*.png' | wc -l)"
+if [ "$capture_status" -ne 0 ] && [ "$captured_count" -eq 0 ]; then
+  echo "::warning::Emulator startup failed before screen 01; restarting ADB once"
+  timeout 10s adb kill-server || true
+  timeout 15s adb start-server || true
+  timeout 45s adb wait-for-device || true
+  sleep 8
+  bash ci/capture_screenshots.sh 2>&1 | tee "$root/capture-retry.log"
+  capture_status=${PIPESTATUS[0]}
+fi
 python3 ci/verify_responsive_capture.py \
   "$QA_OUTPUT_DIR" "$profile" "$width" "$height" "$density" "$font"
 verify_status=$?

@@ -691,7 +691,8 @@ public final class MainActivity extends Activity {
         alerts.setBackground(shape(panel(),12));alerts.setPadding(dp(9),dp(9),dp(9),dp(9));
         alerts.setContentDescription("Obavijesti o neplaćenim računima");
         bar.addView(alerts,lp(42,42));alerts.setOnClickListener(v->showNotifications());
-        place(body,bar);gap(body,25);
+        // In dark mode, the reference greets lower without shifting its hero.
+        place(body,bar);gap(body,dark?41:25);
 
         if(RecoveryVault.hasWorkingDraft(this)){
             LinearLayout resume=card();
@@ -723,7 +724,7 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,21);
+        place(body,welcome);gap(body,dark?9:21);
 
         LinearLayout hero=vertical();pad(hero,19,dark?13:16);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -3034,11 +3035,9 @@ public final class MainActivity extends Activity {
             dividerLp.setMargins(dp(12),0,dp(12),0);
             target.addView(divider,dividerLp);
         }
-        // The reference fits all nine primary settings above the navigation:
-        // reduce vertical inset without dropping any functional destinations.
-        // Settings reference fits all nine rows above the bottom navigation
-        // at 393x852dp. Preserve a >=54dp hit target, but reduce blank padding.
-        LinearLayout row=horizontal();pad(row,13,8);
+        // Nine original settings rows extend close to the navigation bar.
+        // Native rows stay fully tappable and content can scroll at large fonts.
+        LinearLayout row=horizontal();pad(row,13,11);
         row.setGravity(Gravity.CENTER_VERTICAL);
         TextView mark=label(symbol,19,BLUE,true);
         mark.setGravity(Gravity.CENTER);
@@ -3083,24 +3082,24 @@ public final class MainActivity extends Activity {
                 "Podaci na već potvrđenim dokumentima neće se promijeniti.")
             .setPositiveButton("U redu",null).show());
         header.addView(more,lp(43,43));
-        place(body,header);gap(body,19);
-        LinearLayout hero=horizontal();pad(hero,13,12);
+        place(body,header);gap(body,29);
+        LinearLayout hero=horizontal();pad(hero,13,15);
         background(hero,dark?0xff26365a:0xffe9edff,18);
         ImageView brand=new ImageView(this);brand.setImageResource(R.drawable.brand_mark);
-        hero.addView(brand,lp(60,60));
+        hero.addView(brand,lp(64,64));
         LinearLayout heroText=vertical();pad(heroText,10,0);
         String companyName=db.setting("name").trim();
         heroText.addView(label(companyName.isEmpty()?"Moja tvrtka / obrt":companyName,15,ink(),true));
         gap(heroText,5);
         heroText.addView(label("Profil izdavatelja računa",11,sub(),false));
         hero.addView(heroText,new LinearLayout.LayoutParams(0,-2,1));
-        place(body,hero);gap(body,13);
-        caption(body,"Podaci se primjenjuju na nove račune i ponude. Potvrđeni dokumenti čuvaju izvorne podatke izdavatelja.");
-        gap(body,14);
+        // Align the first business form with the reference. Preserve the
+        // immutable-issuer disclosure below the editable sections.
+        place(body,hero);gap(body,18);
         LinearLayout form=card();
-        place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,12);
+        place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note"};
-        String[] labels={"Naziv tvrtke / obrta ili ime i prezime","OIB (11 znamenaka)","PDV identifikacijski broj (ako se primjenjuje)","Ulica i kućni broj / adresa","Poštanski broj","Grad / mjesto","Država","E-mail","Telefon","Web stranica","IBAN","Naziv banke","BIC / SWIFT","Registarski podatak (npr. MBS)","Oznaka poslovnog prostora","Oznaka operatera","Način plaćanja","Poziv na broj / model plaćanja","Porezni status ili zakonska napomena"};
+        String[] labels={"Naziv tvrtke","OIB","PDV identifikacijski broj (ako se primjenjuje)","Adresa","Poštanski broj","Grad / mjesto","Država","E-adresa","Telefon","Web stranica","IBAN","Naziv banke","BIC / SWIFT","Registarski podatak (npr. MBS)","Oznaka poslovnog prostora","Oznaka operatera","Način plaćanja","Poziv na broj / model plaćanja","Porezni status ili zakonska napomena"};
         EditText[] fields=new EditText[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
         int[][] sections={{0,1,3,7,8},{10,11,12,16,17},{2,4,5,6,9,13,14,15,18}};
@@ -3127,12 +3126,21 @@ public final class MainActivity extends Activity {
                     fields[index].setTransformationMethod(
                         android.text.method.PasswordTransformationMethod.getInstance());
                 }
-                fieldLabel(card,labels[index],fields[index]);
+                // Compact form rows preserve all original fields and their
+                // order. Sensitive value toggles share the label's line.
+                fields[index].setPadding(dp(14),dp(9),dp(14),dp(9));
+                fields[index].setMinimumHeight(dp(47));
+                gap(card,index==sections[group][0]?5:10);
+                LinearLayout fieldHeading=horizontal();
+                fieldHeading.setGravity(Gravity.CENTER_VERTICAL);
+                TextView fieldName=label(labels[index],12,ink(),true);
+                fieldHeading.addView(fieldName,new LinearLayout.LayoutParams(0,-2,1));
                 if(index==1||index==8){
                     final int fieldIndex=index;
                     TextView reveal=label("Prikaži "+(index==1?"OIB":"telefon"),11,BLUE,true);
                     reveal.setContentDescription("Prikaži ili sakrij "+
                         (index==1?"OIB":"telefon"));
+                    reveal.setPadding(dp(6),dp(5),dp(6),dp(5));
                     reveal.setOnClickListener(v->{
                         EditText value=fields[fieldIndex];
                         boolean masked=value.getTransformationMethod() instanceof
@@ -3143,8 +3151,11 @@ public final class MainActivity extends Activity {
                         reveal.setText((masked?"Sakrij ":"Prikaži ")+
                             (fieldIndex==1?"OIB":"telefon"));
                     });
-                    place(card,reveal);gap(card,8);
+                    fieldHeading.addView(reveal);
                 }
+                place(card,fieldHeading);
+                gap(card,5);
+                place(card,fields[index]);
             }
             if(group==0)place(body,form);
             else place(body,card);
@@ -3164,6 +3175,8 @@ public final class MainActivity extends Activity {
                 toast("Podaci tvrtke uspješno spremljeni");settings();
             }catch(Exception e){error(e);}
         };
+        gap(body,8);
+        caption(body,"Promjene vrijede samo za nove dokumente. Potvrđeni računi i ponude čuvaju izvorne podatke izdavatelja.");
         // Keep the primary action visible while scrolling the long form, as in the reference.
         LinearLayout bottomAction=vertical();pad(bottomAction,16,7);
         bottomAction.setBackgroundColor(bg());
