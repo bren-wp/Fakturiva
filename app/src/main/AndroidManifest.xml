@@ -6,6 +6,7 @@
     <!-- Used only after explicit LAN ESC/POS printing to a local private IP. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
+    <uses-feature android:name="android.hardware.usb.host" android:required="false"/>
     <application android:allowBackup="false"
         android:fullBackupContent="false"
         android:usesCleartextTraffic="false"
@@ -22,6 +23,9 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Explicit receiver only for Android USB Host permission replies. -->
+        <receiver android:name=".UsbReceiptPrinter$PermissionReceiver"
+            android:exported="false"/>
         <provider android:name=".PdfShareProvider"
             android:authorities="com.brendigo.fakturiva.pdf"
             android:exported="false"
