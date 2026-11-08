@@ -144,9 +144,17 @@ public final class MainActivity extends Activity {
         db.close();super.onDestroy();
     }
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
-    private String money(long amount){return BillingCurrency.format(amount,selectedCurrency(),Locale.ENGLISH);}
+    private String selectedLanguage(){return UiStrings.normalized(
+        prefs==null?"en":prefs.getString("ui_language","en"));}
+    private Locale selectedLocale(){
+        return "hr".equals(selectedLanguage())?Locale.forLanguageTag("hr-HR"):Locale.ENGLISH;
+    }
+    private String ui(String s){return UiStrings.translate(s,selectedLanguage());}
+    private String money(long amount){
+        return BillingCurrency.format(amount,selectedCurrency(),selectedLocale());
+    }
     private String docMoney(Store.Document d,long amount){
-        return BillingCurrency.format(amount,d.currencyCode,Locale.ENGLISH);
+        return BillingCurrency.format(amount,d.currencyCode,selectedLocale());
     }
     private String draftMoney(long amount){
         String currency=selectedCurrency();
@@ -154,7 +162,7 @@ public final class MainActivity extends Activity {
             try{currency=db.document(editingDraftId).currencyCode;}
             catch(Exception ignored){}
         }
-        return BillingCurrency.format(amount,currency,Locale.ENGLISH);
+        return BillingCurrency.format(amount,currency,selectedLocale());
     }
     private int bg(){return dark?0xff0d182a:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
@@ -178,7 +186,7 @@ public final class MainActivity extends Activity {
         }
         return strong?referenceBold:referenceRegular;
     }
-    private TextView label(String s,int size,int color,boolean strong){TextView t=new TextView(this);t.setText(s);
+    private TextView label(String s,int size,int color,boolean strong){TextView t=new TextView(this);t.setText(ui(s));
         t.setTextColor(color);t.setTextSize(size);t.setFontFeatureSettings("kern");
         // Inter belongs to the original design on the highest-deviation
         // dashboard, reports and document-preview screens.
@@ -1404,6 +1412,9 @@ public final class MainActivity extends Activity {
             quote?18:16,ink(),true));gap(basics,quote?16:12);
         String typeName=Store.INVOICE.equals(editType)?"računa":"ponude";
         basics.addView(label("Broj "+typeName,12,sub(),true));gap(basics,6);
+        basics.addView(label("Currency: "+(editingDraftId>0?
+            db.document(editingDraftId).currencyCode:selectedCurrency()),11,sub(),false));
+        gap(basics,6);
         TextView sequence=label(editingDraftId>0?
             "Nacrt · broj nakon potvrde":"Dodjeljuje se pri potvrdi",13,ink(),false);
         pad(sequence,14,quote?9:13);sequence.setBackground(outlined(panel()));
@@ -3113,6 +3124,10 @@ public final class MainActivity extends Activity {
 
         LinearLayout options=card();pad(options,0,2);
         place(body,options);
+        settingRow(options,"◉","Language",selectedLanguage().equals("en")?"English":"Hrvatski",
+            this::languagePicker);
+        settingRow(options,"¤","Default currency",selectedCurrency(),
+            this::currencyPicker);
         settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
             "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
@@ -3142,6 +3157,29 @@ public final class MainActivity extends Activity {
         gap(body,17);
         caption(body,"Fakturiva · Brendigo");
         gap(body,19);
+    }
+    private void languagePicker(){
+        String[] names=UiStrings.readyNames(),codes=UiStrings.readyCodes();
+        int selected=selectedLanguage().equals("hr")?1:0;
+        new AlertDialog.Builder(this).setTitle(ui("Language"))
+            .setSingleChoiceItems(names,selected,(dialog,which)->{
+                prefs.edit().putString("ui_language",codes[which]).apply();
+                dialog.dismiss();settings();
+            }).setNegativeButton(ui("Cancel"),null).show();
+    }
+    private void currencyPicker(){
+        String[] options=BillingCurrency.options();
+        String[] codes=BillingCurrency.codes();
+        int selected=0;
+        for(int i=0;i<codes.length;i++)if(codes[i].equals(selectedCurrency()))selected=i;
+        new AlertDialog.Builder(this).setTitle(ui("Default currency"))
+            .setMessage(ui("Applies to new invoices and quotes. Issued documents retain their original currency."))
+            .setSingleChoiceItems(options,selected,(dialog,which)->{
+                String code=codes[which];
+                if(!BillingCurrency.isSupported(code))return;
+                db.setting("currency",code);
+                dialog.dismiss();settings();
+            }).setNegativeButton(ui("Cancel"),null).show();
     }
     /** Read-only numbering status; no unsafe editing of confirmed sequences. */
     private void numberingInfo(){
@@ -3190,7 +3228,7 @@ public final class MainActivity extends Activity {
         info.addView(summary);
         row.addView(info,new LinearLayout.LayoutParams(0,-2,1));
         row.addView(label("›",22,sub(),false));
-        row.setContentDescription(name+". "+subtitle);
+        row.setContentDescription(ui(name)+". "+ui(subtitle));
         row.setFocusable(true);
         place(target,row);
         row.setOnClickListener(v->action.run());
@@ -3536,7 +3574,7 @@ public final class MainActivity extends Activity {
     }
     private void clearPass(){if(pendingPassword!=null){Arrays.fill(pendingPassword,'\0');pendingPassword=null;}}
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
-    private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
+    private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
         if("security_unlock".equals(screen))finish();
         else if("security_setup".equals(screen)){
