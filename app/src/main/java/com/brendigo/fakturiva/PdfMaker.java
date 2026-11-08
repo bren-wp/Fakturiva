@@ -65,7 +65,7 @@ public final class PdfMaker {
         paint.setColor(RULE);paint.setStrokeWidth(0.7f);
         canvas.drawLine(M,H-60,RIGHT,H-60,paint);
         text("Fakturiva",M,H-44,8,GRAY,false);
-        right("Str. "+pageNumber,RIGHT,H-44,8,GRAY,false);
+        right("Page "+pageNumber,RIGHT,H-44,8,GRAY,false);
     }
     private void newPage(){
         if(current!=null){footer();document.finishPage(current);}
@@ -86,10 +86,10 @@ public final class PdfMaker {
             triangle.close();
             canvas.drawPath(triangle,paint);
             text("Fakturiva",M+25,y,19,NAVY,true);
-            right("POSLOVNI DOKUMENT",RIGHT,y,9,GRAY,false);
+            right("BUSINESS DOCUMENT",RIGHT,y,9,GRAY,false);
         }else{
             text("Fakturiva",M,y,20,NAVY,true);
-            right("PONUDA",RIGHT,y,9,BLUE,false);
+            right("QUOTE",RIGHT,y,9,BLUE,false);
         }
         y+=18;rule();y+=6;
     }
@@ -199,18 +199,18 @@ public final class PdfMaker {
         text(title,M,y,12,BLUE,true);y+=10;rule();
     }
     private void printItems(Store.Document d){
-        heading(invoiceStyle?"STAVKE RAČUNA":"STAVKE DOKUMENTA");
+        heading(invoiceStyle?"INVOICE ITEMS":"DOCUMENT ITEMS");
         requireSpace(34);
         if(invoiceStyle){
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.rgb(238,241,252));
             canvas.drawRoundRect(M-5,y-15,RIGHT+5,y+7,6,6,paint);
         }
-        text(invoiceStyle?"OPIS USLUGE / ARTIKLA":"OPIS STAVKE",M,y,9,BLUE,true);
-        right("KOL.",307,y,9,BLUE,true);
-        right("CIJENA",396,y,9,BLUE,true);
-        right("PDV",447,y,9,BLUE,true);
-        right("IZNOS",RIGHT,y,9,BLUE,true);
+        text(invoiceStyle?"PRODUCT / SERVICE":"DESCRIPTION",M,y,9,BLUE,true);
+        right("QTY",307,y,9,BLUE,true);
+        right("PRICE",396,y,9,BLUE,true);
+        right("Tax",447,y,9,BLUE,true);
+        right("AMOUNT",RIGHT,y,9,BLUE,true);
         y+=10;rule();
         for(Store.Item item:d.items){
             List<String> nameLines=wrap(item.name,210,10,false);
@@ -233,7 +233,7 @@ public final class PdfMaker {
     }
     private void totals(Store.Document d){
         if(invoiceStyle)y+=12;
-        else heading("OBRAČUN I UKUPAN IZNOS");
+        else heading("TOTAL SUMMARY");
         Map<Integer,long[]> groups=new TreeMap<>();
         for(Store.Item item:d.items){
             long[] group=groups.get(item.taxRate);
@@ -246,9 +246,9 @@ public final class PdfMaker {
             field("Tax "+Money.rateLabel(e.getKey())+" · amount",money(e.getValue()[1]));
         }
         requireSpace(88);
-        right("Osnovica",RIGHT-130,y,10,GRAY,false);
+        right("Subtotal",RIGHT-130,y,10,GRAY,false);
         right(money(d.netCents),RIGHT,y,10,NAVY,true);y+=19;
-        String vatLabel="PDV";
+        String vatLabel="Tax";
         if(invoiceStyle&&!d.items.isEmpty()){
             int rate=d.items.get(0).taxRate;
             boolean singleRate=true;
@@ -263,57 +263,57 @@ public final class PdfMaker {
             paint.setColor(RULE);paint.setStrokeWidth(0.7f);
             canvas.drawLine(RIGHT-245,y-11,RIGHT,y-11,paint);
         }
-        right("UKUPNO",RIGHT-130,y,14,NAVY,true);
+        right("TOTAL",RIGHT-130,y,14,NAVY,true);
         right(money(d.totalCents),RIGHT,y,14,BLUE,true);y+=21;
         if(Store.INVOICE.equals(d.type)){
-            right("Evidentirano plaćeno",RIGHT-130,y,9,GRAY,false);
+            right("Paid",RIGHT-130,y,9,GRAY,false);
             right(money(d.paidCents),RIGHT,y,10,NAVY,false);y+=19;
-            right("Preostalo",RIGHT-130,y,10,GRAY,false);
+            right("Outstanding",RIGHT-130,y,10,GRAY,false);
             right(money(d.outstanding()),RIGHT,y,11,NAVY,true);y+=21;
         }
     }
     private void billing(Store.Document d){
-        heading("PLAĆANJE I NAPOMENE");
+        heading("PAYMENT DETAILS");
         field("IBAN",d.issuerIban);
         field("Bank account",d.issuerBankAccountNumber);
         field("Routing / ABA",d.issuerBankRoutingNumber);
         field("Sort / branch code",d.issuerBankSortCode);
         field("Bank address",d.issuerBankAddress);
         field("PO / invoice reference",d.issuerInvoiceReference);
-        field("Banka",d.issuerBankName);
+        field("Bank",d.issuerBankName);
         field("BIC / SWIFT",d.issuerSwift);
-        field("Način plaćanja",d.issuerPaymentMethod);
-        field("Poziv na broj / model",d.issuerPaymentReference);
-        field("Registarski podatak",d.issuerRegistry);
-        field("Poslovni prostor",d.issuerBusinessUnit);
-        field("Oznaka operatera",d.issuerOperator);
+        field("Payment method",d.issuerPaymentMethod);
+        field("Payment reference",d.issuerPaymentReference);
+        field("Registration",d.issuerRegistry);
+        field("Business unit",d.issuerBusinessUnit);
+        field("Operator reference",d.issuerOperator);
         field("Payment terms",d.issuerPaymentTerms);
         field("Additional information",d.issuerFooterNote);
         field("Tax note",d.issuerTaxNote);
-        field("Napomena",d.notes);
+        field("Notes",d.notes);
     }
     private void render(Store.Document d){
         invoiceStyle=Store.INVOICE.equals(d.type);
         documentCurrency=BillingCurrency.canonical(d.currencyCode);
         newPage();
         requireSpace(58);
-        text(Store.INVOICE.equals(d.type)?"RAČUN":"PONUDA",M,y,19,NAVY,true);
-        right(d.number==null?"NACRT #"+d.id:d.number,RIGHT,y,13,BLUE,true);y+=21;
-        text(Store.DRAFT.equals(d.status)?"Nacrt — dokument nije potvrđen":
-            Store.PAID.equals(d.status)?"Plaćeno":
-            Store.SENT.equals(d.status)?"Potvrđena ponuda":"Potvrđeno",M,y,10,GRAY,false);y+=25;
+        text(Store.INVOICE.equals(d.type)?"INVOICE":"QUOTE",M,y,19,NAVY,true);
+        right(d.number==null?"DRAFT #"+d.id:d.number,RIGHT,y,13,BLUE,true);y+=21;
+        text(Store.DRAFT.equals(d.status)?"Draft — not yet confirmed":
+            Store.PAID.equals(d.status)?"Paid":
+            Store.SENT.equals(d.status)?"Confirmed quote":"Confirmed",M,y,10,GRAY,false);y+=25;
         if(Store.QUOTE.equals(d.type) && has(d.quoteTitle)){
-            field("Naslov ponude",d.quoteTitle);
+            field("Quote title",d.quoteTitle);
             y+=8;
         }
-        paired("IZDAVATELJ","KLIJENT");y+=4;
+        paired("ISSUER","CLIENT");y+=4;
         pairedSection(company(d),customer(d));y+=9;
         requireSpace(20);rule();
-        paired("Datum izdavanja: "+displayDate(d.issueDate),
-            "Dospijeće / valjanost: "+displayDate(d.dueDate));
+        paired("Issue date: "+displayDate(d.issueDate),
+            "Due / valid until: "+displayDate(d.dueDate));
         if(has(d.supplyDate))
-            field(Store.QUOTE.equals(d.type)?"Rok izvedbe":
-                "Datum isporuke / obavljene usluge",d.supplyDate);
+            field(Store.QUOTE.equals(d.type)?"Delivery deadline":
+                "Delivery / service date",d.supplyDate);
         y+=12;
         printItems(d);
         totals(d);
