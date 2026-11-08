@@ -10,15 +10,21 @@ if((int)($_SERVER['CONTENT_LENGTH']??0)>4096){
 $mode=(string)($_POST['action']??'');
 $redirect=match($mode){
     'register'=>'register.php','login'=>'login.php',
-    'link'=>'link.php','set-sync'=>'dashboard.php',
+    'link'=>'link.php','set-sync'=>'dashboard.php','identify'=>'identify.php',
     'logout'=>'login.php',default=>'login.php'
 };
+$username='';
 try{
     checkCsrf();
     $username=trim((string)($_POST['username']??''));
     $pin=(string)($_POST['pin']??'');
     $passphrase=(string)($_POST['passphrase']??'');
     $ip=(string)($_SERVER['REMOTE_ADDR']??'');
+    if($mode==='identify'){
+        FakturivaSelfHost\normalizeName($username);
+        $_SESSION['last_username']=$username;
+        gotoPage('login.php');
+    }
     if($mode==='register'){
         $result=FakturivaSelfHost\webRegister($username,$pin,$ip);
         adoptWebLogin($result);
