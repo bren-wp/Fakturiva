@@ -523,4 +523,36 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }
     }
 
+
+    @Test
+    public void testCatalogCurrencyCannotBeRelabelledAsDifferentInvoiceCurrency()throws Exception{
+        IsolatedContext ctx=new IsolatedContext(getContext());Store store=null;
+        try{
+            store=new Store(ctx);
+            store.setting("name","International Example Ltd");
+            store.setting("address","Dublin");
+            long customer=store.saveClient("Buyer","","Address","");
+            store.setting("currency","EUR");
+            store.saveProduct("Euro consulting",10000,0,"SERVICE","hour");
+            Store.Item product=store.products().get(0);
+            assertEquals("EUR",product.currencyCode);
+            store.setting("currency","USD");
+            try{
+                store.createDraft(Store.INVOICE,customer,"2026-11-01","2026-11-20",
+                    "Wrong currency",Arrays.asList(product));
+                fail("Currency mismatch must never silently relabel 100 EUR to 100 USD");
+            }catch(IllegalArgumentException expected){}
+            assertEquals(0,store.documents(Store.INVOICE).size());
+            store.saveProduct("Dollar consulting",10000,0,"SERVICE","hour");
+            boolean foundDollar=false;
+            for(Store.Item item:store.products())
+                if("Dollar consulting".equals(item.name))
+                    foundDollar="USD".equals(item.currencyCode);
+            assertTrue("New catalog product records selected USD",foundDollar);
+        }finally{
+            if(store!=null)store.close();
+            ctx.clean();
+        }
+    }
+
 }
