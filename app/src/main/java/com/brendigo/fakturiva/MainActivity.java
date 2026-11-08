@@ -743,7 +743,7 @@ public final class MainActivity extends Activity {
                 openLocalSession(id);
             }catch(Exception e){toast(e.getMessage()==null?
                 "Registracija nije uspjela":e.getMessage());}
-            finally{Arrays.fill(digits,'\\0');}
+            finally{Arrays.fill(digits,'\0');}
         });
         submit.setContentDescription("Registracija lokalnog korisničkog računa");
         place(body,submit);gap(body,46);
@@ -854,7 +854,7 @@ public final class MainActivity extends Activity {
                     updatePinDots(dots);
                     toast(error.getMessage()==null?
                         "Neuspješna provjera sigurnosnog PIN-a":error.getMessage());
-                }finally{Arrays.fill(digits,'\\0');}
+                }finally{Arrays.fill(digits,'\0');}
             });
             submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
             place(body,submit);gap(body,37);
@@ -972,7 +972,7 @@ public final class MainActivity extends Activity {
                         if(LocalAccounts.activeId()!=null && db==null)
                             db=new Store(this,id);
                         toast(e.getMessage()==null?"Brisanje nije uspjelo":e.getMessage());
-                    }finally{Arrays.fill(code,'\\0');}
+                    }finally{Arrays.fill(code,'\0');}
                 }).show();
         });
     }
