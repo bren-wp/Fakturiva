@@ -320,7 +320,7 @@ public final class MainActivity extends Activity {
                     documents(d.type);
                 }catch(Exception e){home();}
                 break;
-            case "local_accounts":case "self_host":settings();break;
+            case "local_accounts":case "self_host":case "privacy":settings();break;
             case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":case "about":settings();break;
             default:home();
@@ -1105,6 +1105,42 @@ public final class MainActivity extends Activity {
         }catch(Exception error){toast(error.getMessage()==null?
             "Neispravne postavke hostinga":error.getMessage());}
         finally{Arrays.fill(code,'\0');}
+    }
+
+    /** Required in-app privacy information; the public Play policy URL must
+     * be independently published before production distribution. */
+    private void privacyInfoScreen(){
+        setup("privacy",true);
+        toolbar("Privatnost","Fakturiva · Brendigo",true);
+        LinearLayout content=card();
+        place(content,label("Vaši podaci ostaju na uređaju",18,ink(),true));
+        gap(content,11);
+        place(content,label("Korisničko ime, lokalni PIN i poslovni podaci "+
+            "spremaju se na ovom Android uređaju. PIN nije spremljen kao "+
+            "čitljiv tekst. Svaki lokalni korisnik ima zasebnu bazu "+
+            "i lokalne šifrirane kopije.",13,sub(),false));
+        gap(content,14);
+        place(content,label("Vlastiti hosting nije obavezan",16,ink(),true));
+        gap(content,8);
+        place(content,label("Tek ako sami odaberete vlastiti HTTPS hosting "+
+            "i pokrenete slanje, šifrirana kopija računa i ponuda prenosi "+
+            "se na vašu domenu. Za pristup se koristi zasebna poslužiteljska "+
+            "lozinka, nikada lokalni PIN.",13,sub(),false));
+        gap(content,14);
+        place(content,label("Brisanje i čuvanje",16,ink(),true));
+        gap(content,8);
+        place(content,label("Lokalni i poslužiteljski računi brišu se odvojeno. "+
+            "Za brisanje trebate PIN odnosno lozinku poslužitelja. "+
+            "Poslovne dokumente pohranite u skladu sa zakonskim rokovima "+
+            "čuvanja, prije brisanja izvezite potrebne kopije.",13,sub(),false));
+        place(body,content);gap(body,16);
+        button(body,"Upravljaj lokalnim računom",this::localAccountSettings);
+        gap(body,10);
+        secondary(body,"Upravljaj vlastitim hostingom",this::selfHostedSettings);
+        gap(body,16);
+        place(body,label("Kontakt za pitanja o aplikaciji: "+
+            BrandAttribution.SUPPORT_EMAIL,12,sub(),false));
+        gap(body,20);
     }
 
     /**
@@ -3733,6 +3769,9 @@ public final class MainActivity extends Activity {
         settingRow(options,"☁","Vlastiti hosting (neobavezno)",
             "Šifrirana ručna kopija · HTTPS · bez SQL baze",
             this::selfHostedSettings);
+        settingRow(options,"♧","Privatnost i brisanje podataka",
+            "Lokalni i udaljeni računi · prava korisnika",
+            this::privacyInfoScreen);
         settingRow(options,"♙","Korisnički računi",
             LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
             this::localAccountSettings);
@@ -3976,6 +4015,8 @@ public final class MainActivity extends Activity {
         });
         gap(body,12);
         caption(body,"This app creates ordinary invoices and quotes. Printing does not process card payments or provide fiscalization.");
+        gap(body,12);
+        secondary(body,"Privatnost i brisanje računa",this::privacyInfoScreen);
     }
     private void requestBluetoothPrint(long documentId,int dots){
         if(Build.VERSION.SDK_INT>=31 &&
