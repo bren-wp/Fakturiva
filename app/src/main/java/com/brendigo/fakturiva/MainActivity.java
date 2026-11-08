@@ -3,6 +3,12 @@ package com.brendigo.fakturiva;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
@@ -47,6 +53,7 @@ public final class MainActivity extends Activity {
         TEXT=0xff253449, MUTED=0xff8592a5, BLUE=0xff5566f8,
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
+    private static final int BLUETOOTH_PRINT_PERMISSION_REQUEST=108;
     private Store db; private SharedPreferences prefs;
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
@@ -65,6 +72,8 @@ public final class MainActivity extends Activity {
     private String draftIssue="",draftDue="",draftSupply="",draftNote="",draftQuoteTitle="";
     private final ArrayList<Store.Item> draftItems=new ArrayList<>();
     private long pendingPdfId=-1;private char[] pendingPassword;
+    private long pendingBluetoothDocumentId=-1;
+    private int pendingBluetoothPaperDots=ThermalReceipt.PAPER_58_DOTS;
     private final SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT);
 
     @Override public void onCreate(Bundle b){super.onCreate(b);
@@ -82,6 +91,9 @@ public final class MainActivity extends Activity {
             pendingPaymentsCsvMonth=b.getString("pendingPaymentsCsvMonth");
             pendingReportCsvMonth=b.getString("pendingReportCsvMonth");
             deviceAuthAction=b.getInt("deviceAuthAction",0);
+            pendingBluetoothDocumentId=b.getLong("pendingBluetoothDocumentId",-1);
+            pendingBluetoothPaperDots=b.getInt("pendingBluetoothPaperDots",
+                ThermalReceipt.PAPER_58_DOTS);
             securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
         if(runScreenshotHarness())return;
@@ -100,6 +112,8 @@ public final class MainActivity extends Activity {
         outState.putString("pendingPaymentsCsvMonth",pendingPaymentsCsvMonth);
         outState.putString("pendingReportCsvMonth",pendingReportCsvMonth);
         outState.putInt("deviceAuthAction",deviceAuthAction);
+        outState.putLong("pendingBluetoothDocumentId",pendingBluetoothDocumentId);
+        outState.putInt("pendingBluetoothPaperDots",pendingBluetoothPaperDots);
         outState.putBoolean("securityFromSettings",securityFromSettings);
         // Never persist the backup password, even in the Android Bundle.
         super.onSaveInstanceState(outState);
@@ -1819,11 +1833,12 @@ public final class MainActivity extends Activity {
         statusBar.addView(options,lp(38,38));
         options.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Dokument")
-            .setItems(new String[]{"Pregledaj PDF","Spremi PDF","Podijeli PDF"},
+            .setItems(new String[]{"Pregledaj PDF","Spremi PDF","Podijeli PDF","Print / POS printer"},
                 (dialog,which)->{
                     if(which==0)showActualPdfPreview(d);
                     else if(which==1)savePdf(id);
-                    else sharePdf(id);
+                    else if(which==2)sharePdf(id);
+                    else showPrinterDialog(id);
                 }).setNegativeButton("Zatvori",null).show());
         place(body,statusBar);gap(body,invoice?6:12);
 
@@ -1844,6 +1859,8 @@ public final class MainActivity extends Activity {
         right.leftMargin=dp(6);
         actions.addView(share,right);
         place(body,actions);gap(body,10);
+        secondary(body,"Print invoice or quote",()->showPrinterDialog(id));
+        gap(body,10);
 
         if(draft){
             place(body,action(invoice?"Potvrdi račun":"Potvrdi ponudu",
@@ -3134,6 +3151,9 @@ public final class MainActivity extends Activity {
             this::languagePicker);
         settingRow(options,"¤","Default currency",selectedCurrency(),
             this::currencyPicker);
+        settingRow(options,"▤","Printers and paper",
+            printOptions()[Math.max(0,Math.min(5,prefs.getInt("default_paper",0)))],
+            this::printerPreferences);
         settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
             "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
@@ -3186,6 +3206,117 @@ public final class MainActivity extends Activity {
                 db.setting("currency",code);
                 dialog.dismiss();settings();
             }).setNegativeButton(ui("Cancel"),null).show();
+    }
+    private String[] printOptions(){
+        String[] system=SystemInvoicePrinter.formats();
+        return new String[]{system[0],system[1],system[2],system[3],
+            "58 mm · Bluetooth ESC/POS","80 mm · Bluetooth ESC/POS"};
+    }
+    private void printerPreferences(){
+        String[] choices=printOptions();
+        int preferred=Math.max(0,Math.min(choices.length-1,
+            prefs.getInt("default_paper",0)));
+        new AlertDialog.Builder(this)
+            .setTitle("Printers and paper")
+            .setSingleChoiceItems(choices,preferred,(dialog,which)->{
+                prefs.edit().putInt("default_paper",which).apply();
+                dialog.dismiss();settings();
+            })
+            .setNeutralButton("Pair Bluetooth printer",(dialog,which)->
+                startActivity(new Intent("android.settings.BLUETOOTH_SETTINGS")))
+            .setNegativeButton("Cancel",null).show();
+    }
+    private void showPrinterDialog(long documentId){
+        Store.Document document;
+        try{document=db.document(documentId);}catch(Exception e){error(e);return;}
+        String[] choices=printOptions();
+        int preferred=Math.max(0,Math.min(choices.length-1,
+            prefs.getInt("default_paper",0)));
+        int[] choice={preferred};
+        new AlertDialog.Builder(this).setTitle("Print invoice / quote")
+            .setSingleChoiceItems(choices,preferred,(dialog,which)->choice[0]=which)
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Print",(dialog,which)->{
+                prefs.edit().putInt("default_paper",choice[0]).apply();
+                if(choice[0]<4){
+                    try{SystemInvoicePrinter.print(this,document,choice[0]);}
+                    catch(Exception e){error(e);}
+                }else{
+                    requestBluetoothPrint(documentId,choice[0]==4?
+                        ThermalReceipt.PAPER_58_DOTS:ThermalReceipt.PAPER_80_DOTS);
+                }
+            }).show();
+    }
+    private void requestBluetoothPrint(long documentId,int dots){
+        if(Build.VERSION.SDK_INT>=31 &&
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=
+                PackageManager.PERMISSION_GRANTED){
+            pendingBluetoothDocumentId=documentId;
+            pendingBluetoothPaperDots=dots;
+            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT},
+                BLUETOOTH_PRINT_PERMISSION_REQUEST);
+            return;
+        }
+        showPairedBluetoothPrinters(documentId,dots);
+    }
+    @Override public void onRequestPermissionsResult(int requestCode,
+            String[] permissions,int[] grantResults){
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode!=BLUETOOTH_PRINT_PERMISSION_REQUEST)return;
+        long id=pendingBluetoothDocumentId;
+        int paper=pendingBluetoothPaperDots;
+        pendingBluetoothDocumentId=-1;
+        if(grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED
+            &&id>0)showPairedBluetoothPrinters(id,paper);
+        else toast("Nearby devices permission is required for Bluetooth printing.");
+    }
+    private void showPairedBluetoothPrinters(long documentId,int dots){
+        try{
+            BluetoothManager manager=(BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
+            BluetoothAdapter adapter=manager==null?null:manager.getAdapter();
+            if(adapter==null){toast("Bluetooth is unavailable on this device.");return;}
+            if(!adapter.isEnabled()){
+                new AlertDialog.Builder(this).setTitle("Bluetooth is disabled")
+                    .setMessage("Enable Bluetooth and pair an ESC/POS printer in Android settings.")
+                    .setPositiveButton("Bluetooth settings",(dialog,which)->
+                        startActivity(new Intent("android.settings.BLUETOOTH_SETTINGS")))
+                    .setNegativeButton("Cancel",null).show();
+                return;
+            }
+            ArrayList<BluetoothDevice> devices=new ArrayList<>(adapter.getBondedDevices());
+            devices.sort((a,b)->String.valueOf(a.getName()).compareToIgnoreCase(
+                String.valueOf(b.getName())));
+            if(devices.isEmpty()){
+                new AlertDialog.Builder(this).setTitle("No paired Bluetooth printers")
+                    .setMessage("First pair a compatible Bluetooth Classic ESC/POS receipt printer in Android settings.")
+                    .setPositiveButton("Bluetooth settings",(dialog,which)->
+                        startActivity(new Intent("android.settings.BLUETOOTH_SETTINGS")))
+                    .setNegativeButton("Cancel",null).show();
+                return;
+            }
+            String[] names=new String[devices.size()];
+            for(int i=0;i<names.length;i++){
+                BluetoothDevice device=devices.get(i);
+                String name=device.getName();
+                names[i]=name==null||name.trim().isEmpty()?"Paired Bluetooth device":name;
+                String address=device.getAddress();
+                if(address!=null&&address.length()>=5)
+                    names[i]+=" · "+address.substring(address.length()-5);
+            }
+            Store.Document document=db.document(documentId);
+            new AlertDialog.Builder(this).setTitle("Choose ESC/POS printer")
+                .setItems(names,(dialog,index)->{
+                    toast("Sending receipt to printer…");
+                    try{
+                        BluetoothReceiptPrinter.send(this,devices.get(index),document,dots,
+                            error->toast(error==null?
+                                "Print data sent. Check the printer for completion.":error));
+                    }catch(Exception e){error(e);}
+                })
+                .setNegativeButton("Cancel",null).show();
+        }catch(SecurityException e){
+            toast("Bluetooth permission is missing.");
+        }catch(Exception e){error(e);}
     }
     /** Read-only numbering status; no unsafe editing of confirmed sequences. */
     private void numberingInfo(){
