@@ -63,6 +63,8 @@ public final class MainActivity extends Activity {
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private String documentSearchQuery="";
     private boolean dark=false;
+    // Debug-only reference captures must not alter the production EN locale.
+    private boolean qaReferenceCroatian=false;
     // Cached reference-design typography; independent of network/services.
     private Typeface referenceRegular,referenceBold;
     // 1=enable OS credential lock, 2=unlock, 3=disable.
@@ -158,8 +160,11 @@ public final class MainActivity extends Activity {
         db.close();super.onDestroy();
     }
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
-    private String selectedLanguage(){return UiStrings.normalized(
-        prefs==null?"en":prefs.getString("ui_language","en"));}
+    private String selectedLanguage(){
+        if(qaReferenceCroatian)return "hr";
+        return UiStrings.normalized(
+            prefs==null?"en":prefs.getString("ui_language","en"));
+    }
     private Locale selectedLocale(){
         return "hr".equals(selectedLanguage())?Locale.forLanguageTag("hr-HR"):Locale.ENGLISH;
     }
@@ -561,9 +566,27 @@ public final class MainActivity extends Activity {
         }
         place(body,dots);gap(body,23);
         button(body,"›  Započni",()->securityScreen(false,false));
-        gap(body,11);
-        TextView note=label("Računi i ponude, jednostavno i pregledno.",11,MUTED,false);
-        note.setGravity(Gravity.CENTER);place(body,note);gap(body,23);
+        gap(body,4);
+        // Restore the split muted/blue login line from the owner's reference.
+        // Both visible segments share a single accessible tap target.
+        LinearLayout account=horizontal();
+        account.setGravity(Gravity.CENTER);
+        account.setMinimumHeight(dp(36));
+        account.addView(label("Već imate račun? ",11,MUTED,false));
+        TextView signIn=label("Prijavite se",11,BLUE,true);
+        account.addView(signIn);
+        account.setContentDescription(ui("Već imate račun? Prijavite se"));
+        account.setOnClickListener(v->openExistingLocalAccess());
+        place(body,account);gap(body,15);
+    }
+    /** Local access only: Fakturiva has no fictitious cloud account. */
+    private void openExistingLocalAccess(){
+        if(prefs.getBoolean("welcomed",false)){
+            if(prefs.getBoolean("device_lock",false))securityScreen(true,false);
+            else home();
+        }else{
+            securityScreen(false,false);
+        }
     }
     /**
      * Screen 03 is real offline protection, never fake cloud authentication.
