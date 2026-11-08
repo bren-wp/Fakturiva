@@ -23,6 +23,19 @@ public final class PdfMaker {
     private static final int GRAY=Color.rgb(95,111,134), RULE=Color.rgb(224,232,244);
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final PdfDocument document=new PdfDocument();
+    private final int outputWidth,outputHeight;
+    private final float paperScale,paperOffsetX,paperOffsetY;
+    private PdfMaker(int pageWidth,int pageHeight){
+        if(pageWidth<300||pageHeight<400||pageWidth>1000||pageHeight>1600)
+            throw new IllegalArgumentException("Unsupported paper size");
+        outputWidth=pageWidth;outputHeight=pageHeight;
+        // Scale the genuine A4 vector layout uniformly. The resulting PDF
+        // uses the exact requested media dimensions, not an A4-sized PDF
+        // merely mislabeled as A5, Letter or Legal.
+        paperScale=Math.min(pageWidth/(float)W,pageHeight/(float)H);
+        paperOffsetX=(pageWidth-W*paperScale)*0.5f;
+        paperOffsetY=(pageHeight-H*paperScale)*0.5f;
+    }
     private PdfDocument.Page current;
     private Canvas canvas;
     private int y,pageNumber=0;
@@ -69,8 +82,12 @@ public final class PdfMaker {
     }
     private void newPage(){
         if(current!=null){footer();document.finishPage(current);}
-        current=document.startPage(new PdfDocument.PageInfo.Builder(W,H,++pageNumber).create());
-        canvas=current.getCanvas();canvas.drawColor(Color.WHITE);
+        current=document.startPage(new PdfDocument.PageInfo.Builder(
+            outputWidth,outputHeight,++pageNumber).create());
+        canvas=current.getCanvas();
+        canvas.drawColor(Color.WHITE);
+        canvas.translate(paperOffsetX,paperOffsetY);
+        canvas.scale(paperScale,paperScale);
         y=43;
         if(invoiceStyle){
             // A small native vector mark mirrors the invoice sheet preview;
@@ -321,7 +338,11 @@ public final class PdfMaker {
         if(current!=null){footer();document.finishPage(current);current=null;}
     }
     public static void write(Store db,Store.Document d,OutputStream out)throws IOException{
-        PdfMaker maker=new PdfMaker();
+        write(db,d,out,W,H);
+    }
+    public static void write(Store db,Store.Document d,OutputStream out,
+                             int pageWidth,int pageHeight)throws IOException{
+        PdfMaker maker=new PdfMaker(pageWidth,pageHeight);
         try{
             maker.render(d);
             maker.document.writeTo(out);
