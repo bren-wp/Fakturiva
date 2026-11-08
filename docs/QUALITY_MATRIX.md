@@ -22,7 +22,7 @@ Reference iz korisničkog ZIP paketa `Fakturiva_Android_Brending_i_20_Ekrana` im
 | 14 | Artikli/usluge | katalog | test unosa |
 | 15 | Izvještaji | sažetak iz SQLite | provjera agregata |
 | 16 | Naplata | evidencija uplata | provjera parcijalne naplate |
-| 17 | eRačun | informativni ekran | stvarna integracija nije dostupna |
+| 17 | Pomoć (promjena zahtjeva) | upute za račune i ponude i funkcionalni prečaci | nova referenca potrebna; stara slika se više ne boduje |
 | 18 | Postavke | navigacija i sigurnosne kopije | test obnove |
 | 19 | Profil tvrtke | izdavatelj i podaci | test trajnog spremanja |
 | 20 | Tamna tema | Android native tema | test kontrasta i rubova |

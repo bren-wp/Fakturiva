@@ -1,19 +1,27 @@
-# Fakturiva razvojni plan
+# Fakturiva — smjer proizvoda
 
-## Implementirano u prvom PR-u
-- Nativni Android projekt bez vanjskih runtime biblioteka.
-- Lokalna baza klijenata, kataloga, ponuda, računa i uplata.
-- Izrada nacrta dokumenta sa stavkama, obračunom centi i PDV-a.
-- Numeriranje tek prilikom potvrde; pretvaranje ponude u novi nacrt računa.
-- PDF dokumenti, izvoz/dijeljenje, postavke tvrtke i statistika.
-- Šifrirani lokalni izvoz i uvoz sigurnosne kopije (lozinka).
-- Temelj sučelja prema 20 dostavljenih vizualnih referenci.
+Fakturiva je aplikacija za izradu računa i ponuda, vođenje klijenata, katalog artikala i usluga, evidenciju uplata, izvještaje i PDF dokumente.
 
-## Potrebno prije produkcije
-- Usporedba svih 20 ekrana sa stvarnim snimkama emulatora u više rezolucija; ovo je nativna interpretacija dizajna, ne potvrđena pixel-perfect preslika.
-- Automatizirani UI, instrumentacijski i migracijski testovi te Android uređaji.
-- Fiksiranje pravila računovodstva, razlika obrtnik/tvrtka, PDV kategorija, stope, datum prometa, JIR/ZKI/QR ili eRačun XML kada su primjenjivi.
-- Fiskalizacija i eRačun putem odgovarajućih ovlaštenih sustava: nemoguće bez mreže i propisanih vjerodajnica.
-- Pravila izmjene, storna, razmjene, sljedivosti, zakonodavna i sigurnosna revizija.
-- Zaštita korisnika PIN/biometrijom ako bude potrebna.
-- Release signing, Play Store dokumentacija, pristupačnost i testovi oporavka backup-a.
+## Zadržati i razvijati
+- Brz tijek: izdavatelj → klijent → stavke → pregled → potvrda → PDF.
+- Pouzdanu numeraciju, zaključavanje potvrđenih dokumenata i točne obračune.
+- Odvojene poslovne podatke za postojeće dokumente i novu dokumentaciju.
+- Neobavezne međunarodne porezne identifikacijske brojeve, adresu i državu izdavatelja.
+- Zaštitu pristupa, sigurnosne kopije i oporavak podataka.
+- Responsivno sučelje, tamnu temu i provjerene prikaze računa i ponuda.
+- Jednostavnu pomoć i funkcionalne prečace za korisničke radnje.
+
+## Planirano za potpuniju međunarodnu uporabu
+- Odabir valute po dokumentu i ispravno čuvanje valute u potvrđenom dokumentu.
+- Prijevodi korisničkog sučelja, formatiranje datuma i brojeva po jeziku korisnika.
+- Prilagodljivi porezni nazivi i stope za različite poslovne slučajeve.
+- Dodatni predlošci za prikaz i izvoz PDF dokumenata.
+
+## Kontrole kvalitete
+- Svi testovi kompilacije, obračuna, oporavka, navigacije i radnih nacrta.
+- Usporedba sa stvarnim Android snimkama na raznim veličinama zaslona.
+- Zaslon 17 sada prikazuje **Pomoć**, umjesto ranijeg dizajna integracija. Njegova stara PNG referenca nije valjana za ocjenjivanje novog zaslona.
+- Bez lažnih poslovnih podataka, nedostupnih funkcija ili demonstracijskih poruka u aplikaciji.
+- Produkcijska isporuka samo nakon provjere potpisa, testova i korisničkih tokova.
+
+Dokumenti su predlošci za poslovnu upotrebu. Korisnik treba provjeriti zahtjeve koji vrijede u njegovoj državi. Trenutačni prikaz iznosa je u EUR; više valuta još nije implementirano.

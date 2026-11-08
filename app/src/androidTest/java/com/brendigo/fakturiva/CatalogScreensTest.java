@@ -76,7 +76,7 @@ public final class CatalogScreensTest extends FakturivaTestCase {
             first.updateProduct(service,"SEO optimizacija",20000,25,"SERVICE","mj");
             assertEquals("mj",find(first.products(),service).unit);
             JSONObject backup=first.backup();
-            assertEquals(5,backup.getInt("schema"));
+            assertEquals(Store.VERSION,backup.getInt("schema"));
             second=new IsolatedContext(getContext());
             restored=new Store(second);
             restored.restore(backup);

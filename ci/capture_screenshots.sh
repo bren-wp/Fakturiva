@@ -79,36 +79,17 @@ for index in "${!names[@]}"; do
       if timeout 35s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
          timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml" &&
          grep -Fq "<hierarchy" "$xml"; then
-        if grep -Fq 'android:id/immersive_cling_title' "$xml"; then
-          # Fallback for emulator images that ignore the secure setting above.
-          # Click the system tutorial's actual button, never an app control.
-          coords="$(python3 - "$xml" <<'PY'
-import re
-import sys
-from xml.etree import ElementTree as ET
-
-nodes = list(ET.parse(sys.argv[1]).getroot().iter("node"))
-if any(n.get("resource-id") == "android:id/immersive_cling_title"
-       for n in nodes):
-    for node in nodes:
-        if node.get("resource-id") == "android:id/ok":
-            match = re.fullmatch(
-                r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]",
-                node.get("bounds", ""),
-            )
-            if match:
-                x1, y1, x2, y2 = map(int, match.groups())
-                print((x1 + x2) // 2, (y1 + y2) // 2)
-                break
-PY
-)"
-          if [[ "$coords" =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
-            read -r tap_x tap_y <<< "$coords"
-            timeout 8s adb shell input tap "$tap_x" "$tap_y" ||
-              capture_failure "Cannot dismiss Android fullscreen tutorial"
-            sleep 2
-            continue
-          fi
+        # Android 16 may omit the legacy immersive_cling_title resource
+        # even while its SystemUI "Viewing full screen" dialog covers the app.
+        # Only acknowledge the known SystemUI prompt and then re-dump the UI.
+        coords="$(python3 ci/acknowledge_immersive_prompt.py "$xml")" ||
+          capture_failure "Cannot inspect Android system tutorial"
+        if [[ "$coords" =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
+          read -r tap_x tap_y <<< "$coords"
+          timeout 8s adb shell input tap "$tap_x" "$tap_y" ||
+            capture_failure "Cannot dismiss Android fullscreen tutorial"
+          sleep 2
+          continue
         fi
         if grep -Fq "package=\"$APP\"" "$xml"; then
           xml_ready=true
