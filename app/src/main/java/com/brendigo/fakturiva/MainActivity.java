@@ -700,6 +700,19 @@ public final class MainActivity extends Activity {
             else registrationScreen();
         }catch(Exception e){accountStorageError(e);}
     }
+    private void authPrimaryStyle(TextView button){
+        // Preserve a genuine accessible TextView click action while matching
+        // the supplied cobalt-to-indigo CTA rather than a flat Android button.
+        GradientDrawable gradient=new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[]{0xff4c67fb,0xff414ef5});
+        gradient.setCornerRadius(dp(16));
+        button.setBackground(gradient);
+        button.setTextSize(17);
+        button.setMinimumHeight(dp(55));
+        button.setElevation(dp(6));
+    }
+
     /** Local registration modeled on the supplied white/blue reference. */
     private void registrationScreen(){
         if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
@@ -747,6 +760,7 @@ public final class MainActivity extends Activity {
                 "Registracija nije uspjela":e.getMessage());}
             finally{Arrays.fill(digits,'\0');}
         });
+        authPrimaryStyle(submit);
         submit.setContentDescription("Registracija lokalnog korisničkog računa");
         place(body,submit);gap(body,46);
         TextView login=label("Već imate račun?  Prijavite se",14,BLUE,true);
@@ -864,6 +878,7 @@ public final class MainActivity extends Activity {
                         "Neuspješna provjera sigurnosnog PIN-a":error.getMessage());
                 }finally{Arrays.fill(digits,'\0');}
             });
+            authPrimaryStyle(submit);
             submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
             place(body,submit);gap(body,37);
             localPrivacyFooter();
