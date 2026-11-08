@@ -69,10 +69,17 @@ public final class SystemInvoicePrinter {
                     try(OutputStream out=new FileOutputStream(destination.getFileDescriptor())){
                         // PdfMaker uses only the saved document snapshot.
                         PdfMaker.write(null,d,out,pdfDimensions[0],pdfDimensions[1]);
-                        if(cancellation.isCanceled())callback.onWriteCancelled();
-                        else callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
+                        out.flush();
                     }catch(Exception e){
                         callback.onWriteFailed("The invoice PDF could not be prepared");
+                        try{destination.close();}catch(Exception ignored){}
+                        return;
+                    }
+                    try{
+                        // Notify the Android spooler only once the output
+                        // stream is flushed AND closed.
+                        if(cancellation.isCanceled())callback.onWriteCancelled();
+                        else callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
                     }finally{
                         try{destination.close();}catch(Exception ignored){}
                     }
