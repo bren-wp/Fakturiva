@@ -107,7 +107,7 @@ public final class Store extends SQLiteOpenHelper {
     public static final class Item {
         public long id; public String name,kind="UNSPECIFIED",unit="kom",currencyCode;
         public long qtyMilli = 1000, unitCents;
-        public int taxRate=25;
+        public int taxRate=0;
         public long net() { return Money.subtotal(qtyMilli, unitCents); }
         public long tax() { return Money.tax(net(),taxRate); }
     }
