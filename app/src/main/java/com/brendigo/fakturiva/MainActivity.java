@@ -1792,7 +1792,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout masthead=horizontal();
         masthead.setGravity(Gravity.CENTER_VERTICAL);
-        masthead.setMinimumHeight(dp(32));
+        masthead.setMinimumHeight(dp(Store.INVOICE.equals(d.type)?29:32));
         ImageView brand=new ImageView(this);
         brand.setImageResource(Store.INVOICE.equals(d.type)?
             R.drawable.ic_document_invoice_mark:R.drawable.brand_mark);
@@ -1812,7 +1812,8 @@ public final class MainActivity extends Activity {
         identifier.setGravity(Gravity.RIGHT);
         place(docType,identifier);
         masthead.addView(docType);
-        place(paper,masthead);gap(paper,6);
+        // Invoices place issuer details closer to the document logo.
+        place(paper,masthead);gap(paper,Store.INVOICE.equals(d.type)?1:6);
 
         String issuer=d.issuerName==null||d.issuerName.trim().isEmpty()?
             "Izdavatelj nije upisan":d.issuerName;
@@ -1909,8 +1910,9 @@ public final class MainActivity extends Activity {
             gap(paper,7);
             paperAmount(paper,"Preostalo",Money.euros(d.outstanding()),false);
         }
-        // Quote paper reserves reference footer whitespace; invoice stays unchanged.
-        gap(paper,Store.QUOTE.equals(d.type)?34:19);
+        // Keep the white paper's footer level stable while aligning issuer,
+        // customer and item rows with the invoice reference geometry.
+        gap(paper,Store.QUOTE.equals(d.type)?34:31);
         paperRule(paper);gap(paper,12);
         place(paper,label(Store.QUOTE.equals(d.type)?
             "Ponuda nije račun niti dokaz o plaćanju.":
