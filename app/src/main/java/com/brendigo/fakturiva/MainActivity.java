@@ -3362,7 +3362,7 @@ public final class MainActivity extends Activity {
     private String[] printOptions(){
         String[] system=SystemInvoicePrinter.formats();
         // Keep the original indices 0–5 stable for saved user preferences.
-        return new String[]{ui(system[0]),ui(system[1]),ui(system[2]),ui(system[3]),
+        String[] options=new String[]{ui(system[0]),ui(system[1]),ui(system[2]),ui(system[3]),
             ui("58 mm · Bluetooth ESC/POS"),ui("80 mm · Bluetooth ESC/POS"),
             ui(system[4]),ui(system[5]),
             ui("80 mm · Bluetooth ESC/POS (512 dots)"),
@@ -3372,6 +3372,12 @@ public final class MainActivity extends Activity {
             ui("58 mm · USB ESC/POS"),
             ui("80 mm · USB ESC/POS (512 dots)"),
             ui("80 mm · USB ESC/POS (576 dots)")};
+        if(SunmiReceiptPrinter.isSunmiDevice()){
+            String[] extended=java.util.Arrays.copyOf(options,options.length+1);
+            extended[options.length]=ui("SUNMI ugrađeni pisač (SDK)");
+            return extended;
+        }
+        return options;
     }
     private void printerPreferences(){
         String[] choices=printOptions();
@@ -3419,6 +3425,11 @@ public final class MainActivity extends Activity {
                         selected==13?ThermalReceipt.PAPER_80_COMPACT_DOTS:
                         ThermalReceipt.PAPER_80_DOTS;
                     showUsbPrinters(documentId,dots);
+                }else if(selected==15&&SunmiReceiptPrinter.isSunmiDevice()){
+                    SunmiReceiptPrinter.send(this,document,
+                        error->toast(error==null?
+                            ui("Podaci su poslani. Provjerite ispis na papiru."):
+                            ui(error)));
                 }
             }).show();
     }
