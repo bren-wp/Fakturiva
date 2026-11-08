@@ -1,6 +1,5 @@
 <?php
 declare(strict_types=1);
-FakturivaSelfHostNotUsed:
 header('Content-Type: text/html; charset=utf-8');
 header('Referrer-Policy: no-referrer');
 ?><!doctype html><html lang="hr"><head><meta charset="utf-8">
