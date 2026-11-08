@@ -1,0 +1,71 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/bootstrap.php';
+if(webCurrent()!==null)gotoPage('dashboard.php');
+$error=takeFlash();
+?><!doctype html>
+<html lang="hr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
+<meta name="robots" content="noindex,nofollow">
+<title>Registracija — Fakturiva</title>
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/app.css">
+<script src="assets/auth.js" defer></script>
+</head><body>
+<main class="auth-page auth-register">
+<header class="auth-head">
+<?=logoMarkup()?>
+<h1>Registracija</h1>
+<p class="subtitle">Kreirajte novi račun i započnite s poslovanjem.</p>
+</header>
+<?php if($error!==''):?><p class="error-note" role="alert"><?=h($error)?></p><?php endif;?>
+<form class="auth-form" method="post" action="auth.php" autocomplete="off" data-auth-form>
+<input type="hidden" name="csrf" value="<?=h(csrf())?>">
+<input type="hidden" name="action" value="register">
+<label class="input-label" for="username">Korisničko ime</label>
+<div class="field-wrap">
+<input id="username" name="username" required minlength="3" maxlength="80"
+ type="text" autocapitalize="none" autocomplete="username" spellcheck="false"
+ placeholder="ime@tvrtka.hr">
+<svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+<circle cx="12" cy="7.5" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+<path d="M3 21v-1.5c0-4 3.6-6.5 9-6.5s9 2.5 9 6.5V21H3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="form-row-pin">
+<label class="input-label" for="register-pin">PIN</label>
+<div class="field-wrap">
+<input id="register-pin" name="pin" required type="password" inputmode="numeric"
+ autocomplete="new-password" pattern="[0-9]{4,6}" maxlength="6"
+ minlength="4" placeholder="••••" aria-describedby="pin-help"
+ data-numeric-pin>
+<svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+<g fill="none" stroke="currentColor" stroke-width="1.4">
+<circle cx="5" cy="5" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="19" cy="5" r="1.5"/>
+<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+<circle cx="5" cy="19" r="1.5"/><circle cx="12" cy="19" r="1.5"/><circle cx="19" cy="19" r="1.5"/>
+</g>
+</svg>
+</div>
+<p class="help-text" id="pin-help">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.5" stroke-linecap="round"/>
+</svg>
+Unesite sigurnosni PIN (4–6 znamenki).
+</p>
+</div>
+<button class="primary-action" type="submit">
+<svg viewBox="0 0 28 28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="11" cy="8" r="4.5"/><path d="M3 25v-2c0-5 3.3-8 8-8s8 3 8 8v2H3ZM22 9h6M25 6v6"/>
+</svg>Registracija
+</button>
+</form>
+<nav class="auth-switch" aria-label="Prijava">
+<span>Već imate račun?</span><a href="login.php">Prijavite se</a>
+</nav>
+<?=footerMarkup()?>
+</main>
+</body></html>
