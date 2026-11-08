@@ -323,3 +323,161 @@ function enforceHttps(): void {
         $https=true;
     if(!$https)fail(403,'HTTPS is required');
 }
+
+
+/**
+ * Browser PIN is separate from Android's 12+ character sync passphrase.
+ * A 4–6 digit PIN is only acceptable with per-account AND per-IP throttling,
+ * encrypted server records, session expiry and HTTPS. It is not strong enough
+ * to encrypt synced business backups.
+ */
+function checkWebPin(string $pin): void {
+    if(!preg_match('/^[0-9]{4,6}$/D',$pin))fail(422,'PIN mora imati 4–6 znamenki');
+}
+function webPinDigest(string $pin): string {
+    return hash_hmac('sha256',"fakturiva-web-pin-v1\0".$pin,secret());
+}
+function pinHash(string $pin): string {
+    return password_hash(webPinDigest($pin),
+        defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT);
+}
+function pinMatches(array $account,string $pin): bool {
+    $hash=$account['web_pin_hash']??null;
+    return is_string($hash) && preg_match('/^[0-9]{4,6}$/D',$pin)===1 &&
+        password_verify(webPinDigest($pin),$hash);
+}
+function issueWebSession(array &$account): string {
+    $token=bin2hex(random_bytes(32));
+    // One active browser token per account. Re-login invalidates old tabs.
+    $account['web_token_hash']=hash('sha256',$token);
+    $account['web_token_until']=time()+1800;
+    return $token;
+}
+function webRegister(string $username,string $pin,string $address): array {
+    checkWebPin($pin);
+    return transaction(function()use($username,$pin,$address):array{
+        rateLimit($address,true);
+        $index=indexPath($username);
+        if(is_file($index)) {
+            $existing=readRecord($index);
+            if(is_array($existing) && is_string($existing['id']??null) &&
+               is_file(accountPath($existing['id'])))
+                fail(409,'Korisničko ime je već zauzeto');
+            if(!unlink($index))throw new \RuntimeException('Stale user index cannot be removed');
+        }
+        $id=bin2hex(random_bytes(16));
+        $account=[
+            'id'=>$id,
+            'username'=>trim($username),
+            // Not yet configured: Android sync requires its own long passphrase.
+            'password_hash'=>null,
+            'web_pin_hash'=>pinHash($pin),
+            'web_attempts'=>0,
+            'web_block_until'=>0,
+            'revision'=>0,
+            'backup'=>null,
+            'sessions'=>[],
+            'created_at'=>gmdate('c')
+        ];
+        $token=issueWebSession($account);
+        writeRecord(accountPath($id),$account);
+        try{writeRecord($index,['id'=>$id]);}
+        catch(\Throwable $e){@unlink(accountPath($id));throw $e;}
+        return ['id'=>$id,'token'=>$token,'username'=>$account['username']];
+    });
+}
+function webLogin(string $username,string $pin,string $address): array {
+    return transaction(function()use($username,$pin,$address):array{
+        rateLimit($address,false);
+        $account=accountByName($username);
+        if($account===null || !isset($account['web_pin_hash'])) {
+            rateLimit($address,true);
+            fail(401,'Korisničko ime ili PIN nisu ispravni');
+        }
+        if((int)($account['web_block_until']??0)>time())
+            fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
+        if(!pinMatches($account,$pin)){
+            $n=min(20,1+(int)($account['web_attempts']??0));
+            $account['web_attempts']=$n;
+            if($n>=5) {
+                $seconds=min(3600,60*(1 << min($n-5,6)));
+                $account['web_block_until']=time()+$seconds;
+            }
+            writeRecord(accountPath($account['id']),$account);
+            rateLimit($address,true);
+            fail(401,'Korisničko ime ili PIN nisu ispravni');
+        }
+        $account['web_attempts']=0;
+        $account['web_block_until']=0;
+        $token=issueWebSession($account);
+        writeRecord(accountPath($account['id']),$account);
+        return ['id'=>$account['id'],'token'=>$token,
+            'username'=>$account['username']];
+    });
+}
+function webAuthorized(string $id,string $token): array {
+    if(!preg_match('/^[a-f0-9]{32}$/D',$id) ||
+       !preg_match('/^[a-f0-9]{64}$/D',$token))
+        fail(401,'Web sesija nije valjana');
+    $account=readRecord(accountPath($id));
+    if($account===null || !is_string($account['web_token_hash']??null) ||
+       (int)($account['web_token_until']??0)<=time() ||
+       !hash_equals($account['web_token_hash'],hash('sha256',$token)))
+        fail(401,'Web sesija je istekla');
+    return $account;
+}
+function webLogout(string $id,string $token): void {
+    transaction(function()use($id,$token):void{
+        $account=webAuthorized($id,$token);
+        unset($account['web_token_hash'],$account['web_token_until']);
+        writeRecord(accountPath($id),$account);
+    });
+}
+function webLinkAndroidAccount(string $username,string $passphrase,
+                               string $newPin,string $address):array {
+    requirePassphrase($passphrase);checkWebPin($newPin);
+    return transaction(function()use($username,$passphrase,$newPin,$address):array{
+        rateLimit($address,false);
+        $account=accountByName($username);
+        if($account===null ||
+           !is_string($account['password_hash']??null) ||
+           !password_verify($passphrase,$account['password_hash'])){
+            rateLimit($address,true);
+            fail(401,'Neispravno korisničko ime ili lozinka hostinga');
+        }
+        $account['web_pin_hash']=pinHash($newPin);
+        $account['web_attempts']=0;
+        $account['web_block_until']=0;
+        $token=issueWebSession($account);
+        writeRecord(accountPath($account['id']),$account);
+        return ['id'=>$account['id'],'username'=>$account['username'],'token'=>$token];
+    });
+}
+function webChangeAndroidPassphrase(string $id,string $token,string $pin,
+                                    string $newPassphrase):void {
+    requirePassphrase($newPassphrase);
+    transaction(function()use($id,$token,$pin,$newPassphrase):void{
+        $account=webAuthorized($id,$token);
+        if(!pinMatches($account,$pin))fail(401,'Neispravan PIN');
+        $account['password_hash']=password_hash($newPassphrase,
+            defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT);
+        // Existing Android API sessions are invalid after password change.
+        $account['sessions']=[];
+        writeRecord(accountPath($id),$account);
+    });
+}
+function webDeleteAccount(string $id,string $token,string $pin):void {
+    transaction(function()use($id,$token,$pin):void{
+        $account=webAuthorized($id,$token);
+        if(!pinMatches($account,$pin))fail(401,'Neispravan PIN');
+        // Clear credentials before file deletion, so interruption
+        // cannot leave a valid session for a half-removed profile.
+        $account['sessions']=[];
+        unset($account['web_token_hash'],$account['web_token_until']);
+        $account['deleted']=true;
+        writeRecord(accountPath($id),$account);
+        if(!unlink(accountPath($id)))throw new \RuntimeException('Cannot delete account');
+        if(!unlink(indexPath($account['username'])))
+            throw new \RuntimeException('Cannot delete account index');
+    });
+}
