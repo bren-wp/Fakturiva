@@ -967,6 +967,7 @@ public final class MainActivity extends Activity {
                         if(id.equals(prefs.getString("legacy_owner",""))){
                             // Keep legacy migration from repopulating a new account.
                             getApplicationContext().deleteDatabase("fakturiva.db");
+                            RecoveryVault.deleteLegacyCopies(this);
                             prefs.edit().remove("legacy_owner").putBoolean(
                                 "legacy_imported",true).apply();
                         }
