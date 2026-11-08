@@ -37,7 +37,8 @@ try {
     throw new RuntimeException('Stale revision overwrote current backup');
 }catch(HttpFailure $error){check($error->statusCode===409,'Wrong conflict response');}
 try{
-    authorized(substr($ta,0,-1).'0');
+    $different=substr($ta,-1)==='0'?'1':'0';
+    authorized(substr($ta,0,-1).$different);
     throw new RuntimeException('Mutated bearer token was accepted');
 }catch(HttpFailure $error){check($error->statusCode===401,'Wrong authentication failure');}
 $bytes=file_get_contents(accountPath(explode('.',$ta,2)[0]));
