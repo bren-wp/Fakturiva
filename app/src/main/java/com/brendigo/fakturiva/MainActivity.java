@@ -57,6 +57,8 @@ public final class MainActivity extends Activity {
     private Store db; private SharedPreferences prefs;
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
+    private FrameLayout adaptiveNavContainer;
+    private LinearLayout adaptiveNavBar;
     private int paymentFilter=0;
     private String pendingPaymentsCsvMonth=null,pendingReportCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
@@ -222,6 +224,37 @@ public final class MainActivity extends Activity {
     private void gap(LinearLayout container,int h){View v=new View(this);container.addView(v,lp(1,h));}
     private void pad(View v,int x,int y){v.setPadding(dp(x),dp(y),dp(x),dp(y));}
     private void place(LinearLayout parent,View view){parent.addView(view,new LinearLayout.LayoutParams(-1,-2));}
+    /**
+     * Keep 393dp reference layout unchanged on phones; center all native forms
+     * in resizable Android windows on tablets, Chromebooks and Windows hosts.
+     * The limit is based on the measured viewport, not a fixed device label.
+     */
+    private void sizeAdaptiveContent(){
+        if(scroller==null||body==null)return;
+        int available=scroller.getWidth()-scroller.getPaddingLeft()-
+            scroller.getPaddingRight();
+        if(available<=0)return;
+        int target=Math.min(available,dp(840));
+        ScrollView.LayoutParams current=(ScrollView.LayoutParams)body.getLayoutParams();
+        if(current.width!=target||current.gravity!=Gravity.CENTER_HORIZONTAL){
+            current.width=target;
+            current.gravity=Gravity.CENTER_HORIZONTAL;
+            body.setLayoutParams(current);
+        }
+    }
+    private void sizeAdaptiveNavigation(){
+        if(adaptiveNavContainer==null||adaptiveNavBar==null)return;
+        int available=adaptiveNavContainer.getWidth();
+        if(available<=0)return;
+        int target=Math.min(available,dp(840));
+        FrameLayout.LayoutParams current=
+            (FrameLayout.LayoutParams)adaptiveNavBar.getLayoutParams();
+        if(current.width!=target||current.gravity!=Gravity.CENTER_HORIZONTAL){
+            current.width=target;
+            current.gravity=Gravity.CENTER_HORIZONTAL;
+            adaptiveNavBar.setLayoutParams(current);
+        }
+    }
     private void title(LinearLayout parent,String s){TextView v=label(s,19,ink(),true);place(parent,v);}
     private void caption(LinearLayout parent,String s){TextView v=label(s,12,sub(),false);place(parent,v);}
     private void section(String s){gap(body,16);title(body,s);gap(body,11);}
@@ -256,9 +289,17 @@ public final class MainActivity extends Activity {
         }
         contentFrame=new FrameLayout(this);
         root.addView(contentFrame,new LinearLayout.LayoutParams(-1,0,1));
-        scroller=new ScrollView(this);scroller.setFillViewport(false);scroller.setClipToPadding(false);
+        scroller=new ScrollView(this);scroller.setFillViewport(false);
+        scroller.setClipToPadding(false);
         contentFrame.addView(scroller,new FrameLayout.LayoutParams(-1,-1));
-        body=vertical();pad(body,17,18);scroller.addView(body,new ScrollView.LayoutParams(-1,-2));
+        body=vertical();pad(body,17,18);
+        ScrollView.LayoutParams bodyParams=new ScrollView.LayoutParams(-1,-2);
+        bodyParams.gravity=Gravity.CENTER_HORIZONTAL;
+        scroller.addView(body,bodyParams);
+        scroller.addOnLayoutChangeListener((view,left,top,right,bottom,
+            oldLeft,oldTop,oldRight,oldBottom)->sizeAdaptiveContent());
+        adaptiveNavContainer=null;
+        adaptiveNavBar=null;
         if(nav)bottomNav();
     }
     /** Keep native back navigation consistent with the current business workflow. */
@@ -358,10 +399,38 @@ public final class MainActivity extends Activity {
             TextView name=label(names[i],10,selected?BLUE:sub(),selected);
             name.setGravity(Gravity.CENTER);tab.addView(name,lp(-1,19));
             tab.setContentDescription("Otvori "+names[i]);
+            tab.setFocusable(true);tab.setClickable(true);
             bar.addView(tab,new LinearLayout.LayoutParams(0,dp(56),1));
             tab.setOnClickListener(v->navigate(destination));
         }
-        place(root,bar);
+        adaptiveNavContainer=new FrameLayout(this);
+        adaptiveNavContainer.setBackgroundColor(panel());
+        adaptiveNavBar=bar;
+        FrameLayout.LayoutParams navigationParams=
+            new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER_HORIZONTAL);
+        adaptiveNavContainer.addView(bar,navigationParams);
+        adaptiveNavContainer.addOnLayoutChangeListener((view,left,top,right,
+            bottom,oldLeft,oldTop,oldRight,oldBottom)->sizeAdaptiveNavigation());
+        place(root,adaptiveNavContainer);
+    }
+    /** Keyboard controls for mouse/keyboard Android runtimes on Windows hosts. */
+    @Override public boolean onKeyShortcut(int keyCode,android.view.KeyEvent event){
+        if(event!=null&&event.isCtrlPressed()&&!event.isAltPressed()){
+            switch(keyCode){
+                case android.view.KeyEvent.KEYCODE_1:navigate("home");return true;
+                case android.view.KeyEvent.KEYCODE_2:navigate("invoices");return true;
+                case android.view.KeyEvent.KEYCODE_3:navigate("quotes");return true;
+                case android.view.KeyEvent.KEYCODE_4:navigate("clients");return true;
+                case android.view.KeyEvent.KEYCODE_5:navigate("settings");return true;
+                case android.view.KeyEvent.KEYCODE_P:
+                    if("detail".equals(screen)&&currentDocumentId>0){
+                        showPrinterDialog(currentDocumentId);return true;
+                    }
+                    break;
+                default:break;
+            }
+        }
+        return super.onKeyShortcut(keyCode,event);
     }
     /** Never silently delete or overwrite a damaged database. */
     private void damagedDatabase(Exception cause){
