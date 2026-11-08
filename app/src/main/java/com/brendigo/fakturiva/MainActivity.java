@@ -3231,6 +3231,9 @@ public final class MainActivity extends Activity {
                 prefs.getString("printer_host","")+":"+
                 prefs.getString("printer_port","9100"),
             this::networkPrinterSettings);
+        settingRow(options,"⌁","USB ESC/POS printers",
+            "USB Host · 58 / 80 mm · check connected devices",
+            this::usbPrinterInfo);
         settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
             "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
@@ -3296,7 +3299,10 @@ public final class MainActivity extends Activity {
             ui("80 mm · Bluetooth ESC/POS (512 dots)"),
             ui("58 mm · LAN ESC/POS"),
             ui("80 mm · LAN ESC/POS (512 dots)"),
-            ui("80 mm · LAN ESC/POS (576 dots)")};
+            ui("80 mm · LAN ESC/POS (576 dots)"),
+            ui("58 mm · USB ESC/POS"),
+            ui("80 mm · USB ESC/POS (512 dots)"),
+            ui("80 mm · USB ESC/POS (576 dots)")};
     }
     private void printerPreferences(){
         String[] choices=printOptions();
@@ -3339,8 +3345,59 @@ public final class MainActivity extends Activity {
                         selected==10?ThermalReceipt.PAPER_80_COMPACT_DOTS:
                         ThermalReceipt.PAPER_80_DOTS;
                     editNetworkPrinter(documentId,dots);
+                }else if(selected>=12&&selected<=14){
+                    int dots=selected==12?ThermalReceipt.PAPER_58_DOTS:
+                        selected==13?ThermalReceipt.PAPER_80_COMPACT_DOTS:
+                        ThermalReceipt.PAPER_80_DOTS;
+                    showUsbPrinters(documentId,dots);
                 }
             }).show();
+    }
+    /** Enumerates USB Printer Class devices; no wildcard endpoint probing. */
+    private void usbPrinterInfo(){
+        try{
+            List<android.hardware.usb.UsbDevice> devices=UsbReceiptPrinter.discover(this);
+            StringBuilder message=new StringBuilder();
+            if(devices.isEmpty()){
+                message.append("No USB Printer Class device is connected. ")
+                    .append("Connect a compatible receipt printer with a USB OTG cable. ")
+                    .append("Other printers may need their manufacturer's Android print service.");
+            }else{
+                for(android.hardware.usb.UsbDevice device:devices){
+                    message.append("USB ").append(device.getVendorId()).append(":")
+                        .append(device.getProductId()).append("\n");
+                }
+                message.append("\nOpen an invoice or quote and select USB ESC/POS to print.");
+            }
+            new AlertDialog.Builder(this).setTitle("USB receipt printers")
+                .setMessage(message.toString()).setPositiveButton("OK",null).show();
+        }catch(Exception e){error(e);}
+    }
+    private void showUsbPrinters(long documentId,int dots){
+        try{
+            List<android.hardware.usb.UsbDevice> devices=UsbReceiptPrinter.discover(this);
+            if(devices.isEmpty()){
+                new AlertDialog.Builder(this).setTitle("No compatible USB printer")
+                    .setMessage("Connect a USB Printer Class ESC/POS device by USB OTG. " +
+                        "For proprietary printer protocols, use its Android print service. " +
+                        "Card payment terminals are not supported as printers.")
+                    .setPositiveButton("OK",null).show();
+                return;
+            }
+            String[] names=new String[devices.size()];
+            for(int i=0;i<names.length;i++){
+                android.hardware.usb.UsbDevice device=devices.get(i);
+                names[i]="USB VID "+device.getVendorId()+" · PID "+
+                    device.getProductId()+" · "+device.getDeviceName();
+            }
+            Store.Document document=db.document(documentId);
+            new AlertDialog.Builder(this).setTitle("Select USB ESC/POS printer")
+                .setItems(names,(dialog,index)->{
+                    toast("Requesting USB access or sending print data…");
+                    UsbReceiptPrinter.send(this,devices.get(index),document,dots,
+                        this::toast);
+                }).setNegativeButton("Cancel",null).show();
+        }catch(Exception e){error(e);}
     }
     private void networkPrinterSettings(){
         editNetworkPrinter(-1,ThermalReceipt.PAPER_58_DOTS);
