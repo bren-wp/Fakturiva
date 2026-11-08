@@ -24,11 +24,25 @@ SCREEN_NAMES = [
     "postavke", "profil_tvrtke", "tamna_tema",
 ]
 VISIBLE_HEADERS = [
-    "Fakturiva", "Fakturiva", "Zaštitite svoje poslovanje", "Fakturiva",
-    "Računi", "Novi račun", "Stavke računa", "Pregled računa", "Ponude",
-    "Nova ponuda", "Pregled ponude", "Klijenti", "Detalji klijenta",
-    "Artikli i usluge", "Izvještaji", "Naplata", "Pomoć", "Postavke",
-    "Profil tvrtke", "Fakturiva",
+    ("Fakturiva",), ("Fakturiva",),
+    ("Protect your business", "Zaštitite svoje poslovanje"),
+    ("Fakturiva",),
+    ("Invoices", "Računi"),
+    ("New invoice", "Novi račun"),
+    ("Invoice items", "Stavke računa"),
+    ("Invoice preview", "Pregled računa"),
+    ("Quotes", "Ponude"),
+    ("New quote", "Nova ponuda"),
+    ("Quote preview", "Pregled ponude"),
+    ("Clients", "Klijenti"),
+    ("Client details", "Detalji klijenta"),
+    ("Products and services", "Artikli i usluge"),
+    ("Reports", "Izvještaji"),
+    ("Payments", "Naplata"),
+    ("Help", "Pomoć"),
+    ("Settings", "Postavke"),
+    ("Company profile", "Profil tvrtke"),
+    ("Fakturiva",),
 ]
 RECT = re.compile(r"^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$")
 APP = "com.brendigo.fakturiva"
@@ -45,7 +59,7 @@ def png_dimensions(path: Path) -> tuple[int, int]:
 
 
 def examine_hierarchy(path: Path, width: int, height: int,
-                      header: str, density: int) -> dict:
+                      header: tuple[str, ...], density: int) -> dict:
     tree = ET.parse(path)
     root = tree.getroot()
     if root.tag != "hierarchy":
@@ -58,8 +72,8 @@ def examine_hierarchy(path: Path, width: int, height: int,
         (n.attrib.get("text", "") + " " + n.attrib.get("content-desc", ""))
         for n in app_nodes
     )
-    if header.casefold() not in visible_text.casefold():
-        raise ValueError(f"Expected heading {header!r} not visible in {path}")
+    if not any(candidate.casefold() in visible_text.casefold() for candidate in header):
+        raise ValueError(f"Expected one of {header!r} not visible in {path}")
 
     offscreen = []
     small_taps = []
