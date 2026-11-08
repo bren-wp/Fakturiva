@@ -197,6 +197,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         try{
             db=new Store(context);
             db.setting("name","Testni izdavatelj za PDF");
+            db.setting("oib","12345678903");
             db.setting("address","Primjer adrese 7, Rijeka");
             long client=db.saveClient("Poslovni kupac","","Rijeka","");
             java.util.ArrayList<Store.Item> items=new java.util.ArrayList<>();
