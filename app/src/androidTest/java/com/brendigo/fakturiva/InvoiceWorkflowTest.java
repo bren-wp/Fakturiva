@@ -191,6 +191,64 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
     }
 
     @Test
+    public void testStyledInvoicePdfRendersA4AcrossPages()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());
+        Store db=null;
+        try{
+            db=new Store(context);
+            db.setting("name","Testni izdavatelj za PDF");
+            db.setting("address","Primjer adrese 7, Rijeka");
+            long client=db.saveClient("Poslovni kupac","","Rijeka","");
+            java.util.ArrayList<Store.Item> items=new java.util.ArrayList<>();
+            for(int i=0;i<72;i++){
+                Store.Item item=new Store.Item();
+                item.name="Dokumentirana poslovna usluga broj "+i+
+                    " s više detalja i mogućnošću prijeloma retka";
+                item.qtyMilli=1000;item.unitCents=3000;item.taxRate=25;
+                items.add(item);
+            }
+            long id=db.createDraft(Store.INVOICE,client,
+                "2026-10-28","2026-11-15","2026-10-28",
+                "Napomena uz račun",items);
+            db.confirm(id);
+            File pdf=new File(context.dir,"invoice-a4.pdf");
+            try(java.io.FileOutputStream output=new java.io.FileOutputStream(pdf)){
+                PdfMaker.write(db,db.document(id),output);
+            }
+            assertTrue("Invoice PDF is nonempty",pdf.length()>4000);
+            try(android.os.ParcelFileDescriptor parcel=
+                    android.os.ParcelFileDescriptor.open(pdf,
+                    android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+                android.graphics.pdf.PdfRenderer renderer=
+                    new android.graphics.pdf.PdfRenderer(parcel)){
+                assertTrue("Long invoice must be multipage",
+                    renderer.getPageCount()>=2);
+                try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(0)){
+                    assertEquals("A4 width points",595,page.getWidth());
+                    assertEquals("A4 height points",842,page.getHeight());
+                    android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(
+                        page.getWidth(),page.getHeight(),
+                        android.graphics.Bitmap.Config.ARGB_8888);
+                    try{
+                        image.eraseColor(android.graphics.Color.WHITE);
+                        page.render(image,null,null,
+                            android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+                        int inkPixels=0;
+                        for(int y=20;y<160;y+=6){
+                            for(int x=30;x<560;x+=6){
+                                if(image.getPixel(x,y)!=android.graphics.Color.WHITE)
+                                    inkPixels++;
+                            }
+                        }
+                        assertTrue("Branded invoice header must render visibly",
+                            inkPixels>60);
+                    }finally{image.recycle();}
+                }
+            }
+        }finally{if(db!=null)db.close();context.clean();}
+    }
+
+    @Test
     public void testLongPdfHasMultiplePages()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{
