@@ -30,7 +30,7 @@ consult the manufacturer; no proprietary vendor AAR/JAR is bundled in this branc
 | Star Micronics TSP / mC-Print / SM | Android print service where available; **StarXpand / StarIO10** SDK for native models | https://starmicronics.com/support/developers/android-sdks/ | Vendor SDK integration pending |
 | BIXOLON SRP / SPP | ESC/POS only where model confirms compatible raster commands; BIXOLON Android SDK/B-gate | https://docs.bixolon.com/ | Generic path only |
 | Citizen CT series | Print service/ESC/POS where supported; official POS Print SDK for Android | https://www.citizen-systems.co.jp/en/printer/download/sdk | Generic path only |
-| SUNMI V/T/P with built-in printer | **Official SUNMI inner printer SDK** `com.sunmi:printerlibrary:1.0.18` (Apache-2.0), asynchronous service binding, ESC/POS raster, automatic 58/80 mm recognition | https://github.com/shangmisunmi/SunmiPrinterDemo | **Integrated in development branch**; hardware validation required; no card-payment features |
+| SUNMI V/T/P with built-in printer | **Official SUNMI inner printer SDK** `com.sunmi:printerlibrary:1.0.24` (Apache-2.0), asynchronous service binding, ESC/POS raster, automatic 58/80 mm recognition | https://github.com/shangmisunmi/SunmiPrinterDemo | **Integrated in development branch**; hardware validation required; no card-payment features |
 | Xprinter XP series (China) | ESC/POS over Bluetooth/LAN/USB Printer Class **where supported**; Android SDK 3.5.8 | https://www.xprintertech.com/sdk.html | Generic path only; model test required |
 | Rongta / HOIN / MUNBYN and other OEMs | ESC/POS on confirmed transport, or Android vendor print service | Verify exact manufacturer's model protocol and driver | No blanket compatibility promise |
 | Canon / HP / Brother / Ricoh / Kyocera / Konica Minolta etc. | Android Print Framework with compatible installed print service | Respective manufacturer's Android printing solution | System print only; actual devices not tested |
@@ -42,7 +42,7 @@ proprietary models must not receive arbitrary ESC/POS commands.
 
 ### SUNMI native SDK transport (development branch)
 
-Fakturiva includes the official `com.sunmi:printerlibrary:1.0.18` Maven Central artifact, only offers the SUNMI option on devices reporting SUNMI as their manufacturer, binds to the local inner-printer service and uses the same ESC/POS raster renderer as the other transports. The service's reported paper size chooses 384 or 576 dots; unknown sizes fail closed. Remote calls are chunked to bound binder message size; timeout, disconnect and print failure are surfaced without automatically repeating the invoice. The SDK does **not** handle card payments. A real SUNMI V/T/P hardware test remains a release gate.
+Fakturiva includes the official `com.sunmi:printerlibrary:1.0.24` Maven Central artifact, only offers the SUNMI option on devices reporting SUNMI as their manufacturer, binds to the local inner-printer service and uses the same ESC/POS raster renderer as the other transports. The service's reported paper size chooses 384 or 576 dots; unknown sizes fail closed. Remote calls are chunked to bound binder message size; timeout, disconnect and print failure are surfaced without automatically repeating the invoice. The SDK does **not** handle card payments. A real SUNMI V/T/P hardware test remains a release gate.
 
 ## Croatian services, card-present POS and SoftPOS
 
