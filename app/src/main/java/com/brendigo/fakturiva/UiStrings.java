@@ -127,6 +127,9 @@ public final class UiStrings {
         EN.put("Manje papirologije.\nViše vremena za posao.","Less paperwork.\nMore time for business.");
         EN.put("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.","Create professional invoices and quotes, track payments and manage clients.");
         EN.put("›  Započni","›  Get started");
+        EN.put("Već imate račun? ","Already use Fakturiva? ");
+        EN.put("Prijavite se","Continue");
+        EN.put("Već imate račun? Prijavite se","Already use Fakturiva? Continue");
         EN.put("Računi i ponude, jednostavno i pregledno.","Invoices and quotes, clear and simple.");
         EN.put("Otključajte Fakturivu","Unlock Fakturiva");
         EN.put("Zaštitite svoje poslovanje","Protect your business");
