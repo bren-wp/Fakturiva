@@ -48,6 +48,7 @@ public final class SunmiReceiptPrinter {
         }
         final android.content.Context app = activity.getApplicationContext();
         final AtomicBoolean finished = new AtomicBoolean(false);
+        final AtomicBoolean connected = new AtomicBoolean(false);
         final AtomicBoolean intentionalUnbind = new AtomicBoolean(false);
         final Handler ui = new Handler(Looper.getMainLooper());
         final InnerPrinterManager manager = InnerPrinterManager.getInstance();
@@ -63,6 +64,7 @@ public final class SunmiReceiptPrinter {
                 catch (InnerPrinterException | RuntimeException ignored) {}
             }
             @Override protected void onConnected(SunmiPrinterService service) {
+                connected.set(true);
                 if (finished.get()) { unbind(); return; }
                 new Thread(() -> {
                     String error = null;
@@ -100,7 +102,7 @@ public final class SunmiReceiptPrinter {
             }
             // An unresponsive service must not leave the user in a silent state.
             ui.postDelayed(() -> {
-                if (finished.compareAndSet(false, true)) {
+                if (!connected.get() && finished.compareAndSet(false, true)) {
                     intentionalUnbind.set(true);
                     try { manager.unBindService(app, binding); }
                     catch (InnerPrinterException | RuntimeException ignored) {}
