@@ -83,14 +83,17 @@ Fakturiva je namijenjena i obrtima, samostalnim djelatnostima, d.o.o., j.d.o.o.,
 
 **Jezici:** nova osnova koristi engleski kao zadani jezik, a korisnik u Postavkama može izabrati hrvatski. Pripremljen je popis **31 ciljnog jezika**, ali cjelovito prevođenje svih zaslona, obrazaca, dijaloga, PDF-a i sistemskih poruka još **nije dovršeno**, pa se ostali jezici ne prikazuju kao podržani. I dio engleskog/hrvatskog sučelja još zahtijeva lekturu i uklanjanje preostalih neprevedenih tekstova. [Pravila objave prijevoda](docs/INTERNATIONALIZATION_QA.md).
 
-### Ispis računa i ponuda — razvojna grana
+### Ispis računa i ponuda — razvojna verzija
 
-Za praktičan rad dodan je ispis računa i ponuda na dvije vrste pisača:
+Fakturiva podržava više načina ispisa dokumenata:
 
-- **Bluetooth termalni ESC/POS pisači:** uparivanje kroz Android, odabir uređaja i termalni ispis na **58 mm** ili **80 mm**. Ispisuje se stavke, porez, iznos s izvornom valutom i podaci izdavatelja/klijenta. Za podršku je potreban **Bluetooth Classic SPP i ESC/POS raster**; podrška ne obuhvaća automatski sve Bluetooth/BLE uređaje.
-- **Android pisači:** izbor preko Androidova sustava ispisa, uz PDF za **A4, A5, US Letter i Legal**. Wi-Fi/USB uređaji rade ako ih podržava instalirani Android print servis.
+- **Pisači za A3, A4, A5, A6, US Letter i Legal:** preko Androidova sustava ispisa i instaliranih servisa proizvođača, uključujući kompatibilne Wi-Fi, USB i mrežne pisače.
+- **Bluetooth Classic termalni pisači:** ESC/POS računi na **58 mm (384 točke)** ili **80 mm (512 ili 576 točaka)**, uz prethodno uparivanje.
+- **Mrežni termalni pisači:** ESC/POS preko lokalne IPv4 adrese i TCP priključka (obično **9100**), na 58 mm ili 80 mm. Adresu i priključak unosi korisnik; javne internetske adrese namjerno su blokirane.
 
-Format se može birati u Postavkama ili pri ispisu pojedinog računa. **Platni POS terminali za kartična plaćanja ne naplaćuju kartice ovom funkcijom** — njihove integracije zahtijevaju odgovarajući SDK i odobrenje pružatelja usluge. Stvarna podrška za pojedine modele pisača mora se potvrditi na fizičkom hardveru.
+Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađeni PDF-ovi imaju sitnu oznaku **Powered by Brendigo** u podnožju svake stranice, a termalni računi pri samom dnu ispisa. Ako korisnik želi zatražiti uklanjanje te oznake, u **Postavke → O aplikaciji i podrška** može poslati upit na **info@plati.com.hr**.
+
+**Napomena:** Ne postoji univerzalna podrška za sve pisače i kartične POS terminale. Potrebna je kompatibilnost s Androidovim servisom ispisa ili ESC/POS protokolom i provjera konkretnog modela. Funkcija ne naplaćuje kartice i ne provodi fiskalizaciju.
 
 [**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md)
 
