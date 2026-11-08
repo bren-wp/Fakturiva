@@ -27,6 +27,15 @@ public final class SystemInvoicePrinter {
             "A5 · Android printer","US Legal · Android printer"};
     }
     public static boolean supports(int format){return format>=A4&&format<=LEGAL;}
+    static int[] pdfSize(int format){
+        switch(format){
+            case LETTER:return new int[]{612,792};
+            case A5:return new int[]{420,595};
+            case LEGAL:return new int[]{612,1008};
+            case A4:return new int[]{595,842};
+            default:throw new IllegalArgumentException("Unknown paper size");
+        }
+    }
     private static PrintAttributes.MediaSize media(int format){
         switch(format){
             case LETTER:return PrintAttributes.MediaSize.NA_LETTER;
@@ -42,6 +51,7 @@ public final class SystemInvoicePrinter {
         PrintManager manager=(PrintManager)activity.getSystemService(Context.PRINT_SERVICE);
         if(manager==null)throw new IllegalStateException("Android print service unavailable");
         String fileName="Fakturiva-"+(d.number==null?"draft-"+d.id:d.number)+".pdf";
+        int[] pdfDimensions=pdfSize(paper);
         PrintDocumentAdapter adapter=new PrintDocumentAdapter(){
             @Override public void onLayout(PrintAttributes oldAttributes,
                 PrintAttributes newAttributes,CancellationSignal cancellation,
@@ -58,7 +68,7 @@ public final class SystemInvoicePrinter {
                 new Thread(()->{
                     try(OutputStream out=new FileOutputStream(destination.getFileDescriptor())){
                         // PdfMaker uses only the saved document snapshot.
-                        PdfMaker.write(null,d,out);
+                        PdfMaker.write(null,d,out,pdfDimensions[0],pdfDimensions[1]);
                         if(cancellation.isCanceled())callback.onWriteCancelled();
                         else callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
                     }catch(Exception e){
