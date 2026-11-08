@@ -8,7 +8,7 @@ namespace FakturivaSelfHost;
  * library as an account API: api.php enforces TLS and JSON POST.
  */
 const MAX_BACKUP_BYTES = 25000000;
-const MAX_ACCOUNT_BYTES = 40000000;
+const MAX_ACCOUNT_BYTES = 60000000;
 const SESSION_SECONDS = 86400;
 const AAD = 'Fakturiva:encrypted-JSON:v1';
 
@@ -219,7 +219,7 @@ function signIn(string $username,string $password,string $address): array {
     });
 }
 function authorized(string $token): array {
-    if(!preg_match('/^([a-f0-9]{32})\\.([a-f0-9]{64})$/D',$token,$matches))
+    if(!preg_match('/^([a-f0-9]{32})\.([a-f0-9]{64})$/D',$token,$matches))
         fail(401,'Invalid session');
     $account=readRecord(accountPath($matches[1]));
     if(!$account)fail(401,'Invalid session');
