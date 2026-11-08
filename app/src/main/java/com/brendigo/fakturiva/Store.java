@@ -136,6 +136,7 @@ public final class Store extends SQLiteOpenHelper {
     public long saveClient(String name,String oib,String address,String email) {
         if (name.trim().isEmpty()) throw new IllegalArgumentException("Unesite naziv klijenta");
         ContentValues v = new ContentValues();
+        if(oib.trim().length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
         v.put("name",name.trim()); v.put("oib",oib.trim());
         v.put("address",address.trim()); v.put("email",email.trim());
         long id=getWritableDatabase().insertOrThrow("clients",null,v);
@@ -143,7 +144,7 @@ public final class Store extends SQLiteOpenHelper {
     }
     public void updateClient(long id,String name,String oib,String address,String email,String phone,String vatId){
         if(name.trim().isEmpty())throw new IllegalArgumentException("Unesite naziv klijenta");
-        if(!oib.trim().isEmpty()&&!Oib.valid(oib.trim()))throw new IllegalArgumentException("Neispravan OIB");
+        if(oib.trim().length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
         ContentValues v=new ContentValues();v.put("name",name.trim());v.put("oib",oib.trim());
         v.put("address",address.trim());v.put("email",email.trim());v.put("phone",phone.trim());v.put("vat_id",vatId.trim());
         if(getWritableDatabase().update("clients",v,"id=?",new String[]{String.valueOf(id)})!=1)
@@ -152,7 +153,7 @@ public final class Store extends SQLiteOpenHelper {
     }
     public long saveClientDetailed(String name,String oib,String address,String email,String phone,String vatId){
         if(name.trim().isEmpty())throw new IllegalArgumentException("Unesite naziv klijenta");
-        if(!oib.trim().isEmpty()&&!Oib.valid(oib.trim()))throw new IllegalArgumentException("Neispravan OIB");
+        if(oib.trim().length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
         ContentValues v=new ContentValues();
         v.put("name",name.trim());v.put("oib",oib.trim());v.put("address",address.trim());
         v.put("email",email.trim());v.put("phone",phone.trim());v.put("vat_id",vatId.trim());
@@ -380,11 +381,9 @@ public final class Store extends SQLiteOpenHelper {
             }
             if(!DRAFT.equals(status)) throw new IllegalStateException("Dokument je već potvrđen");
             String issuerName=setting("name").trim();
-            if(issuerName.isEmpty())throw new IllegalStateException("Unesite naziv tvrtke ili obrta u Postavkama");
-            if(INVOICE.equals(type)){
-                if(!Oib.valid(setting("oib").trim()))throw new IllegalStateException("Unesite valjan OIB izdavatelja u Postavkama");
-                if(setting("address").trim().isEmpty())throw new IllegalStateException("Unesite adresu izdavatelja u Postavkama");
-            }
+            if(issuerName.isEmpty())throw new IllegalStateException("Unesite naziv izdavatelja u Postavkama");
+            if(INVOICE.equals(type) && setting("address").trim().isEmpty())
+                throw new IllegalStateException("Unesite adresu izdavatelja u Postavkama");
             int year=Integer.parseInt(issueDate.substring(0,4));
             int num=1;
             try(Cursor c=db.rawQuery("SELECT last_num FROM sequences WHERE type=? AND year=?",new String[]{type,String.valueOf(year)})){
