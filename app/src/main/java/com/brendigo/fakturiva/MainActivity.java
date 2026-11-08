@@ -3227,8 +3227,6 @@ public final class MainActivity extends Activity {
             printOptions()[Math.max(0,Math.min(printOptions().length-1,
                 prefs.getInt("default_paper",0)))],
             this::printerPreferences);
-        settingRow(options,"▣","USB termalni pisači",
-            "Ispis na priključenim ESC/POS pisačima",this::usbPrinterHelp);
         settingRow(options,"⌁","LAN receipt printer",
             prefs.getString("printer_host","").isEmpty()?
                 "Configure a local network printer":
@@ -3354,18 +3352,6 @@ public final class MainActivity extends Activity {
                 }
             }).show();
     }
-    private void usbPrinterHelp(){
-        UsbManager manager=(UsbManager)getSystemService(USB_SERVICE);
-        int count=UsbReceiptPrinter.available(manager).size();
-        new AlertDialog.Builder(this)
-            .setTitle(ui("USB termalni pisači"))
-            .setMessage(ui("Priključite USB pisač preko OTG priključka. "
-                +"Podržani su USB Printer Class uređaji s izlaznim bulk endpointom "
-                +"koji razumiju ESC/POS. U dokumentu otvorite Ispis i odaberite "
-                +"USB 58/80 mm. Detektirani kompatibilni USB priključci: ")+count
-                +"\\n\\n"+ui("Ispis nije isto što i kartična naplata ili fiskalizacija."))
-            .setPositiveButton(ui("U redu"),null).show();
-    }
     private void showUsbPrinters(Store.Document document,int dots){
         UsbManager manager=(UsbManager)getSystemService(USB_SERVICE);
         List<UsbDevice> devices=UsbReceiptPrinter.available(manager);
@@ -3387,13 +3373,20 @@ public final class MainActivity extends Activity {
                 device.getVendorId(),device.getProductId());
         }
         new AlertDialog.Builder(this).setTitle(ui("Odaberite USB pisač"))
-            .setMessage(ui("Samo odabrani USB uređaj primit će podatke dokumenta. "
-                +"Korisnik mora potvrditi Android USB dozvolu."))
             .setItems(labels,(dialog,which)->{
-                toast("Slanje na USB pisač…");
-                UsbReceiptPrinter.send(this,devices.get(which),document,dots,
-                    error->toast(error==null?
-                        "Podaci su poslani. Provjerite ispis na papiru.":error));
+                UsbDevice selected=devices.get(which);
+                new AlertDialog.Builder(this)
+                    .setTitle(ui("Potvrdite USB ispis"))
+                    .setMessage(ui("Podaci dokumenta šalju se isključivo na odabrani "
+                        +"USB pisač. Android će zatražiti dozvolu. Provjerite model i papir."))
+                    .setNegativeButton(ui("Odustani"),null)
+                    .setPositiveButton(ui("Ispiši"),(confirm,button)->{
+                        toast(ui("Slanje na USB pisač…"));
+                        UsbReceiptPrinter.send(this,selected,document,dots,
+                            error->toast(error==null?
+                                ui("Podaci su poslani. Provjerite ispis na papiru."):
+                                error));
+                    }).show();
             })
             .setNegativeButton(ui("Odustani"),null).show();
     }
