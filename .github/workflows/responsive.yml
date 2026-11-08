@@ -1,5 +1,13 @@
 name: Responsive Android screen matrix
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'ci/**'
+      - 'quality/**'
+      - '.github/workflows/screenshots.yml'
+      - '.github/workflows/responsive.yml'
   pull_request:
     paths:
       - 'app/**'
