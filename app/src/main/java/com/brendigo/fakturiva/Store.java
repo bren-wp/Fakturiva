@@ -48,7 +48,7 @@ public final class Store extends SQLiteOpenHelper {
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE company (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, oib TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '')");
-        db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'UNSPECIFIED', unit TEXT NOT NULL DEFAULT 'kom')");
+        db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'UNSPECIFIED', unit TEXT NOT NULL DEFAULT 'kom', currency_code TEXT NOT NULL DEFAULT 'EUR')");
         db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', client_address TEXT NOT NULL DEFAULT '', client_oib TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', issuer_address TEXT NOT NULL DEFAULT '', issuer_oib TEXT NOT NULL DEFAULT '', issuer_email TEXT NOT NULL DEFAULT '', issuer_iban TEXT NOT NULL DEFAULT '', issuer_tax_note TEXT NOT NULL DEFAULT '', client_email TEXT NOT NULL DEFAULT '', client_phone TEXT NOT NULL DEFAULT '', client_vat_id TEXT NOT NULL DEFAULT '', issuer_phone TEXT NOT NULL DEFAULT '', issuer_vat_id TEXT NOT NULL DEFAULT '', issuer_postal_code TEXT NOT NULL DEFAULT '', issuer_city TEXT NOT NULL DEFAULT '', issuer_country TEXT NOT NULL DEFAULT '', issuer_website TEXT NOT NULL DEFAULT '', issuer_bank_name TEXT NOT NULL DEFAULT '', issuer_swift TEXT NOT NULL DEFAULT '', issuer_registry TEXT NOT NULL DEFAULT '', issuer_business_unit TEXT NOT NULL DEFAULT '', issuer_operator TEXT NOT NULL DEFAULT '', issuer_payment_method TEXT NOT NULL DEFAULT '', issuer_payment_reference TEXT NOT NULL DEFAULT '', supply_date TEXT NOT NULL DEFAULT '', quote_title TEXT NOT NULL DEFAULT '', currency_code TEXT NOT NULL DEFAULT 'EUR', issuer_legal_form TEXT NOT NULL DEFAULT '', issuer_trading_name TEXT NOT NULL DEFAULT '', issuer_company_number TEXT NOT NULL DEFAULT '', issuer_register_authority TEXT NOT NULL DEFAULT '', issuer_tax_registration TEXT NOT NULL DEFAULT '', issuer_address_2 TEXT NOT NULL DEFAULT '', issuer_region TEXT NOT NULL DEFAULT '', issuer_payment_terms TEXT NOT NULL DEFAULT '', issuer_footer_note TEXT NOT NULL DEFAULT '', issuer_contact_person TEXT NOT NULL DEFAULT '', issuer_bank_account_number TEXT NOT NULL DEFAULT '', issuer_bank_routing_number TEXT NOT NULL DEFAULT '', issuer_bank_sort_code TEXT NOT NULL DEFAULT '', issuer_bank_address TEXT NOT NULL DEFAULT '', issuer_invoice_reference TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE lines (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), name TEXT NOT NULL, qty_milli INTEGER NOT NULL CHECK(qty_milli>0), unit_cents INTEGER NOT NULL CHECK(unit_cents>=0), tax_rate INTEGER NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), paid_on TEXT NOT NULL)");
@@ -90,6 +90,7 @@ public final class Store extends SQLiteOpenHelper {
         }
         if(oldV<=5){
             db.execSQL("ALTER TABLE documents ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'EUR'");
+            db.execSQL("ALTER TABLE catalog ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'EUR'");
             for(String key:new String[]{"legal_form","trading_name","company_number",
                 "register_authority","tax_registration","address_2","region",
                 "payment_terms","footer_note","contact_person","bank_account_number","bank_routing_number","bank_sort_code","bank_address","invoice_reference"})
@@ -104,7 +105,7 @@ public final class Store extends SQLiteOpenHelper {
         public long id; public String name, oib, address, email, phone, vatId;
     }
     public static final class Item {
-        public long id; public String name,kind="UNSPECIFIED",unit="kom";
+        public long id; public String name,kind="UNSPECIFIED",unit="kom",currencyCode;
         public long qtyMilli = 1000, unitCents;
         public int taxRate=25;
         public long net() { return Money.subtotal(qtyMilli, unitCents); }
@@ -208,6 +209,7 @@ public final class Store extends SQLiteOpenHelper {
         ContentValues v=new ContentValues();
         v.put("name",name.trim());v.put("price_cents",priceCents);v.put("tax_rate",taxRate);
         v.put("kind",normalizedKind(kind));v.put("unit",normalizedUnit(unit));
+        v.put("currency_code",BillingCurrency.canonical(setting("currency")));
         long id=getWritableDatabase().insertOrThrow("catalog",null,v);
         snapshotAfterWrite();return id;
     }
@@ -236,11 +238,12 @@ public final class Store extends SQLiteOpenHelper {
     public List<Item> products(){
         ArrayList<Item> out=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery(
-            "SELECT id,name,price_cents,tax_rate,kind,unit FROM catalog ORDER BY name COLLATE NOCASE",null)){
+            "SELECT id,name,price_cents,tax_rate,kind,unit,currency_code FROM catalog ORDER BY name COLLATE NOCASE",null)){
             while(c.moveToNext()){
                 Item x=new Item();
                 x.id=c.getLong(0);x.name=c.getString(1);x.unitCents=c.getLong(2);
                 x.taxRate=c.getInt(3);x.kind=c.getString(4);x.unit=c.getString(5);
+                x.currencyCode=BillingCurrency.canonical(c.getString(6));
                 out.add(x);
             }
         }
@@ -270,7 +273,11 @@ public final class Store extends SQLiteOpenHelper {
             }
             ContentValues doc=new ContentValues();
             doc.put("type",type);doc.put("client_id",clientId);
-            doc.put("currency_code",BillingCurrency.canonical(setting("currency")));
+            String currency=BillingCurrency.canonical(setting("currency"));
+            for(Item i:items)if(i.currencyCode!=null &&
+                !currency.equals(BillingCurrency.canonical(i.currencyCode)))
+                throw new IllegalArgumentException("Catalog item's currency differs from invoice currency");
+            doc.put("currency_code",currency);
             doc.put("issue_date",issueDate);doc.put("due_date",dueDate);doc.put("supply_date",supplyDate);
             doc.put("notes",notes);doc.put("quote_title",QUOTE.equals(type)?
                 (quoteTitle==null?"":quoteTitle.trim()):"");doc.put("status",DRAFT);
