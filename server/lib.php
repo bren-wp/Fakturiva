@@ -43,6 +43,11 @@ function secret(): string {
     ensureStorage();
     $filename=keyFile();
     if (!is_file($filename)) {
+        // A missing key with existing ciphertext is a recovery emergency.
+        // Never silently generate another key and orphan other users' data.
+        if(count(glob(storage().'/accounts/*.json')?:[])>0 ||
+           count(glob(storage().'/index/*.json')?:[])>0)
+            throw new \RuntimeException('Master key missing; restore secret.php from backup');
         $fp=@fopen($filename,'x');
         if ($fp !== false) {
             try {
