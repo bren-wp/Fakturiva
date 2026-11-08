@@ -804,7 +804,13 @@ public final class MainActivity extends Activity {
                             loginPinScreen();
                         }).show());
             }
-            place(body,chosen);gap(body,18);
+            if(names.length>1){
+                place(body,chosen);gap(body,18);
+            }else{
+                // Single-profile login stays visually aligned with the owner's
+                // PIN reference; profile switching remains in Settings.
+                gap(body,31);
+            }
             place(body,label("PIN",14,0xff65748d,true));gap(body,9);
             LinearLayout masked=horizontal();
             masked.setBackground(outlined(WHITE));pad(masked,19,10);
@@ -861,10 +867,12 @@ public final class MainActivity extends Activity {
             submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
             place(body,submit);gap(body,37);
             localPrivacyFooter();
-            TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
-            next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
-            next.setOnClickListener(v->registrationScreen());
-            place(body,next);
+            if(names.length>1){
+                TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
+                next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
+                next.setOnClickListener(v->registrationScreen());
+                place(body,next);
+            }
         }catch(Exception e){accountStorageError(e);}
     }
 
