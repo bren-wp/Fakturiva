@@ -31,6 +31,10 @@ jobs:
           mkdir -p build/smoke
           javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/Money.java app/src/main/java/com/brendigo/fakturiva/SecureBackup.java app/src/main/java/com/brendigo/fakturiva/Oib.java app/src/main/java/com/brendigo/fakturiva/IsoDates.java app/src/main/java/com/brendigo/fakturiva/Iban.java quality/NativeCoreSmoke.java
           java -cp build/smoke com.brendigo.fakturiva.NativeCoreSmoke
+      - name: Verify USB print stream integrity and no-replay failure behavior
+        run: |
+          javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/EscPosChunkedOutputStream.java quality/UsbPrinterChunkSmoke.java
+          java -cp build/smoke com.brendigo.fakturiva.UsbPrinterChunkSmoke
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

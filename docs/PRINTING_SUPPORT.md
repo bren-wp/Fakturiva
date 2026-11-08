@@ -11,7 +11,8 @@ Fakturiva can print its existing **invoices and quotes** through two distinct pa
 | Local TCP network printer | 58 mm / 384 dots; 80 mm / 512 or 576 dots | ESC/POS raw TCP (typically port 9100) with manually supplied RFC1918 IPv4 | Implemented in code; real printer validation required |
 | Bluetooth LE only devices | None | Proprietary BLE GATT services vary | Not implemented |
 | Proprietary card-payment POS terminals | None | Vendor/acquirer approval and SDK are required | **Not implemented; does not process cards** |
-| Direct USB ESC/POS | None | Vendor USB endpoints and drivers vary | Use Android Print Framework/installed service; generic raw-USB driver not implemented |
+| USB Host ESC/POS Printer Class | 58 mm / 384 dots; 80 mm / 512 or 576 dots | USB interface class 7 with bulk OUT endpoint; Android permission prompt; ESC/POS raster | Implemented on current development branch; hardware QA pending |
+| Proprietary USB vendor interface | None | Proprietary interface/commands, may require SDK | Not implemented; no unsafe probing |
 
 The Android Print Framework selects the real destination printer. Compatibility with a Wi-Fi, USB or network printer depends on the installed print service. No generic API can promise universal hardware compatibility.
 
@@ -20,11 +21,14 @@ The Android Print Framework selects the real destination printer. Compatibility 
 1. Open an invoice or quote, then choose **Print invoice or quote** or **Print / POS printer** from document options.
 2. For page printers select A4, A5, US Letter or Legal. Android displays the normal printer-selection dialog. A matching-size **vector PDF** is prepared locally.
 3. For a compatible **Bluetooth Classic** thermal printer, pair the printer in Android's Bluetooth settings first, select 58 mm / 384 dots or 80 mm / 512 or 576 dots, and pick the paired device.
-4. For a **LAN ESC/POS** printer, select the corresponding LAN option and enter its private IPv4 (for example `192.168.1.50`) and raw TCP port (usually `9100`). Fakturiva does not scan the network or resolve arbitrary hostnames; public IP, loopback, multicast and broadcast are rejected. An unsafeguarded public-network print destination is not supported.
-5. The last chosen paper format and optional LAN address/port are saved in local app preferences. No Bluetooth printer identifier is saved in the Fakturiva database.
-6. Check paper and support for ESC/POS raster `GS v 0`. Some manufacturers use proprietary protocols/SDKs and will not work with generic SPP/TCP. Print-service support for USB, Wi-Fi Direct or network printers likewise depends on the installed Android driver.
+4. For a **USB Host ESC/POS** printer, connect a compatible USB Printer Class device through USB OTG (if the Android runtime exposes USB Host), then choose the USB option and grant the explicit device permission. The application does not support arbitrary vendor-specific USB devices or card terminals via this path.
+5. For a **LAN ESC/POS** printer, select the corresponding LAN option and enter its private IPv4 (for example `192.168.1.50`) and raw TCP port (usually `9100`). Fakturiva does not scan the network or resolve arbitrary hostnames; public IP, loopback, multicast and broadcast are rejected. An unsafeguarded public-network print destination is not supported.
+6. The last chosen paper format and optional LAN address/port are saved in local app preferences. No Bluetooth printer identifier is saved in the Fakturiva database.
+7. Check paper and support for ESC/POS raster `GS v 0`. Some manufacturers use proprietary protocols/SDKs and will not work with generic SPP/TCP. Print-service support for USB, Wi-Fi Direct or network printers likewise depends on the installed Android driver.
 
 Settings → Printers and paper lets users choose a default format and open Android Bluetooth settings. Settings → LAN receipt printer allows editing the stored local IP and port. All actual print operations require an explicit user action.
+
+Additional printer/SDK and Croatian POS acquirer boundary matrix: [PRINTER_VENDOR_AND_POS_MATRIX.md](PRINTER_VENDOR_AND_POS_MATRIX.md).
 
 ## Thermal output
 
@@ -38,6 +42,7 @@ The code initializes ESC/POS and feeds paper. It deliberately does **not** kick 
 
 ## Permissions and privacy
 
+- USB Host permission is requested only for the selected USB printer-class device; an explicit non-exported receiver handles the result and never trusts an unverified permission callback. USB transport sends invoice data only after permission approval. No automatic replay occurs after uncertain partial writes.
 - Android 12+ asks for `BLUETOOTH_CONNECT` only after the user explicitly selects Bluetooth printing.
 - Android 11 and older use legacy `BLUETOOTH` permission with maxSdkVersion 30.
 - No scanning, location, BLE discovery, hidden pairing, background listening, or Bluetooth advertising.
