@@ -47,11 +47,11 @@ public final class LocalAccountsTest extends FakturivaTestCase {
             }finally{b.close();}
             LocalAccounts.lock();
             LocalAccounts.unlock(ctx,LocalAccounts.verify(ctx,first,pinA));
-            Store a=new Store(ctx,idA);
+            Store restoredA=new Store(ctx,idA);
             try{
-                assertEquals("Korisnik A",a.clients().get(0).name);
+                assertEquals("Korisnik A",restoredA.clients().get(0).name);
                 assertTrue(RecoveryVault.hasWorkingDraft(ctx));
-            }finally{a.close();}
+            }finally{restoredA.close();}
             LocalAccounts.delete(ctx,first,pinA);
             assertFalse(ctx.getDatabasePath(Store.databaseName(idA)).exists());
             LocalAccounts.unlock(ctx,LocalAccounts.verify(ctx,second,pinB));
