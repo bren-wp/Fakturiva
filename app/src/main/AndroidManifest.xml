@@ -3,6 +3,8 @@
     <!-- Pair in Android settings; no Bluetooth scan or location permission. -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <!-- Used only after explicit LAN ESC/POS printing to a local private IP. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
     <application android:allowBackup="false"
         android:fullBackupContent="false"
