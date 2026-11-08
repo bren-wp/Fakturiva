@@ -187,9 +187,22 @@ function rateLimit(string $address,bool $failed): void {
 function signUp(string $username,string $password,string $address): array {
     requirePassphrase($password);
     return transaction(function() use($username,$password,$address): array {
-        rateLimit($address,false);
+        // Account creation also consumes the IP budget to prevent unbounded
+        // JSON-file creation on shared hosting from scripted registrations.
+        rateLimit($address,true);
         $index=indexPath($username);
-        if(is_file($index))fail(409,'Username already registered');
+        if(is_file($index)){
+            $entry=readRecord($index);
+            $existingId=is_array($entry)?($entry['id']??null):null;
+            if(is_string($existingId) &&
+                preg_match('/^[a-f0-9]{32}$/D',$existingId) &&
+                is_file(accountPath($existingId)))
+                fail(409,'Username already registered');
+            // Recover an orphan username index left by an interrupted deletion;
+            // an old account file must NEVER be silently reassigned.
+            if(!unlink($index))
+                throw new \RuntimeException('Cannot clear stale username index');
+        }
         $id=bin2hex(random_bytes(16));
         $account=['id'=>$id,'username'=>trim($username),
             'password_hash'=>password_hash($password,
