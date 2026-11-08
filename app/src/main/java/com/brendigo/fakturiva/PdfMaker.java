@@ -26,7 +26,7 @@ public final class PdfMaker {
     private final int outputWidth,outputHeight;
     private final float paperScale,paperOffsetX,paperOffsetY;
     private PdfMaker(int pageWidth,int pageHeight){
-        if(pageWidth<300||pageHeight<400||pageWidth>1000||pageHeight>1600)
+        if(pageWidth<280||pageHeight<400||pageWidth>1000||pageHeight>1600)
             throw new IllegalArgumentException("Unsupported paper size");
         outputWidth=pageWidth;outputHeight=pageHeight;
         // Scale the genuine A4 vector layout uniformly. The resulting PDF
