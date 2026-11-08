@@ -115,7 +115,7 @@ public final class ScreenshotHarness {
                 call(a,"reports");
                 break;
             case "16":call(a,"payments");break;
-            case "17":call(a,"eracun");break;
+            case "17":call(a,"guide");break;
             case "18":call(a,"settings");break;
             case "19":call(a,"company");break;
             case "20":set(a,"dark",true);call(a,"home");break;
