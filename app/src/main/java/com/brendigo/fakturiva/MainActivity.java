@@ -1699,15 +1699,17 @@ public final class MainActivity extends Activity {
         // Quote detail remains on its pre-existing independent geometry.
         pad(body,18,invoice?20:13);
         toolbar(invoice?"Pregled računa":"Pregled ponude",
-            draft?"Provjerite podatke prije potvrde":
+            draft?(invoice?"Provjerite podatke prije izdavanja":
+                "Provjerite podatke prije potvrde"):
                 (invoice?"Pregled potvrđenog dokumenta":"Ponuda pripremljena za dijeljenje"),true);
         backupAlert();
 
         // Status, true persisted number and contextual actions match the
         // reference hierarchy. Drafts must never display invented numbers.
         LinearLayout statusBar=horizontal();
-        TextView statusLabel=label(DocumentStatus.label(d,DocumentStatus.today(),
-            DocumentStatus.inSevenDays()),11,draft?sub():ink(),true);
+        String visibleStatus=invoice&&draft?"Nacrt":
+            DocumentStatus.label(d,DocumentStatus.today(),DocumentStatus.inSevenDays());
+        TextView statusLabel=label(visibleStatus,11,draft?sub():ink(),true);
         statusLabel.setGravity(Gravity.CENTER);
         statusLabel.setPadding(dp(10),dp(6),dp(10),dp(6));
         statusLabel.setBackground(shape(draft?(dark?0xff273953:0xffedf1f6):
@@ -1789,12 +1791,16 @@ public final class MainActivity extends Activity {
         paper.setMinimumHeight(dp(355));
 
         LinearLayout masthead=horizontal();
+        masthead.setGravity(Gravity.CENTER_VERTICAL);
+        masthead.setMinimumHeight(dp(Store.INVOICE.equals(d.type)?29:32));
         ImageView brand=new ImageView(this);
-        brand.setImageResource(R.drawable.brand_mark);
-        masthead.addView(brand,lp(32,32));
+        brand.setImageResource(Store.INVOICE.equals(d.type)?
+            R.drawable.ic_document_invoice_mark:R.drawable.brand_mark);
+        masthead.addView(brand,lp(Store.INVOICE.equals(d.type)?19:32,
+            Store.INVOICE.equals(d.type)?19:32));
         TextView brandTitle=label("Fakturiva",18,NAVY,true);
         LinearLayout.LayoutParams brandText=new LinearLayout.LayoutParams(0,-2,1);
-        brandText.leftMargin=dp(7);
+        brandText.leftMargin=dp(Store.INVOICE.equals(d.type)?5:7);
         masthead.addView(brandTitle,brandText);
         LinearLayout docType=vertical();
         docType.setGravity(Gravity.RIGHT);
@@ -1806,18 +1812,21 @@ public final class MainActivity extends Activity {
         identifier.setGravity(Gravity.RIGHT);
         place(docType,identifier);
         masthead.addView(docType);
-        place(paper,masthead);gap(paper,6);
+        // Invoices place issuer details closer to the document logo.
+        place(paper,masthead);gap(paper,Store.INVOICE.equals(d.type)?1:6);
 
         String issuer=d.issuerName==null||d.issuerName.trim().isEmpty()?
             "Izdavatelj nije upisan":d.issuerName;
-        place(paper,label(issuer,11,0xff647b97,false));
+        place(paper,label(issuer,Store.INVOICE.equals(d.type)?10:11,
+            0xff647b97,false));
         if(Store.QUOTE.equals(d.type) && d.quoteTitle!=null &&
             !d.quoteTitle.trim().isEmpty()){
             gap(paper,8);
             place(paper,label(d.quoteTitle,14,NAVY,true));
         }
         if(d.issuerAddress!=null&&!d.issuerAddress.isEmpty())
-            place(paper,label(d.issuerAddress,10,0xff8798ad,false));
+            place(paper,label(d.issuerAddress,Store.INVOICE.equals(d.type)?9:10,
+                0xff8798ad,false));
         gap(paper,20);
         paperRule(paper);gap(paper,17);
 
@@ -1882,7 +1891,16 @@ public final class MainActivity extends Activity {
         gap(paper,16);
         paperAmount(paper,"Osnovica",Money.euros(d.netCents),false);
         gap(paper,9);
-        paperAmount(paper,"PDV",Money.euros(d.taxCents),false);
+        String paperTaxLabel="PDV";
+        if(Store.INVOICE.equals(d.type)&&!d.items.isEmpty()){
+            int oneRate=d.items.get(0).taxRate;
+            boolean onlyOneRate=true;
+            for(Store.Item item:d.items)if(item.taxRate!=oneRate){
+                onlyOneRate=false;break;
+            }
+            if(onlyOneRate)paperTaxLabel="PDV ("+oneRate+" %)";
+        }
+        paperAmount(paper,paperTaxLabel,Money.euros(d.taxCents),false);
         gap(paper,12);
         paperRule(paper);gap(paper,12);
         paperAmount(paper,"UKUPNO",Money.euros(d.totalCents),true);
@@ -1892,8 +1910,9 @@ public final class MainActivity extends Activity {
             gap(paper,7);
             paperAmount(paper,"Preostalo",Money.euros(d.outstanding()),false);
         }
-        // Quote paper reserves reference footer whitespace; invoice stays unchanged.
-        gap(paper,Store.QUOTE.equals(d.type)?34:19);
+        // Keep the white paper's footer level stable while aligning issuer,
+        // customer and item rows with the invoice reference geometry.
+        gap(paper,Store.QUOTE.equals(d.type)?34:31);
         paperRule(paper);gap(paper,12);
         place(paper,label(Store.QUOTE.equals(d.type)?
             "Ponuda nije račun niti dokaz o plaćanju.":
