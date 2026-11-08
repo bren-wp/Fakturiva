@@ -59,7 +59,7 @@ def png_dimensions(path: Path) -> tuple[int, int]:
 
 
 def examine_hierarchy(path: Path, width: int, height: int,
-                      header: tuple[str, ...], density: int) -> dict:
+                      header: str | tuple[str, ...], density: int) -> dict:
     tree = ET.parse(path)
     root = tree.getroot()
     if root.tag != "hierarchy":
@@ -72,8 +72,9 @@ def examine_hierarchy(path: Path, width: int, height: int,
         (n.attrib.get("text", "") + " " + n.attrib.get("content-desc", ""))
         for n in app_nodes
     )
-    if not any(candidate.casefold() in visible_text.casefold() for candidate in header):
-        raise ValueError(f"Expected one of {header!r} not visible in {path}")
+    accepted = (header,) if isinstance(header, str) else header
+    if not any(candidate.casefold() in visible_text.casefold() for candidate in accepted):
+        raise ValueError(f"Expected one of {accepted!r} not visible in {path}")
 
     offscreen = []
     small_taps = []
