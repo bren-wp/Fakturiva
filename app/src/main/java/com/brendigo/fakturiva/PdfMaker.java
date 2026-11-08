@@ -176,6 +176,7 @@ public final class PdfMaker {
         add(lines,"Tax registration",d.issuerTaxRegistration);
         add(lines,"City / country",join(d.issuerPostalCode,d.issuerCity,d.issuerCountry));
         add(lines,"Tax ID",d.issuerOib);add(lines,"VAT ID",d.issuerVatId);
+        add(lines,"Contact person",d.issuerContactPerson);
         add(lines,"Email",d.issuerEmail);add(lines,"Phone",d.issuerPhone);
         add(lines,"Web",d.issuerWebsite);
         return lines.toArray(new String[0]);
@@ -274,6 +275,11 @@ public final class PdfMaker {
     private void billing(Store.Document d){
         heading("PLAĆANJE I NAPOMENE");
         field("IBAN",d.issuerIban);
+        field("Bank account",d.issuerBankAccountNumber);
+        field("Routing / ABA",d.issuerBankRoutingNumber);
+        field("Sort / branch code",d.issuerBankSortCode);
+        field("Bank address",d.issuerBankAddress);
+        field("PO / invoice reference",d.issuerInvoiceReference);
         field("Banka",d.issuerBankName);
         field("BIC / SWIFT",d.issuerSwift);
         field("Način plaćanja",d.issuerPaymentMethod);
