@@ -276,6 +276,31 @@ public final class UiStrings {
         HR.put("Applies to new invoices and quotes. Issued documents retain their original currency.","Primjenjuje se na nove račune i ponude. Već potvrđeni dokumenti zadržavaju izvornu valutu.");
         HR.put("Unit price","Jedinična cijena");
         HR.put("Company and business details","Podaci o poslovnom subjektu");
+        HR.put("Printers and paper","Pisači i formati papira");
+        HR.put("A4 · Android printer","A4 · Android pisač");
+        HR.put("US Letter · Android printer","US Letter · Android pisač");
+        HR.put("A5 · Android printer","A5 · Android pisač");
+        HR.put("US Legal · Android printer","US Legal · Android pisač");
+        HR.put("58 mm · Bluetooth ESC/POS","58 mm · Bluetooth ESC/POS");
+        HR.put("80 mm · Bluetooth ESC/POS","80 mm · Bluetooth ESC/POS");
+        HR.put("Print invoice or quote","Ispiši račun ili ponudu");
+        HR.put("Print / POS printer","Ispis / POS pisač");
+        HR.put("Print invoice / quote","Ispis računa / ponude");
+        HR.put("Print","Ispiši");
+        HR.put("Pair Bluetooth printer","Upari Bluetooth pisač");
+        HR.put("Bluetooth is unavailable on this device.","Bluetooth nije dostupan na ovom uređaju.");
+        HR.put("Bluetooth is disabled","Bluetooth je isključen");
+        HR.put("Enable Bluetooth and pair an ESC/POS printer in Android settings.","Uključite Bluetooth i uparite ESC/POS pisač u postavkama Androida.");
+        HR.put("Bluetooth settings","Postavke Bluetootha");
+        HR.put("No paired Bluetooth printers","Nema uparenih Bluetooth pisača");
+        HR.put("First pair a compatible Bluetooth Classic ESC/POS receipt printer in Android settings.","Najprije uparite kompatibilan Bluetooth Classic ESC/POS pisač u postavkama Androida.");
+        HR.put("Choose ESC/POS printer","Odaberite ESC/POS pisač");
+        HR.put("Paired Bluetooth device","Upareni Bluetooth uređaj");
+        HR.put("Sending receipt to printer…","Slanje računa na pisač…");
+        HR.put("Print data sent. Check the printer for completion.","Podaci su poslani. Provjerite je li pisač završio ispis.");
+        HR.put("Bluetooth permission is missing.","Nedostaje dopuštenje za Bluetooth.");
+        HR.put("Nearby devices permission is required for Bluetooth printing.","Za Bluetooth ispis potrebno je dopuštenje za uređaje u blizini.");
+        HR.put("Printer connection or printing failed. Check the paper before retrying.","Spajanje ili ispis nisu uspjeli. Prije ponovnog pokušaja provjerite papir i moguće djelomičan ispis.");
     }
     private UiStrings(){}
     /**
