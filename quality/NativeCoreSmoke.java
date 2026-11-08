@@ -22,8 +22,11 @@ public final class NativeCoreSmoke {
         boolean invalid=false;
         try{Money.quantity("0");}catch(IllegalArgumentException expected){invalid=true;}
         require(invalid,"Zero quantity rejected");
-        invalid=false;try{Money.tax(100,99);}catch(IllegalArgumentException expected){invalid=true;}
-        require(invalid,"Unknown VAT rate rejected");
+        eq(99,Money.tax(100,99),"International rate 99%");
+        eq(770,Money.tax(10000,Money.parseRate("7.7")),"Swiss decimal rate");
+        require("7.7%".equals(Money.rateLabel(Money.parseRate("7,7"))),"Fractional tax labeling");
+        invalid=false;try{Money.tax(100,101);}catch(IllegalArgumentException expected){invalid=true;}
+        require(invalid,"Tax rates above 100% rejected");
         require(Oib.valid("12345678903"),"Valid Croatian OIB");
         require(!Oib.valid("12345678904"),"Invalid OIB checksum rejected");
         require(IsoDates.valid("2028-02-29"),"Leap day accepted");
