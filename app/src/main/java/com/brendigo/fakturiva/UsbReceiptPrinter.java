@@ -124,7 +124,7 @@ public final class UsbReceiptPrinter {
             if (Build.VERSION.SDK_INT >= 33) {
                 activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
-                activity.registerReceiver(receiver, filter);
+                registerLegacyReceiver(activity, receiver, filter);
             }
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             // UsbManager adds EXTRA_DEVICE / EXTRA_PERMISSION_GRANTED to this result.
@@ -137,6 +137,13 @@ public final class UsbReceiptPrinter {
             catch (IllegalArgumentException ignored) {}
             callback.onFinished("Could not request permission for the selected USB printer.");
         }
+    }
+
+    /** Before API 33 Android has no registerReceiver(receiver, filter, flags) overload. */
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private static void registerLegacyReceiver(Activity activity,
+                                               BroadcastReceiver receiver, IntentFilter filter) {
+        activity.registerReceiver(receiver, filter);
     }
 
     private static void sendWithPermission(Activity activity, UsbManager manager,
