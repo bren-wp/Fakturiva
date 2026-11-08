@@ -75,6 +75,20 @@ Posljednje objavljeno izdanje: [**v0.17.0-preview.1**](https://github.com/bren-w
 
 **Prije zamjene aplikacije ili promjene telefona izvezite i provjerite sigurnosnu kopiju.** Različiti potpisni certifikati mogu spriječiti instalaciju preko postojeće verzije.
 
+## Android aplikacija na Windows računalu
+
+Fakturiva **ostaje Android aplikacija** — ne izrađuje se zasebna Windows
+aplikacija. Kompatibilan Android emulator na Windows računalu može pokrenuti
+APK, uz ograničenja samog emulatora. Obrasci i navigacija prilagođavaju se
+veličini Android prozora: telefonski raspored ostaje jednak izvornim mobilnim
+referencama, a na širokim prozorima sadržaj je čitljivo centriran. Dostupni
+su prečaci Ctrl+1–5 za glavne zaslone te Ctrl+P za ispis otvorenog dokumenta.
+
+**Napomena:** Windows Subsystem for Android više nije dostupan putem
+Microsoft Storea od 5. ožujka 2025. Podrška za fizičke pisače i ostale USB
+uređaje ovisi o njihovoj dostupnosti unutar Android emulatora.
+[Upute i provjera kompatibilnosti](docs/ANDROID_ON_WINDOWS.md).
+
 ## Međunarodni računi i ponude — razvojna grana
 
 Fakturiva je namijenjena i obrtima, samostalnim djelatnostima, d.o.o., j.d.o.o., Ltd, LLC, Inc, GmbH i drugim oblicima poslovanja. U novoj razvojnoj grani profil izdavatelja sadrži pravni oblik, registracijski broj i tijelo, trgovački naziv, državu i regiju, dodatne porezne podatke, kontakt-osobu te detaljne bankovne i platne upute. Porezni broj može ostati prazan ili sadržavati međunarodnu oznaku.
@@ -95,7 +109,7 @@ Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađen
 
 **Napomena:** Ne postoji univerzalna podrška za sve pisače i kartične POS terminale. Potrebna je kompatibilnost s Androidovim servisom ispisa ili ESC/POS protokolom i provjera konkretnog modela. Funkcija ne naplaćuje kartice i ne provodi fiskalizaciju.
 
-[**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md)
+[**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md) · [**Proizvođači pisača i hrvatski POS servisi**](docs/PRINTER_VENDOR_AND_POS_MATRIX.md)
 
 Ove značajke **još nisu dio posljednjeg objavljenog izdanja** v0.17.0-preview.1. Trenutačna aplikacija nije certificirana za automatsko ispunjavanje zakonskih obveza bilo koje države; korisnik provjerava obvezne podatke i računovodstvene zahtjeve u svojoj jurisdikciji.
 
