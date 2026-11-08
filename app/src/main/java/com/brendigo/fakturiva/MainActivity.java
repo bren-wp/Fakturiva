@@ -56,6 +56,8 @@ public final class MainActivity extends Activity {
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private String documentSearchQuery="";
     private boolean dark=false;
+    // Cached reference-design typography; independent of network/services.
+    private Typeface referenceRegular,referenceBold;
     // 1=enable OS credential lock, 2=unlock, 3=disable.
     private int deviceAuthAction=0;
     private boolean securityFromSettings=false;
@@ -150,9 +152,26 @@ public final class MainActivity extends Activity {
     private GradientDrawable shape(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
     private GradientDrawable outlined(int color){GradientDrawable d=shape(color,17);d.setStroke(dp(1),border());return d;}
     private void background(View v,int color,int radius){v.setBackground(shape(color,radius));}
+    private Typeface referenceTypeface(boolean strong){
+        if(referenceRegular==null){
+            try{
+                referenceRegular=Typeface.createFromAsset(getAssets(),"fonts/Inter.ttf");
+                referenceBold=Typeface.create(referenceRegular,Typeface.BOLD);
+            }catch(RuntimeException ignored){
+                // Older Android font parsers still receive fully working text.
+                referenceRegular=Typeface.create("sans-serif",Typeface.NORMAL);
+                referenceBold=Typeface.create("sans-serif",Typeface.BOLD);
+            }
+        }
+        return strong?referenceBold:referenceRegular;
+    }
     private TextView label(String s,int size,int color,boolean strong){TextView t=new TextView(this);t.setText(s);
         t.setTextColor(color);t.setTextSize(size);t.setFontFeatureSettings("kern");
-        t.setTypeface(Typeface.create("sans-serif",strong?Typeface.BOLD:Typeface.NORMAL));
+        // Reference images use Inter. Constrain typography experiments to
+        // dashboard 04/20 and document preview 08/11, not all other forms.
+        t.setTypeface(("home".equals(screen)||"detail".equals(screen))
+            ?referenceTypeface(strong)
+            :Typeface.create("sans-serif",strong?Typeface.BOLD:Typeface.NORMAL));
         t.setGravity(Gravity.CENTER_VERTICAL);return t;}
     private LinearLayout vertical(){LinearLayout v=new LinearLayout(this);v.setOrientation(LinearLayout.VERTICAL);return v;}
     private LinearLayout horizontal(){LinearLayout v=new LinearLayout(this);v.setGravity(Gravity.CENTER_VERTICAL);return v;}
@@ -232,12 +251,16 @@ public final class MainActivity extends Activity {
         LinearLayout heading=vertical();TextView t=label(title,23,ink(),true);place(heading,t);
         if(subtitle!=null){TextView st=label(subtitle,11,sub(),false);place(heading,st);}
         row.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        TextView more=label("•••",15,sub(),true);
-        more.setGravity(Gravity.CENTER);
-        more.setBackground(shape(panel(),12));
-        more.setContentDescription("Otvori postavke");
-        row.addView(more,lp(44,44));
-        more.setOnClickListener(v->navigate("settings"));
+        // Document previews already show an actionable menu beside the
+        // document status. Do not draw a second, redundant overflow button.
+        if(!"detail".equals(screen)){
+            TextView more=label("•••",15,sub(),true);
+            more.setGravity(Gravity.CENTER);
+            more.setBackground(shape(panel(),12));
+            more.setContentDescription("Otvori postavke");
+            row.addView(more,lp(44,44));
+            more.setOnClickListener(v->navigate("settings"));
+        }
         place(body,row);gap(body,18);
     }
     private ImageView icon(int id,int tint){
