@@ -324,11 +324,11 @@ public final class MainActivity extends Activity {
     private void damagedDatabase(Exception cause){
         setup("damaged",false);
         gap(body,40);title(body,"Potreban je oporavak podataka");gap(body,16);
-        caption(body,"Baza se nije mogla sigurno otvoriti. Izvorna datoteka neće biti obrisana. Ako postoji lokalna kopija, možete je pokušati vratiti.");
+        caption(body,"Poslovne podatke nije moguće otvoriti. Pokušajte ih vratiti iz sigurnosne kopije.");
         gap(body,25);
-        button(body,"Pokušaj oporavak iz lokalne kopije",()->{
+        button(body,"Vrati iz sigurnosne kopije",()->{
             new AlertDialog.Builder(this).setTitle("Oporavak aplikacije")
-                .setMessage("Prije vraćanja sačuvat ćemo postojeću bazu u zasebnu datoteku. Lokalna kopija može biti starija od posljednjih izmjena.")
+                .setMessage("Prije vraćanja sačuvat ćemo trenutačne podatke. Odabrana kopija može biti starija.")
                 .setNegativeButton("Odustani",null)
                 .setPositiveButton("Pokušaj",(dlg,w)->recoverDamagedDatabase()).show();
         });
@@ -2419,7 +2419,7 @@ public final class MainActivity extends Activity {
         TextView key=label(title,11,sub(),false);
         row.addView(key,new LinearLayout.LayoutParams(0,-2,1));
         boolean oib="Porezni broj".equals(title);
-        TextView text=label(oib?"•••••••••••":value,11,ink(),true);
+        TextView text=label(oib?"••••••••":value,11,ink(),true);
         text.setMaxLines(3);text.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         row.addView(text,new LinearLayout.LayoutParams(0,-2,1.7f));
         if(oib){
@@ -3335,7 +3335,7 @@ public final class MainActivity extends Activity {
         caption(local,"Automatske kopije pomažu pri oporavku. Prije promjene telefona izvezite zasebnu sigurnosnu kopiju.");
         if(!db.backupWarning().isEmpty()){gap(local,8);local.addView(label(db.backupWarning(),12,RED,true));}
         gap(local,12);
-        secondary(local,"Vrati prethodno lokalno stanje",this::showLocalRecovery);
+        secondary(local,"Vrati prethodnu kopiju",this::showLocalRecovery);
         place(body,local);gap(body,18);
         button(body,"Izvezi šifriranu kopiju",()->passwordPrompt(false));
         gap(body,10);secondary(body,"Uvezi sigurnosnu kopiju",()->passwordPrompt(true));
@@ -3345,7 +3345,7 @@ public final class MainActivity extends Activity {
     private void showLocalRecovery(){
         try{
             int count=RecoveryVault.count(this);
-            if(count==0){toast("Nema dostupnih lokalnih kopija");return;}
+            if(count==0){toast("Nema dostupnih kopija");return;}
             String[] labels=new String[count];
             for(int i=0;i<count;i++)labels[i]="Kopija "+(i+1)+(i==0?" (najnovija)":"");
             new AlertDialog.Builder(this).setTitle("Odaberite kopiju za oporavak")
