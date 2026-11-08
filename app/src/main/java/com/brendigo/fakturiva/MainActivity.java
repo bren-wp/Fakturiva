@@ -768,7 +768,7 @@ public final class MainActivity extends Activity {
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
-        long[] monthly=db.monthlyReceipts();
+        long[] monthly=db.monthlyReceipts(selectedCurrency());
         LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
         heading.addView(label("Naplaćeno ovaj mjesec",12,0xffcedbf2,false),
             new LinearLayout.LayoutParams(0,-2,1));
@@ -784,7 +784,7 @@ public final class MainActivity extends Activity {
             }
         }
         place(hero,heading);gap(hero,13);
-        hero.addView(label(Money.euros(monthly[11]),31,WHITE,true));gap(hero,5);
+        hero.addView(label(money(monthly[11]),31,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
         hero.addView(new RevenueLine(this),lp(-1,43));
@@ -2771,7 +2771,7 @@ public final class MainActivity extends Activity {
 
         List<Store.Document> invoices=db.documents(Store.INVOICE);
         List<Store.Payment> payments=db.payments();
-        long[] totals=reportMetrics(invoices,payments,yearMonth);
+        long[] totals=reportMetrics(invoices,payments,yearMonth,selectedCurrency());
 
         LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titles=vertical();
@@ -2839,8 +2839,8 @@ public final class MainActivity extends Activity {
 
         LinearLayout revenue=card();pad(revenue,18,16);
         revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,9);
-        revenue.addView(label(Money.euros(totals[0]),30,ink(),true));gap(revenue,9);
-        long previousCents=db.invoicedCentsMonth(previousKey);
+        revenue.addView(label(money(totals[0]),30,ink(),true));gap(revenue,9);
+        long previousCents=db.invoicedCentsMonth(previousKey,selectedCurrency());
         if(previousCents>0){
             double pct=(totals[0]-previousCents)*100d/previousCents;
             String trend=String.format(Locale.forLanguageTag("hr-HR"),
@@ -2873,8 +2873,8 @@ public final class MainActivity extends Activity {
 
         LinearLayout payout=card();
         place(payout,label("Pregled naplate",16,ink(),true));gap(payout,19);
-        clientField(payout,"Naplaćeno u mjesecu",Money.euros(totals[3]));
-        clientField(payout,"Nenaplaćeno iz izdanih računa",Money.euros(totals[4]));
+        clientField(payout,"Naplaćeno u mjesecu",money(totals[3]));
+        clientField(payout,"Nenaplaćeno iz izdanih računa",money(totals[4]));
         place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
         gap(body,20);
@@ -2890,18 +2890,24 @@ public final class MainActivity extends Activity {
     /** Invoiced, issued, settled, received this month, outstanding on issued this month. */
     static long[] reportMetrics(List<Store.Document> invoices,
                                 List<Store.Payment> payments,String yearMonth){
+        return reportMetrics(invoices,payments,yearMonth,"EUR");
+    }
+    static long[] reportMetrics(List<Store.Document> invoices,
+                                List<Store.Payment> payments,String yearMonth,String currency){
         long issued=0,settled=0,invoiced=0,open=0,received=0;
         for(Store.Document d:invoices){
             if(!Store.INVOICE.equals(d.type)||d.issueDate==null||
                 !d.issueDate.startsWith(yearMonth)||
-                Store.DRAFT.equals(d.status)||Store.VOID.equals(d.status))continue;
+                Store.DRAFT.equals(d.status)||Store.VOID.equals(d.status)||
+                !BillingCurrency.canonical(d.currencyCode).equals(BillingCurrency.canonical(currency)))continue;
             issued++;
             invoiced=Math.addExact(invoiced,d.totalCents);
             if(d.outstanding()==0)settled++;
             open=Math.addExact(open,d.outstanding());
         }
         for(Store.Payment p:payments){
-            if(p.paidOn!=null&&p.paidOn.startsWith(yearMonth))
+            if(p.paidOn!=null&&p.paidOn.startsWith(yearMonth)&&
+                BillingCurrency.canonical(p.currencyCode).equals(BillingCurrency.canonical(currency)))
                 received=Math.addExact(received,p.amountCents);
         }
         return new long[]{invoiced,issued,settled,received,open};
@@ -2957,7 +2963,8 @@ public final class MainActivity extends Activity {
         List<Store.Payment> history=db.payments();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
         int monthlyCount=0;long monthlyAmount=0;
-        for(Store.Payment p:history)if(p.paidOn.startsWith(month)){
+        for(Store.Payment p:history)if(p.paidOn.startsWith(month)&&
+            BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency())){
             monthlyCount++;monthlyAmount=Math.addExact(monthlyAmount,p.amountCents);
         }
         LinearLayout hero=vertical();pad(hero,19,22);
@@ -2965,9 +2972,9 @@ public final class MainActivity extends Activity {
             new int[]{0xff173b69,0xff102844});
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
-        hero.addView(label(Money.euros(db.receivedCents()),29,WHITE,true));gap(hero,13);
+        hero.addView(label(money(db.receivedCents(selectedCurrency())),29,WHITE,true));gap(hero,13);
         hero.addView(label("✓  "+monthlyCount+" evidentiranih uplata ovaj mjesec · "+
-            Money.euros(monthlyAmount),11,0xff73dfd0,false));
+            money(monthlyAmount),11,0xff73dfd0,false));
         place(body,hero);gap(body,15);
 
         LinearLayout filters=horizontal();
@@ -3031,10 +3038,10 @@ public final class MainActivity extends Activity {
                     11,sub(),false);
                 documentInfo.setMaxLines(2);
                 description.addView(documentInfo);
-                TextView amount=label("+"+Money.euros(p.amountCents),12,TEAL,true);
+                TextView amount=label("+"+BillingCurrency.format(p.amountCents,p.currencyCode,Locale.ENGLISH),12,TEAL,true);
                 amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
                 amount.setMaxLines(3);
-                amount.setContentDescription("Evidentirana uplata: "+Money.euros(p.amountCents));
+                amount.setContentDescription("Evidentirana uplata: "+BillingCurrency.format(p.amountCents,p.currencyCode,Locale.ENGLISH));
                 // Avoid competing horizontal widths on 280/320dp screens or
                 // when the user selects large accessibility font scaling.
                 float widthDp=getResources().getDisplayMetrics().widthPixels/
@@ -3564,7 +3571,7 @@ public final class MainActivity extends Activity {
             SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM",Locale.ROOT);
             long max=1;
             for(int i=0;i<6;i++){
-                values[i]=db.invoicedCentsMonth(fmt.format(cursor.getTime()));
+                values[i]=db.invoicedCentsMonth(fmt.format(cursor.getTime()),selectedCurrency());
                 max=Math.max(max,values[i]);
                 labels[i]=names[cursor.get(Calendar.MONTH)];
                 cursor.add(Calendar.MONTH,1);
@@ -3585,6 +3592,13 @@ public final class MainActivity extends Activity {
             paint.setTextAlign(android.graphics.Paint.Align.LEFT);
         }
     }
+    private static List<Store.Payment> paymentsForCurrency(List<Store.Payment> all,String code){
+        ArrayList<Store.Payment> chosen=new ArrayList<>();
+        for(Store.Payment p:all)
+            if(BillingCurrency.canonical(p.currencyCode).equals(BillingCurrency.canonical(code)))
+                chosen.add(p);
+        return chosen;
+    }
     private final class RevenueLine extends View{
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
         private final long[] cumulative;
@@ -3593,7 +3607,8 @@ public final class MainActivity extends Activity {
             Calendar calendar=Calendar.getInstance();
             String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(calendar.getTime());
             cumulative=ReceiptsChart.cumulative(
-                db.payments(),month,calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+                paymentsForCurrency(db.payments(),selectedCurrency()),month,
+                calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
         }
         @Override protected void onDraw(android.graphics.Canvas canvas){
             super.onDraw(canvas);
