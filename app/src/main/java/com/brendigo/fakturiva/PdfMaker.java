@@ -222,7 +222,7 @@ public final class PdfMaker {
                 if(first){
                     right(Money.decimalQuantity(item.qtyMilli),307,y,9,GRAY,false);
                     right(money(item.unitCents),396,y,9,GRAY,false);
-                    right(item.taxRate+"%",447,y,9,GRAY,false);
+                    right(Money.rateLabel(item.taxRate),447,y,9,GRAY,false);
                     right(money(Math.addExact(item.net(),item.tax())),RIGHT,y,9,NAVY,true);
                     first=false;
                 }
@@ -242,8 +242,8 @@ public final class PdfMaker {
             group[1]=Math.addExact(group[1],item.tax());
         }
         for(Map.Entry<Integer,long[]> e:groups.entrySet()){
-            field("PDV "+e.getKey()+"% · osnovica",money(e.getValue()[0]));
-            field("PDV "+e.getKey()+"% · porez",money(e.getValue()[1]));
+            field("Tax "+Money.rateLabel(e.getKey())+" · subtotal",money(e.getValue()[0]));
+            field("Tax "+Money.rateLabel(e.getKey())+" · amount",money(e.getValue()[1]));
         }
         requireSpace(88);
         right("Osnovica",RIGHT-130,y,10,GRAY,false);
@@ -255,7 +255,7 @@ public final class PdfMaker {
             for(Store.Item item:d.items)if(item.taxRate!=rate){
                 singleRate=false;break;
             }
-            if(singleRate)vatLabel="PDV ("+rate+" %)";
+            if(singleRate)vatLabel="Tax ("+Money.rateLabel(rate)+")";
         }
         right(vatLabel,RIGHT-130,y,10,GRAY,false);
         right(money(d.taxCents),RIGHT,y,10,NAVY,true);y+=20;
