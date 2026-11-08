@@ -77,8 +77,10 @@ public final class PdfMaker {
     private void footer(){
         paint.setColor(RULE);paint.setStrokeWidth(0.7f);
         canvas.drawLine(M,H-60,RIGHT,H-60,paint);
-        text("Fakturiva",M,H-44,8,GRAY,false);
-        right("Page "+pageNumber,RIGHT,H-44,8,GRAY,false);
+        // A small, unobtrusive footer on every invoice/quote PDF page,
+        // including documents exported, shared and sent to Android print.
+        text("Fakturiva · Page "+pageNumber,M,H-44,8,GRAY,false);
+        right(BrandAttribution.FOOTER,RIGHT,H-44,7,GRAY,false);
     }
     private void newPage(){
         if(current!=null){footer();document.finishPage(current);}
