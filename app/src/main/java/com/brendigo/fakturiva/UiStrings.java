@@ -263,6 +263,18 @@ public final class UiStrings {
         HR.put("Company details saved","Podaci tvrtke su spremljeni");
         HR.put("Invoice and quote issuer","Izdavatelj računa i ponuda");
         HR.put("Company details","Podaci o tvrtki");
+        HR.put("Contact person","Kontakt osoba");
+        HR.put("Bank account number (non-IBAN)","Broj bankovnog računa (izvan IBAN sustava)");
+        HR.put("Bank routing number / ABA","Bankovni routing/ABA broj");
+        HR.put("Sort code / branch code","Kod banke / poslovnice");
+        HR.put("Bank address","Adresa banke");
+        HR.put("Purchase order / invoice reference","Referenca narudžbe / računa");
+        HR.put("Language","Jezik");
+        HR.put("Default currency","Zadana valuta");
+        HR.put("Cancel","Odustani");
+        HR.put("Applies to new invoices and quotes. Issued documents retain their original currency.","Primjenjuje se na nove račune i ponude. Već potvrđeni dokumenti zadržavaju izvornu valutu.");
+        HR.put("Unit price","Jedinična cijena");
+        HR.put("Company and business details","Podaci o poslovnom subjektu");
     }
     private UiStrings(){}
     /**
