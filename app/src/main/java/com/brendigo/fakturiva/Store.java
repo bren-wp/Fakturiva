@@ -20,9 +20,21 @@ public final class Store extends SQLiteOpenHelper {
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
     private final Context appContext;
+    private final String profileId;
     private volatile String lastBackupWarning="";
-    public Store(Context c) {
-        super(c, DB_NAME, null, VERSION);
+    /** Legacy/test-only store; production sessions always provide a verified profile id. */
+    public Store(Context c) { this(c,null); }
+    public static String databaseName(String profileId) {
+        if (profileId == null) return DB_NAME;
+        if (!LocalAccounts.validProfileId(profileId))
+            throw new IllegalArgumentException("Neispravan korisnički profil");
+        return "fakturiva-" + profileId + ".db";
+    }
+    public String databaseFileName() { return databaseName(profileId); }
+    public String profileId() { return profileId; }
+    public Store(Context c,String profileId) {
+        super(c, databaseName(profileId), null, VERSION);
+        this.profileId = profileId;
         appContext=c.getApplicationContext();
         setWriteAheadLoggingEnabled(true);
     }
