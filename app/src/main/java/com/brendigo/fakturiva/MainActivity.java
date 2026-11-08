@@ -56,6 +56,7 @@ public final class MainActivity extends Activity {
     private static final int BLUETOOTH_PRINT_PERMISSION_REQUEST=108;
     private Store db; private SharedPreferences prefs;
     private String loginUsername="";
+    private boolean selfHostedBusy=false;
     private final StringBuilder enteredLocalPin=new StringBuilder();
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
@@ -319,7 +320,7 @@ public final class MainActivity extends Activity {
                     documents(d.type);
                 }catch(Exception e){home();}
                 break;
-            case "local_accounts":settings();break;
+            case "local_accounts":case "self_host":settings();break;
             case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":case "about":settings();break;
             default:home();
@@ -701,6 +702,7 @@ public final class MainActivity extends Activity {
     }
     /** Local registration modeled on the supplied white/blue reference. */
     private void registrationScreen(){
+        if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
         enteredLocalPin.setLength(0);
         setup("local_register",false);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
@@ -944,6 +946,7 @@ public final class MainActivity extends Activity {
         secondary(body,"Dodaj lokalni korisnički račun",()->registrationScreen());
         gap(body,22);
         secondary(body,"Trajno izbriši ovaj lokalni račun",()->{
+            if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
             EditText secret=field("PIN za potvrdu brisanja","");
             secret.setInputType(InputType.TYPE_CLASS_NUMBER|
                 InputType.TYPE_NUMBER_VARIATION_PASSWORD);
@@ -978,10 +981,121 @@ public final class MainActivity extends Activity {
     }
 
     private void signOutLocal(){
+        if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
         enteredLocalPin.setLength(0);
         if(db!=null){db.close();db=null;}
         LocalAccounts.lock();
         loginPinScreen();
+    }
+
+    /**
+     * An optional HTTPS host is NEVER configured by default. The user's local
+     * PIN is never submitted. Strong server credentials are entered per action
+     * and never saved in the app or included in Android backup.
+     */
+    private void selfHostedSettings(){
+        if(LocalAccounts.activeId()==null||db==null){loginPinScreen();return;}
+        setup("self_host",true);
+        toolbar("Vlastiti hosting","Ručna šifrirana sinkronizacija",true);
+        LinearLayout notice=card();
+        place(notice,label("Potpuno neobavezno",16,ink(),true));gap(notice,8);
+        place(notice,label("Svi računi i ponude rade lokalno i bez interneta. "+
+            "Za sinkronizaciju sa svojim hostingom postavite vlastitu HTTPS adresu "+
+            "i zasebnu lozinku od najmanje 12 znakova. PIN ostaje na uređaju.",12,sub(),false));
+        place(body,notice);gap(body,15);
+        String id=LocalAccounts.activeId();
+        EditText url=field("https://moja-domena.hr/",
+            prefs.getString("host_url_"+id,""));
+        fieldLabel(body,"Adresa vlastitog hostinga (HTTPS)",url);
+        EditText user=field("ime@tvrtka.hr",
+            prefs.getString("host_user_"+id,LocalAccounts.activeName()));
+        fieldLabel(body,"Poslužiteljsko korisničko ime",user);
+        EditText pass=field("Lozinka hostinga (nije PIN)","");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        fieldLabel(body,"Poslužiteljska lozinka",pass);
+        gap(body,17);
+        secondary(body,"Registriraj račun na hostingu",()->
+            remoteAction(SelfHostedSyncClient.Action.REGISTER,url,user,pass));
+        gap(body,10);
+        button(body,"Pošalji šifriranu sigurnosnu kopiju",()->
+            new AlertDialog.Builder(this).setTitle("Prijenos na vlastiti hosting")
+                .setMessage("Poslat će se cijela šifrirana kopija ovog lokalnog "+
+                    "profila na odabrani HTTPS hosting. Ako ondje postoji ranija "+
+                    "kopija, bit će zamijenjena. Ne prenosite podatke bez ovlaštenja.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Pošalji",(dialog,which)->
+                    remoteAction(SelfHostedSyncClient.Action.UPLOAD,url,user,pass))
+                .show());
+        gap(body,10);
+        secondary(body,"Preuzmi i vrati kopiju s hostinga",()->
+            new AlertDialog.Builder(this).setTitle("Zamjena lokalnih podataka")
+                .setMessage("Ovo zamjenjuje sve račune, ponude i klijente SAMO "+
+                    "trenutačnog lokalnog profila. Fakturiva će prije vraćanja "+
+                    "napraviti lokalnu šifriranu sigurnosnu kopiju. "+
+                    "Provjerite ispravnost odabranog računa i hostinga.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Preuzmi",(dialog,which)->
+                    remoteAction(SelfHostedSyncClient.Action.DOWNLOAD,url,user,pass))
+                .show());
+        gap(body,18);
+        secondary(body,"Trajno izbriši račun na hostingu",()->
+            new AlertDialog.Builder(this).setTitle("Brisanje na vlastitom hostingu")
+                .setMessage("Ovo trajno briše poslužiteljski račun i spremljenu "+
+                    "kopiju. Lokalni podaci i dalje ostaju na ovom uređaju.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Trajno izbriši",(dialog,which)->
+                    remoteAction(SelfHostedSyncClient.Action.DELETE,url,user,pass))
+                .show());
+        gap(body,10);
+        secondary(body,"Web obrazac za brisanje računa",()->{
+            try{
+                String api=SelfHostedSyncClient.apiUrl(url.getText().toString());
+                String page=api.substring(0,api.length()-"api.php".length())+
+                    "delete-account.php";
+                startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(page)));
+            }catch(Exception error){toast(error.getMessage());}
+        });
+        gap(body,16);
+        place(body,label("Hoster mora podržavati PHP 8.1+, OpenSSL, HTTPS i "+
+            "zapisivanje u storage/data. Nije potreban SQL niti vanjski servis. "+
+            "Veći dokumenti mogu zahtijevati povećanje PHP limita prijenosa.",12,sub(),false));
+        gap(body,20);
+    }
+
+    private void remoteAction(SelfHostedSyncClient.Action action,EditText url,
+        EditText username,EditText pass){
+        if(selfHostedBusy){toast("Prijenos je već u tijeku");return;}
+        if(db==null||LocalAccounts.activeId()==null){
+            toast("Prvo se prijavite u lokalni račun");return;
+        }
+        String host=url.getText().toString().trim();
+        String user=username.getText().toString().trim();
+        char[] code=pass.getText().toString().toCharArray();
+        try{
+            String api=SelfHostedSyncClient.apiUrl(host);
+            if(code.length<12||code.length>256)
+                throw new IllegalArgumentException("Lozinka hostinga mora imati 12–256 znakova");
+            String id=LocalAccounts.activeId();
+            prefs.edit().putString("host_url_"+id,api)
+                .putString("host_user_"+id,user).apply();
+            selfHostedBusy=true;
+            SelfHostedSyncClient.execute(this,action,api,user,code,db,(error,result)->{
+                selfHostedBusy=false;
+                if(error!=null)toast(error);
+                else{
+                    toast(result);
+                    if(action==SelfHostedSyncClient.Action.DOWNLOAD)
+                        navigate("home");
+                    else selfHostedSettings();
+                }
+            });
+            pass.setText("");
+            toast("Pokrenut je samo odabrani zahtjev prema vašem hostingu");
+        }catch(Exception error){toast(error.getMessage()==null?
+            "Neispravne postavke hostinga":error.getMessage());}
+        finally{Arrays.fill(code,'\0');}
     }
 
     /**
@@ -3607,6 +3721,9 @@ public final class MainActivity extends Activity {
             "Profil izdavatelja za nove PDF dokumente",this::company);
         settingRow(options,"?","Pomoć i upute",
             "Računi, ponude i načini rada",this::guide);
+        settingRow(options,"☁","Vlastiti hosting (neobavezno)",
+            "Šifrirana ručna kopija · HTTPS · bez SQL baze",
+            this::selfHostedSettings);
         settingRow(options,"♙","Korisnički računi",
             LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
             this::localAccountSettings);
