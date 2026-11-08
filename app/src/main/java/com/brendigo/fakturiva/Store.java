@@ -29,7 +29,7 @@ public final class Store extends SQLiteOpenHelper {
     private void snapshotAfterWrite(){
         try{RecoveryVault.snapshot(appContext,this);lastBackupWarning="";}
         catch(Exception e){
-            lastBackupWarning="Lokalna kopija nije ažurirana. Odmah izvezite sigurnosnu kopiju.";
+            lastBackupWarning="Sigurnosnu kopiju nije bilo moguće ažurirati. Izvezite novu kopiju.";
             android.util.Log.e("FakturivaRecovery","Cannot write local recovery snapshot",e);
         }
     }
