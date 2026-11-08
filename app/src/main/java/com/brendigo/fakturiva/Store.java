@@ -461,17 +461,22 @@ public final class Store extends SQLiteOpenHelper {
         if(!table.equals("clients")&&!table.equals("catalog")&&!table.equals("documents")) return 0;
         return DatabaseUtils.longForQuery(getReadableDatabase(),"SELECT COUNT(*) FROM "+table,null);
     }
-    public long invoicedCentsMonth(String yearMonth){
+    public long invoicedCentsMonth(String yearMonth){return invoicedCentsMonth(yearMonth,"EUR");}
+    public long invoicedCentsMonth(String yearMonth,String currency){
         if(yearMonth==null||!yearMonth.matches("[0-9]{4}-[0-9]{2}"))
-            throw new IllegalArgumentException("Neispravan mjesec izvještaja");
+            throw new IllegalArgumentException("Invalid reporting month");
         return DatabaseUtils.longForQuery(getReadableDatabase(),
             "SELECT COALESCE(SUM(total_cents),0) FROM documents "+
             "WHERE type='INVOICE' AND status IN ('ISSUED','PAID') "+
-            "AND substr(issue_date,1,7)=?",new String[]{yearMonth});
+            "AND substr(issue_date,1,7)=? AND currency_code=?",
+            new String[]{yearMonth,BillingCurrency.canonical(currency)});
     }
-    public long invoicedCents() {
+    public long invoicedCents(){return invoicedCents("EUR");}
+    public long invoicedCents(String currency){
         return DatabaseUtils.longForQuery(getReadableDatabase(),
-            "SELECT COALESCE(SUM(total_cents),0) FROM documents WHERE type='INVOICE' AND status IN ('ISSUED','PAID')",null);
+            "SELECT COALESCE(SUM(total_cents),0) FROM documents "+
+            "WHERE type='INVOICE' AND status IN ('ISSUED','PAID') AND currency_code=?",
+            new String[]{BillingCurrency.canonical(currency)});
     }
     /** Individually logged payments; never infer a receipt from invoice status alone. */
     public static final class Payment {
@@ -492,10 +497,13 @@ public final class Store extends SQLiteOpenHelper {
         }
         return out;
     }
-    public long outstandingCents() {
+    public long outstandingCents(){return outstandingCents("EUR");}
+    public long outstandingCents(String currency){
         return DatabaseUtils.longForQuery(getReadableDatabase(),
-            "SELECT COALESCE(SUM(total_cents-(SELECT COALESCE(SUM(amount_cents),0) FROM payments p WHERE p.document_id=d.id)),0) "+
-            "FROM documents d WHERE d.type='INVOICE' AND d.status IN ('ISSUED','PAID')",null);
+            "SELECT COALESCE(SUM(total_cents-(SELECT COALESCE(SUM(amount_cents),0) "+
+            "FROM payments p WHERE p.document_id=d.id)),0) "+
+            "FROM documents d WHERE d.type='INVOICE' AND d.status IN ('ISSUED','PAID') "+
+            "AND d.currency_code=?",new String[]{BillingCurrency.canonical(currency)});
     }
     public long receivedCents(){return receivedCents("EUR");}
     public long receivedCents(String currency){
