@@ -1843,7 +1843,7 @@ public final class MainActivity extends Activity {
         LinearLayout paper=vertical();
         // Invoice reference requires a slightly taller white paper inset.
         // Quote previews retain their original document geometry.
-        pad(paper,18,Store.INVOICE.equals(d.type)?24:20);
+        pad(paper,18,Store.INVOICE.equals(d.type)?21:20);
         paper.setBackground(outlined(WHITE));
         paper.setMinimumHeight(dp(355));
 
@@ -1886,8 +1886,8 @@ public final class MainActivity extends Activity {
                 0xff8798ad,false));
         // Offer paper has a more compact row rhythm in the reference;
         // all variable business text continues to grow naturally.
-        gap(paper,Store.QUOTE.equals(d.type)?14:20);
-        paperRule(paper);gap(paper,Store.QUOTE.equals(d.type)?14:17);
+        gap(paper,Store.QUOTE.equals(d.type)?14:16);
+        paperRule(paper);gap(paper,Store.QUOTE.equals(d.type)?14:15);
 
         LinearLayout contacts=horizontal();
         LinearLayout buyer=vertical();
@@ -1911,7 +1911,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams dateParams=new LinearLayout.LayoutParams(0,-2,1);
         dateParams.leftMargin=dp(12);
         contacts.addView(dates,dateParams);
-        place(paper,contacts);gap(paper,offer?18:23);
+        place(paper,contacts);gap(paper,offer?18:19);
 
         LinearLayout columns=horizontal();
         columns.setBackground(shape(0xffeef1fc,6));
@@ -1947,7 +1947,7 @@ public final class MainActivity extends Activity {
             paperRule(paper);
         }
 
-        gap(paper,offer?12:16);
+        gap(paper,offer?12:14);
         paperAmount(paper,"Osnovica",Money.euros(d.netCents),false);
         gap(paper,9);
         String paperTaxLabel="PDV";
@@ -1971,7 +1971,7 @@ public final class MainActivity extends Activity {
         }
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
-        gap(paper,Store.QUOTE.equals(d.type)?29:31);
+        gap(paper,Store.QUOTE.equals(d.type)?29:28);
         paperRule(paper);gap(paper,12);
         place(paper,label(Store.QUOTE.equals(d.type)?
             "Ponuda nije račun niti dokaz o plaćanju.":
