@@ -29,6 +29,9 @@ Relevant platform guidance: https://developer.android.com/guide/topics/resources
 - Never combine EUR and USD balances without an explicit exchange conversion. Dashboard and report financial totals are scoped to selected currency; payment CSV includes the original currency code. Exchange rates and cross-currency accounting are **not supported**.
 - A converted quote preserves its currency in the resulting invoice draft. Changing the selected default does not change issued documents.
 - Numeric grouping and decimal display follow selected app locale where implemented. Data remain exact integers without binary floating-point calculations.
+- Product catalog prices also carry an ISO currency. Selecting a catalog entry for an invoice in a different currency is blocked rather than silently relabelled.
+- The tax input now accepts configurable rates from 0% to 100% with up to two fractional digits (e.g., 7.7%, 8.1%). The stored integer code is backward-compatible with earlier Croatian integer rates. Tax totals still round to the document's 1/100 minor unit; separate rounding and legal suitability must be reviewed per jurisdiction.
+- Payment CSV includes original payment currencies; monthly report CSV labels its selected currency explicitly.
 
 ## Business profile and invoices
 
