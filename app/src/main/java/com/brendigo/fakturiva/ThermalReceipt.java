@@ -19,12 +19,15 @@ import java.util.Locale;
  * terminal protocol, Bluetooth LE profile, or fiscalization integration.
  */
 public final class ThermalReceipt {
-    public static final int PAPER_58_DOTS=384, PAPER_80_DOTS=576;
+    public static final int PAPER_58_DOTS=384, PAPER_80_DOTS=576,
+        PAPER_80_COMPACT_DOTS=512;
     private static final int MAX_ROWS=800;
     private ThermalReceipt(){}
 
     public static boolean supports(int dots){
-        return dots==PAPER_58_DOTS || dots==PAPER_80_DOTS;
+        // 80 mm printers commonly expose either 512 or 576 printable dots.
+        return dots==PAPER_58_DOTS || dots==PAPER_80_DOTS ||
+            dots==PAPER_80_COMPACT_DOTS;
     }
     private static void optional(List<String> rows,String label,String value){
         if(value!=null && !value.trim().isEmpty())
@@ -102,12 +105,14 @@ public final class ThermalReceipt {
         optional(rows,"Business unit",d.issuerBusinessUnit);
         optional(rows,"Operator",d.issuerOperator);
         rows.add("Fakturiva");
+        rows.add(BrandAttribution.FOOTER);
         return rows;
     }
     private static String amount(long cents,String currency){
         return BillingCurrency.format(cents,currency,Locale.ENGLISH);
     }
-    private static void rasterLine(OutputStream out,String raw,int widthDots) throws IOException{
+    private static void rasterLine(OutputStream out,String raw,int widthDots,
+                                   boolean smallFooter) throws IOException{
         String text=raw==null?"":raw.replace('\r',' ').replace('\n',' ');
         // Keep each raster allocation bounded; never omit a long text field.
         int offset=0;
@@ -121,12 +126,15 @@ public final class ThermalReceipt {
             String part=text.substring(offset,next);
             TextPaint paint=new TextPaint(3);
             paint.setColor(Color.BLACK);
-            paint.setTextSize(widthDots==PAPER_58_DOTS?24f:27f);
+            paint.setTextSize(smallFooter?
+                (widthDots==PAPER_58_DOTS?16f:18f):
+                (widthDots==PAPER_58_DOTS?24f:27f));
             int margin=widthDots==PAPER_58_DOTS?10:14;
             int contentWidth=widthDots-margin*2;
             StaticLayout layout=StaticLayout.Builder.obtain(part,0,part.length(),
                 paint,contentWidth)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setAlignment(smallFooter?
+                    Layout.Alignment.ALIGN_CENTER:Layout.Alignment.ALIGN_NORMAL)
                 .setIncludePad(false)
                 .build();
             int height=Math.max(28,layout.getHeight()+12);
@@ -163,11 +171,12 @@ public final class ThermalReceipt {
             throws IOException{
         if(out==null)throw new IllegalArgumentException("Output required");
         if(!supports(widthDots))
-            throw new IllegalArgumentException("Only 58 mm and 80 mm paper supported");
+            throw new IllegalArgumentException("Supported raster widths: 384, 512, 576 dots");
         List<String> rows=compose(d);
         if(rows.size()>MAX_ROWS)throw new IOException("Receipt too long; print PDF instead");
         out.write(new byte[]{0x1b,0x40}); // ESC @ initialize; no drawer kick
-        for(String line:rows)rasterLine(out,line,widthDots);
+        for(String line:rows)
+            rasterLine(out,line,widthDots,BrandAttribution.FOOTER.equals(line));
         out.write(new byte[]{0x1b,0x64,0x04}); // feed; no auto cut
         out.flush();
     }
