@@ -16,14 +16,18 @@ if(!is_dir($sessionDir) && !mkdir($sessionDir,0700,true) && !is_dir($sessionDir)
 ini_set('session.use_strict_mode','1');
 ini_set('session.use_only_cookies','1');
 ini_set('session.cookie_httponly','1');
-ini_set('session.cookie_secure','1');
+// Insecure cookies are allowed ONLY on the isolated localhost CLI test server.
+// All actual hosting requests require secure cookies over verified HTTPS.
+$testHttp=PHP_SAPI==='cli-server' && getenv('FAKTURIVA_TEST_HTTP')==='1' &&
+    in_array(($_SERVER['REMOTE_ADDR']??''),['127.0.0.1','::1'],true);
+ini_set('session.cookie_secure',$testHttp?'0':'1');
 ini_set('session.gc_maxlifetime','1800');
 session_save_path($sessionDir);
 session_name('FakturivaWeb');
 $cookiePath=rtrim(str_replace('\\','/',dirname($_SERVER['SCRIPT_NAME']??'/')),'/');
 $cookiePath=($cookiePath===''?'/':$cookiePath.'/');
 session_set_cookie_params([
-    'lifetime'=>0,'path'=>$cookiePath,'secure'=>true,
+    'lifetime'=>0,'path'=>$cookiePath,'secure'=>!$testHttp,
     'httponly'=>true,'samesite'=>'Strict'
 ]);
 session_start();
