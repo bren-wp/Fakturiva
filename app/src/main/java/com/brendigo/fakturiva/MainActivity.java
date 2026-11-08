@@ -1022,7 +1022,8 @@ public final class MainActivity extends Activity {
         EditText pass=field("Lozinka hostinga (nije PIN)","");
         pass.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        if(Build.VERSION.SDK_INT>=26)
+            pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
         fieldLabel(body,"Poslužiteljska lozinka",pass);
         gap(body,17);
         secondary(body,"Registriraj račun na hostingu",()->
