@@ -1113,7 +1113,7 @@ public final class MainActivity extends Activity {
         setup("privacy",true);
         toolbar("Privatnost","Fakturiva · Brendigo",true);
         LinearLayout content=card();
-        place(content,label("Vaši podaci ostaju na uređaju",18,ink(),true));
+        place(content,label("Lokalni profil i pohrana",18,ink(),true));
         gap(content,11);
         place(content,label("Korisničko ime, lokalni PIN i poslovni podaci "+
             "spremaju se na ovom Android uređaju. PIN nije spremljen kao "+
