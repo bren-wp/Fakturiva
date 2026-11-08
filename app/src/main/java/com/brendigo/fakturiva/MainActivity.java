@@ -278,7 +278,7 @@ public final class MainActivity extends Activity {
                 }catch(Exception e){home();}
                 break;
             case "catalog":case "reports":case "payments":case "company":case "guide":
-            case "backup":settings();break;
+            case "backup":case "about":settings();break;
             default:home();
         }
     }
@@ -338,7 +338,8 @@ public final class MainActivity extends Activity {
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
         }else if("catalog".equals(screen)||"reports".equals(screen)||
                   "payments".equals(screen)||"company".equals(screen)||
-                  "guide".equals(screen)||"backup".equals(screen)){
+                  "guide".equals(screen)||"backup".equals(screen)||
+                  "about".equals(screen)){
             active="settings";
         }else if("client_detail".equals(screen)){
             active="clients";
@@ -3198,10 +3199,7 @@ public final class MainActivity extends Activity {
         help.setGravity(Gravity.CENTER);
         help.setBackground(shape(panel(),12));
         help.setContentDescription("Informacije o aplikaciji");
-        help.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Fakturiva "+getPackageVersion())
-            .setMessage("Izrađujte račune i ponude, upravljajte klijentima, pratite naplatu te spremite ili podijelite PDF dokumente.")
-            .setPositiveButton("Zatvori",null).show());
+        help.setOnClickListener(v->aboutSupport());
         heading.addView(help,lp(43,43));
         place(body,heading);gap(body,18);
         LinearLayout brand=horizontal();pad(brand,13,12);
@@ -3214,10 +3212,7 @@ public final class MainActivity extends Activity {
         brand.addView(brandText,new LinearLayout.LayoutParams(0,-2,1));
         brand.addView(label("›",23,0xffb6cbe2,true));
         brand.setContentDescription("Fakturiva, informacije o aplikaciji");
-        brand.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Fakturiva "+getPackageVersion())
-            .setMessage("Računi, ponude, klijenti i evidencija naplate na jednom mjestu.")
-            .setPositiveButton("U redu",null).show());
+        brand.setOnClickListener(v->aboutSupport());
         place(body,brand);gap(body,14);
 
         LinearLayout options=card();pad(options,0,2);
@@ -3227,8 +3222,15 @@ public final class MainActivity extends Activity {
         settingRow(options,"¤","Default currency",selectedCurrency(),
             this::currencyPicker);
         settingRow(options,"▤","Printers and paper",
-            printOptions()[Math.max(0,Math.min(5,prefs.getInt("default_paper",0)))],
+            printOptions()[Math.max(0,Math.min(printOptions().length-1,
+                prefs.getInt("default_paper",0)))],
             this::printerPreferences);
+        settingRow(options,"⌁","LAN receipt printer",
+            prefs.getString("printer_host","").isEmpty()?
+                "Configure a local network printer":
+                prefs.getString("printer_host","")+":"+
+                prefs.getString("printer_port","9100"),
+            this::networkPrinterSettings);
         settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
             "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
@@ -3249,6 +3251,9 @@ public final class MainActivity extends Activity {
             dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
                 dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
             });
+        settingRow(options,"ⓘ","About and support",
+            "Powered by Brendigo · "+BrandAttribution.SUPPORT_EMAIL,
+            this::aboutSupport);
         gap(body,14);
         place(body,label("POSLOVNI ALATI",11,sub(),true));gap(body,8);
         LinearLayout tools=card();pad(tools,0,2);
@@ -3284,8 +3289,14 @@ public final class MainActivity extends Activity {
     }
     private String[] printOptions(){
         String[] system=SystemInvoicePrinter.formats();
+        // Keep the original indices 0–5 stable for saved user preferences.
         return new String[]{ui(system[0]),ui(system[1]),ui(system[2]),ui(system[3]),
-            ui("58 mm · Bluetooth ESC/POS"),ui("80 mm · Bluetooth ESC/POS")};
+            ui("58 mm · Bluetooth ESC/POS"),ui("80 mm · Bluetooth ESC/POS"),
+            ui(system[4]),ui(system[5]),
+            ui("80 mm · Bluetooth ESC/POS (512 dots)"),
+            ui("58 mm · LAN ESC/POS"),
+            ui("80 mm · LAN ESC/POS (512 dots)"),
+            ui("80 mm · LAN ESC/POS (576 dots)")};
     }
     private void printerPreferences(){
         String[] choices=printOptions();
@@ -3313,14 +3324,99 @@ public final class MainActivity extends Activity {
             .setNegativeButton(ui("Cancel"),null)
             .setPositiveButton(ui("Print"),(dialog,which)->{
                 prefs.edit().putInt("default_paper",choice[0]).apply();
-                if(choice[0]<4){
-                    try{SystemInvoicePrinter.print(this,document,choice[0]);}
+                int selected=choice[0];
+                if(selected<4||selected==6||selected==7){
+                    try{SystemInvoicePrinter.print(this,document,
+                        selected<4?selected:selected-2);}
                     catch(Exception e){error(e);}
-                }else{
-                    requestBluetoothPrint(documentId,choice[0]==4?
-                        ThermalReceipt.PAPER_58_DOTS:ThermalReceipt.PAPER_80_DOTS);
+                }else if(selected==4||selected==5||selected==8){
+                    int dots=selected==4?ThermalReceipt.PAPER_58_DOTS:
+                        selected==8?ThermalReceipt.PAPER_80_COMPACT_DOTS:
+                        ThermalReceipt.PAPER_80_DOTS;
+                    requestBluetoothPrint(documentId,dots);
+                }else if(selected>=9&&selected<=11){
+                    int dots=selected==9?ThermalReceipt.PAPER_58_DOTS:
+                        selected==10?ThermalReceipt.PAPER_80_COMPACT_DOTS:
+                        ThermalReceipt.PAPER_80_DOTS;
+                    editNetworkPrinter(documentId,dots);
                 }
             }).show();
+    }
+    private void networkPrinterSettings(){
+        editNetworkPrinter(-1,ThermalReceipt.PAPER_58_DOTS);
+    }
+    private void editNetworkPrinter(long documentId,int dots){
+        LinearLayout form=vertical();pad(form,18,9);
+        EditText host=field("Private printer IPv4 (192.168.1.50)",
+            prefs.getString("printer_host",""));
+        host.setSingleLine(true);
+        host.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_URI);
+        fieldLabel(form,"Printer IPv4",host);
+        EditText port=field("Port 9100",prefs.getString("printer_port","9100"));
+        port.setInputType(InputType.TYPE_CLASS_NUMBER);
+        fieldLabel(form,"TCP port",port);
+        final boolean printing=documentId>0;
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle(ui(printing?"Print on LAN ESC/POS":"LAN receipt printer"))
+            .setMessage(ui("Only trusted private-network ESC/POS printers with a raw TCP port are supported."))
+            .setView(form).setNegativeButton(ui("Cancel"),null)
+            .setPositiveButton(ui(printing?"Print":"Save"),null).create();
+        dialog.setOnShowListener(ignored->
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+                String address=host.getText().toString().trim();
+                String value=port.getText().toString().trim();
+                try{
+                    NetworkReceiptPrinter.privateIpv4(address);
+                    int tcp=NetworkReceiptPrinter.validPort(Integer.parseInt(value));
+                    prefs.edit().putString("printer_host",address)
+                        .putString("printer_port",Integer.toString(tcp)).apply();
+                    dialog.dismiss();
+                    if(printing){
+                        Store.Document document=db.document(documentId);
+                        toast("Sending receipt to LAN printer…");
+                        NetworkReceiptPrinter.send(this,address,tcp,document,dots,
+                            failure->toast(failure==null?
+                                "Print data sent. Check the printer for completion.":
+                                failure));
+                    }else settings();
+                }catch(NumberFormatException e){
+                    port.setError(ui("Enter a valid TCP port (1024–65535)."));
+                    port.requestFocus();
+                }catch(IllegalArgumentException e){
+                    host.setError(e.getMessage());
+                    host.requestFocus();
+                }catch(Exception e){error(e);}
+            }));
+        dialog.show();
+    }
+    private void aboutSupport(){
+        setup("about",true);
+        pad(body,17,18);
+        toolbar("About and support","Fakturiva · Brendigo",true);
+        LinearLayout info=card();
+        place(info,label("Fakturiva",22,ink(),true));
+        gap(info,6);
+        place(info,label("Version "+getPackageVersion(),12,sub(),false));
+        gap(info,14);
+        place(info,label(BrandAttribution.FOOTER,13,ink(),true));
+        gap(info,8);
+        caption(info,"Every generated PDF invoice and thermal receipt has a small Powered by Brendigo attribution at the bottom.");
+        gap(info,10);
+        caption(info,"To request removal of this attribution, contact our support team at info@plati.com.hr.");
+        place(body,info);gap(body,14);
+        button(body,"Contact support · "+BrandAttribution.SUPPORT_EMAIL,()->{
+            Intent email=new Intent(Intent.ACTION_SENDTO,
+                Uri.parse("mailto:"+BrandAttribution.SUPPORT_EMAIL));
+            email.putExtra(Intent.EXTRA_SUBJECT,
+                "Fakturiva — Powered by Brendigo attribution");
+            try{startActivity(email);}
+            catch(android.content.ActivityNotFoundException missing){
+                toast("No email app is installed. Please write to info@plati.com.hr.");
+            }
+        });
+        gap(body,12);
+        caption(body,"This app creates ordinary invoices and quotes. Printing does not process card payments or provide fiscalization.");
     }
     private void requestBluetoothPrint(long documentId,int dots){
         if(Build.VERSION.SDK_INT>=31 &&
