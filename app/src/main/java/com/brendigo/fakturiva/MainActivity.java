@@ -3016,12 +3016,25 @@ public final class MainActivity extends Activity {
                     11,sub(),false);
                 documentInfo.setMaxLines(2);
                 description.addView(documentInfo);
-                row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
                 TextView amount=label("+"+Money.euros(p.amountCents),12,TEAL,true);
                 amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
                 amount.setMaxLines(3);
                 amount.setContentDescription("Evidentirana uplata: "+Money.euros(p.amountCents));
-                row.addView(amount);
+                // Avoid competing horizontal widths on 280/320dp screens or
+                // when the user selects large accessibility font scaling.
+                float widthDp=getResources().getDisplayMetrics().widthPixels/
+                    getResources().getDisplayMetrics().density;
+                boolean compactPayment=widthDp<340 ||
+                    getResources().getConfiguration().fontScale>=1.35f;
+                if(compactPayment){
+                    LinearLayout.LayoutParams sumLp=lp(-1,-2);
+                    sumLp.topMargin=dp(5);
+                    description.addView(amount,sumLp);
+                    row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+                }else{
+                    row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
+                    row.addView(amount);
+                }
                 place(card,row);
                 row.setOnClickListener(v->showDocument(p.documentId));
             }
