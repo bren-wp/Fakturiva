@@ -63,6 +63,27 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
             assertEquals(4,bytes[bytes.length-1]&255);
         }
     }
+    @Test public void testPdfPagesUseActualRequestedPaperDimensions()throws Exception{
+        int[][] papers={{595,842},{420,595},{612,792},{612,1008}};
+        for(int[] paper:papers){
+            java.io.File file=java.io.File.createTempFile(
+                "fakturiva-paper-",".pdf",getContext().getCacheDir());
+            try{
+                try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)){
+                    PdfMaker.write(null,sample(),out,paper[0],paper[1]);
+                }
+                try(android.os.ParcelFileDescriptor fd=android.os.ParcelFileDescriptor.open(
+                        file,android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+                    android.graphics.pdf.PdfRenderer pdf=new android.graphics.pdf.PdfRenderer(fd)){
+                    assertTrue(pdf.getPageCount()>0);
+                    try(android.graphics.pdf.PdfRenderer.Page page=pdf.openPage(0)){
+                        assertEquals(paper[0],page.getWidth());
+                        assertEquals(paper[1],page.getHeight());
+                    }
+                }
+            }finally{file.delete();}
+        }
+    }
     @Test public void testUnsupportedPaperFailsInsteadOfSendingUnspecifiedCommands(){
         ByteArrayOutputStream out=new ByteArrayOutputStream();
         try{
