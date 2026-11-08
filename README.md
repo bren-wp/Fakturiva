@@ -75,7 +75,15 @@ Posljednje objavljeno izdanje: [**v0.17.0-preview.1**](https://github.com/bren-w
 
 **Prije zamjene aplikacije ili promjene telefona izvezite i provjerite sigurnosnu kopiju.** Različiti potpisni certifikati mogu spriječiti instalaciju preko postojeće verzije.
 
-**Međunarodna upotreba:** profil izdavatelja i porezni broj nisu ograničeni na hrvatski OIB. U sadašnjem izdanju iznosi se prikazuju u **EUR**, a sučelje je na **hrvatskom jeziku**. Prije stvarne poslovne uporabe korisnik treba provjeriti obvezne elemente dokumenata i postupke koji vrijede u njegovoj državi.
+## Međunarodni računi i ponude — razvojna grana
+
+Fakturiva je namijenjena i obrtima, samostalnim djelatnostima, d.o.o., j.d.o.o., Ltd, LLC, Inc, GmbH i drugim oblicima poslovanja. U novoj razvojnoj grani profil izdavatelja sadrži pravni oblik, registracijski broj i tijelo, trgovački naziv, državu i regiju, dodatne porezne podatke, kontakt-osobu te detaljne bankovne i platne upute. Porezni broj može ostati prazan ili sadržavati međunarodnu oznaku.
+
+**Valute:** EUR je zadana. Za nove dokumente možete odabrati podržanu ISO valutu s dvije decimalne znamenke (npr. USD, GBP, CHF, CAD, AUD i mnoge druge). Valuta se sprema uz račun ili ponudu i ostaje vezana uz dokument. Evidencija i izvještaji ne zbrajaju različite valute. **Konverzija tečaja nije automatska.** Valute s 0 ili 3 decimalna mjesta (npr. JPY, KWD) nisu još dostupne zbog potrebne zasebne nadogradnje novčanog modela.
+
+**Jezici:** nova osnova koristi engleski kao zadani jezik, a korisnik u Postavkama može izabrati hrvatski. Pripremljen je popis **31 ciljnog jezika**, ali cjelovito prevođenje svih zaslona, obrazaca, dijaloga, PDF-a i sistemskih poruka još **nije dovršeno**, pa se ostali jezici ne prikazuju kao podržani. I dio engleskog/hrvatskog sučelja još zahtijeva lekturu i uklanjanje preostalih neprevedenih tekstova. [Pravila objave prijevoda](docs/INTERNATIONALIZATION_QA.md).
+
+Ove značajke **još nisu dio posljednjeg objavljenog izdanja** v0.17.0-preview.1. Trenutačna aplikacija nije certificirana za automatsko ispunjavanje zakonskih obveza bilo koje države; korisnik provjerava obvezne podatke i računovodstvene zahtjeve u svojoj jurisdikciji.
 
 ---
 
