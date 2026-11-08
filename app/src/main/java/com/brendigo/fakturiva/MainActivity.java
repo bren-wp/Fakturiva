@@ -143,6 +143,19 @@ public final class MainActivity extends Activity {
         if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
         db.close();super.onDestroy();
     }
+    private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
+    private String money(long amount){return BillingCurrency.format(amount,selectedCurrency(),Locale.ENGLISH);}
+    private String docMoney(Store.Document d,long amount){
+        return BillingCurrency.format(amount,d.currencyCode,Locale.ENGLISH);
+    }
+    private String draftMoney(long amount){
+        String currency=selectedCurrency();
+        if(editingDraftId>0){
+            try{currency=db.document(editingDraftId).currencyCode;}
+            catch(Exception ignored){}
+        }
+        return BillingCurrency.format(amount,currency,Locale.ENGLISH);
+    }
     private int bg(){return dark?0xff0d182a:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
     private int ink(){return dark?WHITE:TEXT;}
@@ -3206,19 +3219,26 @@ public final class MainActivity extends Activity {
         String companyName=db.setting("name").trim();
         heroText.addView(label(companyName.isEmpty()?"Moja tvrtka / obrt":companyName,15,ink(),true));
         gap(heroText,5);
-        heroText.addView(label("Profil izdavatelja računa",11,sub(),false));
+        heroText.addView(label("Invoice and quote issuer",11,sub(),false));
         hero.addView(heroText,new LinearLayout.LayoutParams(0,-2,1));
         // Align the first business form with the reference. Preserve the
         // immutable-issuer disclosure below the editable sections.
         place(body,hero);gap(body,18);
         LinearLayout form=card();
-        place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,9);
-        String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note"};
-        String[] labels={"Naziv izdavatelja","Porezni broj (neobavezno)","Porezni / VAT ID (ako postoji)","Adresa","Poštanski broj","Grad / mjesto","Država","E-adresa","Telefon","Web stranica","IBAN (ako se koristi)","Naziv banke","BIC / SWIFT","Registracijski broj (neobavezno)","Poslovna jedinica (neobavezno)","Referentna oznaka (neobavezno)","Način plaćanja","Referenca plaćanja","Porezna ili poslovna napomena"};
+        place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
+        String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note",
+            "legal_form","trading_name","company_number","register_authority","tax_registration",
+            "address_2","region","payment_terms","footer_note"};
+        String[] labels={"Legal business name","Tax ID (optional)","VAT ID (optional)","Street address","Postal code","City","Country","Email","Phone","Website","IBAN (optional)","Bank name","BIC / SWIFT","Register reference (optional)","Business unit","Operator reference","Payment method","Payment reference","Tax or legal note",
+            "Legal form (Ltd, Inc, LLC, GmbH, d.o.o., sole trader...)","Trading name (optional)",
+            "Company registration number","Registering authority","Tax registration details",
+            "Additional address line","State / province / region","Payment terms","Invoice footer note"};
         EditText[] fields=new EditText[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
-        int[][] sections={{0,1,3,7,8},{10,11,12,16,17},{2,4,5,6,9,13,14,15,18}};
-        String[] sectionNames={"Podaci o tvrtki","Podaci za plaćanje","Dodatni poslovni podaci"};
+        int[][] sections={{0,19,20,1,3,24,6,7,8},
+            {10,11,12,16,17,26},
+            {2,4,5,9,13,14,15,18,21,22,23,25,27}};
+        String[] sectionNames={"Company and legal identity","Payment and bank details","Additional invoice details"};
         for(int group=0;group<sections.length;group++){
             LinearLayout card=group==0?form:card();
             if(group>0){
@@ -3281,13 +3301,13 @@ public final class MainActivity extends Activity {
                 String name=fields[0].getText().toString().trim();
                 String oib=fields[1].getText().toString().trim();
                 String iban=fields[10].getText().toString().trim();
-                if(name.isEmpty())throw new IllegalArgumentException("Unesite naziv tvrtke ili obrta");
+                if(name.isEmpty())throw new IllegalArgumentException("Enter a legal business name");
                 if(oib.length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
                 if(!iban.isEmpty()&&!Iban.valid(iban))throw new IllegalArgumentException("IBAN nije valjan");
                 String[] vals=new String[keys.length];
                 for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString().trim();
                 db.companySettings(keys,vals);
-                toast("Podaci tvrtke uspješno spremljeni");settings();
+                toast("Company details saved");settings();
             }catch(Exception e){error(e);}
         };
         gap(body,8);
