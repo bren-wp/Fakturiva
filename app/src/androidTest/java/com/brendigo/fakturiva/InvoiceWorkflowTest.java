@@ -384,7 +384,7 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
             assertEquals("Marketing za studeni",first.document(id).quoteTitle);
             assertEquals("2026-11-20",first.document(id).supplyDate);
             JSONObject backup=first.backup();
-            assertEquals(5,backup.getInt("schema"));
+            assertEquals(Store.VERSION,backup.getInt("schema"));
             IsolatedContext second=new IsolatedContext(getContext());
             Store restored=null;
             try{
@@ -449,6 +449,76 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
             assertTrue(pdf.size()>1500);
         }finally{
             if(db!=null)db.close();
+            context.clean();
+        }
+    }
+
+
+    @Test
+    public void testCurrencySnapshotAndAggregatesNeverMixCurrencies()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());Store store=null;
+        try{
+            store=new Store(context);
+            store.setting("name","Global Example Ltd");
+            store.setting("address","11 Main Street, Dublin");
+            long customer=store.saveClient("Customer","","Sample address","");
+            Store.Item item=new Store.Item();
+            item.name="Consulting";item.qtyMilli=1000;item.unitCents=10000;item.taxRate=0;
+            store.setting("currency","EUR");
+            long euro=store.createDraft(Store.INVOICE,customer,"2026-11-01","2026-11-15",
+                "Euro invoice",Arrays.asList(item));
+            store.confirm(euro);
+            store.pay(euro,10000,"2026-11-02");
+            store.setting("currency","USD");
+            long dollar=store.createDraft(Store.INVOICE,customer,"2026-11-03","2026-11-16",
+                "Dollar invoice",Arrays.asList(item));
+            store.confirm(dollar);
+            store.pay(dollar,6000,"2026-11-04");
+            assertEquals("EUR",store.document(euro).currencyCode);
+            assertEquals("USD",store.document(dollar).currencyCode);
+            assertEquals(10000L,store.receivedCents("EUR"));
+            assertEquals(6000L,store.receivedCents("USD"));
+            assertEquals(10000L,store.invoicedCents("EUR"));
+            assertEquals(10000L,store.invoicedCents("USD"));
+            assertEquals(4000L,store.outstandingCents("USD"));
+            assertEquals(0L,store.outstandingCents("EUR"));
+            assertEquals("USD",store.payments().get(0).currencyCode);
+            assertEquals("EUR",store.payments().get(1).currencyCode);
+
+            JSONObject snapshot=store.backup();
+            assertEquals(Store.VERSION,snapshot.getInt("schema"));
+            store.restore(snapshot);
+            assertEquals("EUR",store.document(euro).currencyCode);
+            assertEquals("USD",store.document(dollar).currencyCode);
+            assertEquals(6000L,store.receivedCents("USD"));
+            assertEquals(10000L,store.receivedCents("EUR"));
+        }finally{
+            if(store!=null)store.close();
+            context.clean();
+        }
+    }
+
+    @Test
+    public void testQuoteConversionPreservesOriginalCurrency()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());Store store=null;
+        try{
+            store=new Store(context);
+            store.setting("name","Example Inc");
+            store.setting("address","123 International Avenue");
+            store.setting("currency","GBP");
+            long buyer=store.saveClient("Partner","","", "");
+            Store.Item row=new Store.Item();
+            row.name="Design";row.unitCents=55000;row.qtyMilli=1000;row.taxRate=0;
+            long quote=store.createDraft(Store.QUOTE,buyer,"2026-11-01","2026-11-15",
+                "Example",Arrays.asList(row));
+            store.confirm(quote);
+            store.setting("currency","EUR");
+            long invoice=store.quoteToInvoice(quote);
+            assertEquals("GBP",store.document(quote).currencyCode);
+            assertEquals("GBP",store.document(invoice).currencyCode);
+            assertEquals(Store.DRAFT,store.document(invoice).status);
+        }finally{
+            if(store!=null)store.close();
             context.clean();
         }
     }
