@@ -554,7 +554,7 @@ public final class MainActivity extends Activity {
         place(body,brand);gap(body,22);
         body.addView(new WelcomeIllustration(this),lp(-1,345));gap(body,30);
         TextView eyebrow=label("SVE NA JEDNOM MJESTU",10,0xff6c83ac,true);
-        eyebrow.setLetterSpacing(.085f);
+        eyebrow.setLetterSpacing(.12f);
         eyebrow.setTranslationX(dp(1));
         place(body,eyebrow);gap(body,11);
         TextView heading=label("Manje papirologije.\nViše vremena za posao.",26,NAVY,true);
@@ -566,7 +566,7 @@ public final class MainActivity extends Activity {
         heading.setTranslationY(0);
         place(body,heading);gap(body,14);
         TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",12,MUTED,false);
-        info.setTextScaleX(.97f);
+        info.setTextScaleX(.965f);
         info.setTranslationX(dp(1));
         info.setTranslationY(-dp(.67f));
         info.setLineSpacing(dp(4),1.0f);place(body,info);
@@ -597,7 +597,7 @@ public final class MainActivity extends Activity {
         startButton.addView(startText,startTextLp);
         startButton.setContentDescription(ui("Započni"));
         startButton.setOnClickListener(v->securityScreen(false,false));
-        LinearLayout.LayoutParams startLp=lp(-1,49);
+        LinearLayout.LayoutParams startLp=lp(-1,48);
         startLp.leftMargin=dp(1);startLp.rightMargin=dp(1);
         body.addView(startButton,startLp);
         // Restore the split muted/blue login line from the owner's reference.
@@ -605,8 +605,8 @@ public final class MainActivity extends Activity {
         LinearLayout account=horizontal();
         account.setGravity(Gravity.CENTER);
         account.setMinimumHeight(dp(38));
-        account.addView(label("Već imate račun? ",11,MUTED,false));
-        TextView signIn=label("Prijavite se",11,BLUE,true);
+        account.addView(label("Već imate račun? ",10,MUTED,false));
+        TextView signIn=label("Prijavite se",10,BLUE,true);
         account.addView(signIn);
         account.setContentDescription(ui("Već imate račun? Prijavite se"));
         account.setOnClickListener(v->openExistingLocalAccess());
@@ -767,7 +767,7 @@ public final class MainActivity extends Activity {
             p.setColor(NAVY);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
             p.setTextSize(16);canvas.drawText("1.250,00 €",192,248,p);
             // Small native verified stamp at the sheet's upper-right edge.
-            p.setColor(0xff18c6b7);p.setStrokeWidth(1.6f);
+            p.setColor(0xff18c6b7);p.setStrokeWidth(1.2f);
             p.setStyle(android.graphics.Paint.Style.STROKE);
             canvas.drawCircle(254.5f,88,6.1f,p);
             android.graphics.Path seal=new android.graphics.Path();
@@ -778,7 +778,11 @@ public final class MainActivity extends Activity {
             p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
             p.setColor(0xff18c6b7);p.setShadowLayer(12,0,10,0x5518c6b7);
-            canvas.drawRoundRect(249,231,320,301,23,23,p);p.clearShadowLayer();
+            // The reference badge is a 64-unit rounded square rotated ~6
+            // degrees, rather than a large horizontal axis-aligned badge.
+            canvas.save();canvas.rotate(6f,284.5f,266f);
+            canvas.drawRoundRect(252.5f,234,316.5f,298,20,20,p);
+            p.clearShadowLayer();
             p.setColor(Color.WHITE);p.setStrokeWidth(2.6f);
             p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
             p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
@@ -786,6 +790,7 @@ public final class MainActivity extends Activity {
             android.graphics.Path check=new android.graphics.Path();
             check.moveTo(277,262);check.lineTo(284,269);check.lineTo(295,255);
             canvas.drawPath(check,p);p.setStyle(android.graphics.Paint.Style.FILL);
+            canvas.restore();
             canvas.restore();
         }
     }
