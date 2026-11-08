@@ -56,6 +56,8 @@ public final class MainActivity extends Activity {
     private String screen="home",filter="Svi",editType=Store.INVOICE;
     private String documentSearchQuery="";
     private boolean dark=false;
+    // Cached reference-design typography; independent of network/services.
+    private Typeface referenceRegular,referenceBold;
     // 1=enable OS credential lock, 2=unlock, 3=disable.
     private int deviceAuthAction=0;
     private boolean securityFromSettings=false;
@@ -150,9 +152,27 @@ public final class MainActivity extends Activity {
     private GradientDrawable shape(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
     private GradientDrawable outlined(int color){GradientDrawable d=shape(color,17);d.setStroke(dp(1),border());return d;}
     private void background(View v,int color,int radius){v.setBackground(shape(color,radius));}
+    private Typeface referenceTypeface(boolean strong){
+        if(referenceRegular==null){
+            try{
+                referenceRegular=Typeface.createFromAsset(getAssets(),"fonts/Inter.ttf");
+                referenceBold=Typeface.create(referenceRegular,Typeface.BOLD);
+            }catch(RuntimeException ignored){
+                // Older Android font parsers still receive fully working text.
+                referenceRegular=Typeface.create("sans-serif",Typeface.NORMAL);
+                referenceBold=Typeface.create("sans-serif",Typeface.BOLD);
+            }
+        }
+        return strong?referenceBold:referenceRegular;
+    }
     private TextView label(String s,int size,int color,boolean strong){TextView t=new TextView(this);t.setText(s);
         t.setTextColor(color);t.setTextSize(size);t.setFontFeatureSettings("kern");
-        t.setTypeface(Typeface.create("sans-serif",strong?Typeface.BOLD:Typeface.NORMAL));
+        // Inter belongs to the original design on the highest-deviation
+        // dashboard, reports and document-preview screens.
+        t.setTypeface(("home".equals(screen)||"detail".equals(screen)||
+            "reports".equals(screen))
+            ?referenceTypeface(strong)
+            :Typeface.create("sans-serif",strong?Typeface.BOLD:Typeface.NORMAL));
         t.setGravity(Gravity.CENTER_VERTICAL);return t;}
     private LinearLayout vertical(){LinearLayout v=new LinearLayout(this);v.setOrientation(LinearLayout.VERTICAL);return v;}
     private LinearLayout horizontal(){LinearLayout v=new LinearLayout(this);v.setGravity(Gravity.CENTER_VERTICAL);return v;}
@@ -232,6 +252,9 @@ public final class MainActivity extends Activity {
         LinearLayout heading=vertical();TextView t=label(title,23,ink(),true);place(heading,t);
         if(subtitle!=null){TextView st=label(subtitle,11,sub(),false);place(heading,st);}
         row.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        // The original preview has TWO purposeful overflow controls:
+        // this toolbar button opens settings; the status-row menu opens
+        // document-specific PDF actions. Keep both like the source design.
         TextView more=label("•••",15,sub(),true);
         more.setGravity(Gravity.CENTER);
         more.setBackground(shape(panel(),12));
@@ -757,9 +780,21 @@ public final class MainActivity extends Activity {
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
-        gap(body,dark?14:14);
-        place(body,label("Brze radnje",18,ink(),true));
-        gap(body,11);
+        // Keep the title's baseline unchanged while providing a 48dp
+        // accessible hit target for the arrow shown in both original homes.
+        gap(body,1);
+        LinearLayout quickHeader=horizontal();
+        quickHeader.addView(label("Brze radnje",18,ink(),true),
+            new LinearLayout.LayoutParams(0,-2,1));
+        TextView moreActions=label("›",24,BLUE,true);
+        moreActions.setGravity(Gravity.CENTER);
+        moreActions.setContentDescription("Otvori sve brze radnje");
+        moreActions.setMinimumWidth(dp(48));
+        moreActions.setMinimumHeight(dp(48));
+        quickHeader.addView(moreActions,lp(48,48));
+        moreActions.setOnClickListener(v->showQuickActions());
+        place(body,quickHeader);
+        gap(body,1);
         LinearLayout fast=horizontal();
         quick(fast,"＋","Novi račun",()->newDocument(Store.INVOICE));
         quick(fast,"▣","Nova ponuda",()->newDocument(Store.QUOTE));
@@ -785,6 +820,22 @@ public final class MainActivity extends Activity {
             gap(body,15);
             place(body,label(db.backupWarning(),12,RED,true));
         }
+    }
+    private void showQuickActions(){
+        String[] names={"Novi račun","Nova ponuda","Novi klijent",
+            "Artikli i usluge","Izvještaji","Naplata"};
+        new AlertDialog.Builder(this).setTitle("Brze radnje")
+            .setItems(names,(dialog,which)->{
+                switch(which){
+                    case 0:newDocument(Store.INVOICE);break;
+                    case 1:newDocument(Store.QUOTE);break;
+                    case 2:addClient();break;
+                    case 3:catalog();break;
+                    case 4:reports();break;
+                    case 5:payments();break;
+                    default:break;
+                }
+            }).setNegativeButton("Zatvori",null).show();
     }
     private void showNotifications(){
         ArrayList<Store.Document> open=new ArrayList<>();
@@ -1794,13 +1845,13 @@ public final class MainActivity extends Activity {
         masthead.setGravity(Gravity.CENTER_VERTICAL);
         masthead.setMinimumHeight(dp(Store.INVOICE.equals(d.type)?29:32));
         ImageView brand=new ImageView(this);
-        brand.setImageResource(Store.INVOICE.equals(d.type)?
-            R.drawable.ic_document_invoice_mark:R.drawable.brand_mark);
-        masthead.addView(brand,lp(Store.INVOICE.equals(d.type)?19:32,
-            Store.INVOICE.equals(d.type)?19:32));
+        // Both original paper references use the same small blue document
+        // motif; the large square app launcher mark belongs to app branding.
+        brand.setImageResource(R.drawable.ic_document_invoice_mark);
+        masthead.addView(brand,lp(19,19));
         TextView brandTitle=label("Fakturiva",18,NAVY,true);
         LinearLayout.LayoutParams brandText=new LinearLayout.LayoutParams(0,-2,1);
-        brandText.leftMargin=dp(Store.INVOICE.equals(d.type)?5:7);
+        brandText.leftMargin=dp(5);
         masthead.addView(brandTitle,brandText);
         LinearLayout docType=vertical();
         docType.setGravity(Gravity.RIGHT);
@@ -2723,17 +2774,34 @@ public final class MainActivity extends Activity {
         place(body,header);gap(body,15);
 
         LinearLayout period=horizontal();period.setGravity(Gravity.CENTER_VERTICAL);
-        TextView picker=label("▣  "+month+"  ›",12,ink(),true);
-        picker.setSingleLine(true);
-        picker.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        pad(picker,10,10);
+        // On a 393dp reference the month control is compact, NOT the whole
+        // remaining row. Constrain it while retaining an ellipsis on mini phones.
+        int windowDp=Math.round(getResources().getDisplayMetrics().widthPixels/
+            getResources().getDisplayMetrics().density);
+        int pickerWidth=Math.max(96,Math.min(155,
+            windowDp-36-8-(currentMonth?97:112)-12));
+        LinearLayout picker=horizontal();
         picker.setBackground(outlined(panel()));
-        LinearLayout.LayoutParams periodLp=new LinearLayout.LayoutParams(0,-2,1);
+        picker.setPadding(dp(10),dp(6),dp(10),dp(6));
+        picker.setMinimumHeight(dp(40));
+        ImageView monthIcon=icon(R.drawable.ic_calendar,sub());
+        picker.addView(monthIcon,lp(18,18));
+        TextView monthText=label(month,12,ink(),true);
+        monthText.setSingleLine(true);
+        monthText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams monthNameLp=new LinearLayout.LayoutParams(0,-2,1);
+        monthNameLp.leftMargin=dp(7);
+        picker.addView(monthText,monthNameLp);
+        TextView nextMonth=label("›",18,sub(),true);
+        nextMonth.setGravity(Gravity.CENTER);
+        picker.addView(nextMonth,lp(11,20));
+        LinearLayout.LayoutParams periodLp=lp(pickerWidth,-2);
         periodLp.rightMargin=dp(8);
         period.addView(picker,periodLp);
         picker.setContentDescription("Odaberi mjesec izvještaja: "+month);
+        picker.setFocusable(true);
         picker.setOnClickListener(v->reportPeriodPicker());
-        // The month control takes the remaining width; no forced line wrap.
+        period.addView(new View(this),new LinearLayout.LayoutParams(0,dp(1),1));
         TextView current=label(currentMonth?"Ovaj mjesec":"Na ovaj mjesec",11,BLUE,true);
         current.setGravity(Gravity.CENTER);
         current.setBackground(shape(dark?0xff27385f:0xffe9edff,16));
