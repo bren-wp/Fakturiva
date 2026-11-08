@@ -2,7 +2,7 @@
 set -euo pipefail
 # Only the PHP built-in loopback server accepts this test-only HTTP override.
 port="18089"
-FAKTURIVA_TEST_HTTP=1 php -S "127.0.0.1:$port" -t server > /tmp/fakturiva-http-test.log 2>&1 &
+FAKTURIVA_TEST_HTTP=1 php -S "127.0.0.1:$port" -t web > /tmp/fakturiva-http-test.log 2>&1 &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true' EXIT
 ready=false

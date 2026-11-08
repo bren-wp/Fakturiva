@@ -44,7 +44,7 @@ adrese, korisničkog imena i vlastite poslužiteljske lozinke
 **nema prijenosa korisničkih podataka**.
 
 - Nema SQL baze i nema vanjskog API-ja treće strane.
-- `server/` može se postaviti u root bilo koje HTTPS domene s
+- `web/` može se postaviti u root bilo koje HTTPS domene s
   PHP 8.1+, OpenSSL i potrebnim pravima zapisivanja.
 - Korisnički račun na hostingu ima neovisnu jaku lozinku
   (najmanje 12 znakova), vremenski ograničeni nasumični bearer token
@@ -108,4 +108,4 @@ i [zahtjevima za brisanje računa](https://support.google.com/googleplay/android
    pregled deklaracija i pozitivne testove; sam kod na GitHubu
    nije Google Play odobrenje.
 
-[Detaljne upute za hosting i putanje](../server/README.md).
+[Detaljne upute za hosting i putanje](../web/README.md).

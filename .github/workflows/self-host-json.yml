@@ -3,11 +3,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'server/**'
+      - 'web/**'
       - '.github/workflows/self-host-json.yml'
   pull_request:
     paths:
-      - 'server/**'
+      - 'web/**'
       - '.github/workflows/self-host-json.yml'
   workflow_dispatch:
 jobs:
@@ -26,12 +26,12 @@ jobs:
         run: |
           find server -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Test tenant isolation, optimistic revisions and deletion
-        run: php server/tests/smoke.php
+        run: php web/tests/smoke.php
       - name: Verify HTTPS-only API handling, auth and account deletion over HTTP loopback
-        run: bash server/tests/http-smoke.sh
+        run: bash web/tests/http-smoke.sh
       - name: Verify no keys or test credentials were checked in
         run: |
-          if git ls-files server/storage | grep -E '/secret\.php$|/accounts/.+\.json$|/index/.+\.json$|/limits/.+\.json$'; then
+          if git ls-files web/storage | grep -E '/secret\.php$|/accounts/.+\.json$|/index/.+\.json$|/limits/.+\.json$'; then
             echo "::error::Runtime secret or tenant data is tracked in Git"
             exit 1
           fi

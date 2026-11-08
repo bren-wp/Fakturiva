@@ -56,7 +56,7 @@ Korisnik stvara lokalno korisničko ime i PIN od 4–6 znamenki.
   uz dodatnu potvrdu. Vanjski obrazac za udaljeno brisanje isporučen je
   s poslužiteljskom skriptom.
 
-[Postavljanje na bilo koju HTTPS domenu](server/README.md) ·
+[Postavljanje na bilo koju HTTPS domenu](web/README.md) ·
 [Pravila autentikacije, privatnosti i testiranja](docs/ACCOUNT_AUTH_AND_HOSTING.md)
 
 **Napomena:** implementacija je u PR-u #26, a ne u trenutačno objavljenom

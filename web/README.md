@@ -7,7 +7,7 @@ prijave, SQL baze ni automatskog slanja podataka.
 
 ## Instalacija na root bilo koje domene
 
-Prekopirajte **sadržaj** direktorija `server/` (ne omotnicu `server/`)
+Prekopirajte **sadržaj** direktorija `web/` (ne omotnicu `web/`)
 u root svoje HTTPS domene ili u poddirektorij, primjerice
 `public_html/` ili `public_html/fakturiva/`.
 
@@ -111,8 +111,8 @@ zamjena i revizije namjerno sprječavaju nevidljiv gubitak.
 ## Testiranje
 
 ```sh
-find server -name '*.php' -print0 | xargs -0 -n1 php -l
-php server/tests/smoke.php
+find web -name '*.php' -print0 | xargs -0 -n1 php -l
+php web/tests/smoke.php
 ```
 
 CI provjerava osnovnu izolaciju dva korisnika, HTTPS API u kodu,
