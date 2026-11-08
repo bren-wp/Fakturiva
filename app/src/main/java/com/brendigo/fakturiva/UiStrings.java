@@ -47,6 +47,7 @@ public final class UiStrings {
     static {
         EN.put("Početna","Home");
         EN.put("Odaberite USB pisač","Choose USB printer");
+        EN.put("SUNMI ugrađeni pisač (SDK)","SUNMI built-in printer (SDK)");
         EN.put("Potvrdite USB ispis","Confirm USB printing");
         EN.put("USB termalni pisači","USB receipt printers");
         EN.put("Nije pronađen priključen USB Printer Class pisač. Provjerite OTG kabel, podršku za ESC/POS i USB dozvolu.","No USB Printer Class device found. Check the OTG adapter, ESC/POS support and USB permission.");
@@ -310,6 +311,14 @@ public final class UiStrings {
         HR.put("No email app is installed. Please write to info@plati.com.hr.","Nije pronađena aplikacija za e-poštu. Pošaljite poruku na info@plati.com.hr.");
         HR.put("Printers and paper","Pisači i formati papira");
         HR.put("80 mm · USB ESC/POS (512 dots)","80 mm · USB ESC/POS (512 točaka)");
+        HR.put("The built-in SUNMI printer is unavailable on this device.","Ugrađeni SUNMI pisač nije dostupan na ovom uređaju.");
+        HR.put("No integrated thermal printer is available.","Ugrađeni termalni pisač nije dostupan.");
+        HR.put("Unknown SUNMI paper width; printing blocked.","Nepoznata širina SUNMI papira; ispis je blokiran.");
+        HR.put("SUNMI printing failed. Check for partial output before retrying.","SUNMI ispis nije uspio. Provjerite djelomičan ispis prije ponavljanja.");
+        HR.put("SUNMI print service disconnected. Check for partial output.","SUNMI usluga ispisa je prekinuta. Provjerite djelomičan ispis.");
+        HR.put("The SUNMI printer service is not available.","SUNMI usluga pisača nije dostupna.");
+        HR.put("SUNMI printer connection timed out.","Povezivanje sa SUNMI pisačem je isteklo.");
+        HR.put("Could not connect to the SUNMI printer service.","Nije moguće povezati se sa SUNMI uslugom pisača.");
         HR.put("80 mm · USB ESC/POS (576 dots)","80 mm · USB ESC/POS (576 točaka)");
         HR.put("The selected USB device has no printer-class bulk OUT endpoint.","Odabrani USB uređaj nema odgovarajući izlaz pisača.");
         HR.put("USB host service is unavailable.","USB host usluga nije dostupna.");
