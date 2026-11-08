@@ -29,7 +29,7 @@ android {
 dependencies {
     // Official SUNMI inner-printer SDK, Apache 2.0; activated only on SUNMI hardware.
     // Card payments are not part of this library or Fakturiva.
-    implementation 'com.sunmi:printerlibrary:1.0.18'
+    implementation 'com.sunmi:printerlibrary:1.0.24'
     // All other runtime paths use Android framework APIs.
     // No AndroidX UI dependency is packaged intentionally.
     androidTestImplementation 'androidx.test:runner:1.7.0'
