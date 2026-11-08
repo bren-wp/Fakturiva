@@ -154,10 +154,13 @@ public final class LocalAccounts {
         byte[] raw = registry.toString().getBytes(StandardCharsets.UTF_8);
         if (raw.length > MAX_REGISTRY - 128)
             throw new IllegalStateException("Previše lokalnih računa");
-        byte[] iv = new byte[12];
-        new SecureRandom().nextBytes(iv);
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE,key(),new GCMParameterSpec(128,iv));
+        // AndroidKeyStore with randomizedEncryptionRequired(true) must create
+        // the encryption IV itself; a caller-provided GCM IV is rejected.
+        cipher.init(Cipher.ENCRYPT_MODE,key());
+        byte[] iv = cipher.getIV();
+        if(iv == null || iv.length != 12)
+            throw new IllegalStateException("Android Keystore did not return a GCM nonce");
         cipher.updateAAD(HEADER);
         byte[] encrypted = cipher.doFinal(raw);
         AtomicFile atomic = new AtomicFile(file(context));
