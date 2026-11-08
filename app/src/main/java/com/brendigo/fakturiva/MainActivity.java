@@ -1563,7 +1563,7 @@ public final class MainActivity extends Activity {
             edit.setOnClickListener(v->editLine(selected));
             place(c,header);gap(c,1);
             place(c,label(Money.decimalQuantity(item.qtyMilli)+" × "+
-                draftMoney(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
+                draftMoney(item.unitCents)+" · Tax "+Money.rateLabel(item.taxRate),11,sub(),false));
             gap(c,4);
             TextView amount=label(draftMoney(Math.addExact(item.net(),item.tax())),
                 16,ink(),true);
@@ -1598,7 +1598,7 @@ public final class MainActivity extends Activity {
         amountRow(summary,"Osnovica",draftMoney(net),false);
         gap(summary,12);
         String taxCaption=commonRate==null||mixedRates?"PDV":
-            "PDV ("+commonRate+" %)";
+            "Tax ("+Money.rateLabel(commonRate)+")";
         amountRow(summary,taxCaption,draftMoney(tax),false);
         gap(summary,12);
         View line=new View(this);line.setBackgroundColor(border());
@@ -1639,11 +1639,9 @@ public final class MainActivity extends Activity {
             String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         qty.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        String[] rates={"25%","13%","5%","0%"};
-        Spinner tax=new Spinner(this);
-        tax.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,rates));
-        if(editing)for(int i=0;i<rates.length;i++)
-            if(rates[i].equals(current.taxRate+"%"))tax.setSelection(i);
+        EditText tax=field("Tax rate (%)",editing?
+            Money.rateLabel(current.taxRate).replace("%",""):"0");
+        tax.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         fieldLabel(form,"Stavka",name);
         List<Store.Item> catalog=new ArrayList<>();
         for(Store.Item item:db.products())
@@ -1665,8 +1663,7 @@ public final class MainActivity extends Activity {
                     name.setText(item.name);
                     price.setText(String.format(selectedLocale(),
                         "%.2f",item.unitCents/100.0));
-                    for(int j=0;j<rates.length;j++)
-                        if(rates[j].equals(item.taxRate+"%"))tax.setSelection(j);
+                    tax.setText(Money.rateLabel(item.taxRate).replace("%",""));
                 }
             });
             gap(form,12);
@@ -1675,8 +1672,7 @@ public final class MainActivity extends Activity {
         }
         fieldLabel(form,"Količina",qty);
         fieldLabel(form,"Jedinična cijena bez PDV-a",price);
-        gap(form,11);form.addView(label("Stopa PDV-a",12,ink(),true));
-        place(form,tax);
+        fieldLabel(form,"Tax rate (%)",tax);
         AlertDialog.Builder editor=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi stavku":"Nova stavka")
             .setView(form).setNegativeButton("Odustani",null)
@@ -1716,8 +1712,8 @@ public final class MainActivity extends Activity {
                         qty.setError("Količina mora biti veća od nule");
                         qty.requestFocus();return;
                     }
-                    item.taxRate=Integer.parseInt(rates[
-                        tax.getSelectedItemPosition()].replace("%",""));
+                    try{item.taxRate=Money.parseRate(tax.getText().toString());}
+                    catch(Exception e){tax.setError("Enter a valid tax rate");tax.requestFocus();return;}
                     Math.addExact(item.net(),item.tax());
                     if(editing)draftItems.set(index,item);else draftItems.add(item);
                     if(!saveWorkingDraft()){
@@ -1969,7 +1965,7 @@ public final class MainActivity extends Activity {
             // Keep the reference's clean document row while retaining the
             // exact quantity, unit price and VAT on tap and for accessibility.
             String breakdown=Money.decimalQuantity(item.qtyMilli)+" × "+
-                docMoney(d,item.unitCents)+" · PDV "+item.taxRate+"%";
+                docMoney(d,item.unitCents)+" · Tax "+Money.rateLabel(item.taxRate);
             line.setContentDescription(item.name+", "+breakdown);
             line.setFocusable(true);
             line.setOnClickListener(v->new AlertDialog.Builder(this)
@@ -1995,7 +1991,7 @@ public final class MainActivity extends Activity {
             for(Store.Item item:d.items)if(item.taxRate!=oneRate){
                 onlyOneRate=false;break;
             }
-            if(onlyOneRate)paperTaxLabel="PDV ("+oneRate+" %)";
+            if(onlyOneRate)paperTaxLabel="Tax ("+Money.rateLabel(oneRate)+")";
         }
         paperAmount(paper,paperTaxLabel,docMoney(d,d.taxCents),false);
         gap(paper,12);
@@ -2737,18 +2733,16 @@ public final class MainActivity extends Activity {
         kind.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,kinds));
         if(editing)kind.setSelection("SERVICE".equals(current.kind)?1:
             "PRODUCT".equals(current.kind)?2:3);
-        String[] rates={"25%","13%","5%","0%"};
-        Spinner vat=new Spinner(this);
-        vat.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,rates));
-        if(editing)for(int i=0;i<rates.length;i++)
-            if(rates[i].equals(current.taxRate+"%"))vat.setSelection(i);
+        EditText vat=field("Tax rate (%)",editing?
+            Money.rateLabel(current.taxRate).replace("%",""):"0");
+        vat.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         EditText unit=field("Mjerna jedinica (kom, sat, mj...)",
             editing?current.unit:"kom");
         fieldLabel(form,"Naziv",name);
         gap(form,9);place(form,label("Vrsta",12,ink(),true));place(form,kind);
         fieldLabel(form,"Jedinična cijena bez PDV-a",price);
         fieldLabel(form,"Mjerna jedinica",unit);
-        gap(form,9);place(form,label("Stopa PDV-a",12,ink(),true));place(form,vat);
+        fieldLabel(form,"Tax rate (%)",vat);
         AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi artikl ili uslugu":"Novi artikl ili usluga")
             .setView(form).setNegativeButton("Odustani",null)
@@ -2761,7 +2755,7 @@ public final class MainActivity extends Activity {
                     }
                     String value=new String[]{"","SERVICE","PRODUCT","UNSPECIFIED"}[
                         kind.getSelectedItemPosition()];
-                    int rate=Integer.parseInt(rates[vat.getSelectedItemPosition()].replace("%",""));
+                    int rate=Money.parseRate(vat.getText().toString());
                     long cents=Money.cents(price.getText().toString());
                     String normalizedUnit=Store.normalizedUnit(unit.getText().toString().trim());
                     if(editing)
