@@ -26,9 +26,18 @@ public final class PdfMaker {
     private PdfDocument.Page current;
     private Canvas canvas;
     private int y,pageNumber=0;
+    private boolean invoiceStyle;
 
     private static boolean has(String s){return s!=null&&!s.trim().isEmpty();}
     private static String safe(String s){return s==null?"":s.trim();}
+    /** Render validated stored ISO dates in Croatian notation on the PDF. */
+    static String displayDate(String date){
+        String value=safe(date);
+        if(value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")&&IsoDates.valid(value))
+            return value.substring(8,10)+". "+value.substring(5,7)+". "+
+                value.substring(0,4)+".";
+        return value;
+    }
     private String font(boolean bold,int size) {return bold?"sans-serif-medium":"sans-serif";}
 
     private void useFont(int size,int color,boolean bold){
@@ -61,8 +70,25 @@ public final class PdfMaker {
         current=document.startPage(new PdfDocument.PageInfo.Builder(W,H,++pageNumber).create());
         canvas=current.getCanvas();canvas.drawColor(Color.WHITE);
         y=43;
-        text("Fakturiva",M,y,20,NAVY,true);
-        right("Računi i ponude, jednostavno.",RIGHT,y,9,BLUE,false);
+        if(invoiceStyle){
+            // A small native vector mark mirrors the invoice sheet preview;
+            // no background bitmap or fabricated customer fields are used.
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(BLUE);
+            canvas.drawRoundRect(M,y-16,M+17,y+1,1,1,paint);
+            paint.setColor(Color.WHITE);
+            android.graphics.Path triangle=new android.graphics.Path();
+            triangle.moveTo(M+4,y-2);
+            triangle.lineTo(M+15,y-13);
+            triangle.lineTo(M+15,y-2);
+            triangle.close();
+            canvas.drawPath(triangle,paint);
+            text("Fakturiva",M+25,y,19,NAVY,true);
+            right("POSLOVNI DOKUMENT",RIGHT,y,9,GRAY,false);
+        }else{
+            text("Fakturiva",M,y,20,NAVY,true);
+            right("PONUDA",RIGHT,y,9,BLUE,false);
+        }
         y+=18;rule();y+=6;
     }
     private void requireSpace(int height){
@@ -163,9 +189,14 @@ public final class PdfMaker {
         text(title,M,y,12,BLUE,true);y+=10;rule();
     }
     private void printItems(Store.Document d){
-        heading("STAVKE DOKUMENTA");
+        heading(invoiceStyle?"STAVKE RAČUNA":"STAVKE DOKUMENTA");
         requireSpace(34);
-        text("OPIS STAVKE",M,y,9,BLUE,true);
+        if(invoiceStyle){
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.rgb(238,241,252));
+            canvas.drawRoundRect(M-5,y-15,RIGHT+5,y+7,6,6,paint);
+        }
+        text(invoiceStyle?"OPIS USLUGE / ARTIKLA":"OPIS STAVKE",M,y,9,BLUE,true);
         right("KOL.",307,y,9,BLUE,true);
         right("CIJENA",396,y,9,BLUE,true);
         right("PDV",447,y,9,BLUE,true);
@@ -191,7 +222,8 @@ public final class PdfMaker {
         }
     }
     private void totals(Store.Document d){
-        heading("OBRAČUN I UKUPAN IZNOS");
+        if(invoiceStyle)y+=12;
+        else heading("OBRAČUN I UKUPAN IZNOS");
         Map<Integer,long[]> groups=new TreeMap<>();
         for(Store.Item item:d.items){
             long[] group=groups.get(item.taxRate);
@@ -203,10 +235,26 @@ public final class PdfMaker {
             field("PDV "+e.getKey()+"% · osnovica",Money.euros(e.getValue()[0]));
             field("PDV "+e.getKey()+"% · porez",Money.euros(e.getValue()[1]));
         }
-        requireSpace(70);
-        right("Osnovica",RIGHT-130,y,10,GRAY,false);right(Money.euros(d.netCents),RIGHT,y,10,NAVY,true);y+=19;
-        right("PDV",RIGHT-130,y,10,GRAY,false);right(Money.euros(d.taxCents),RIGHT,y,10,NAVY,true);y+=20;
-        right("UKUPNO",RIGHT-130,y,14,NAVY,true);right(Money.euros(d.totalCents),RIGHT,y,14,BLUE,true);y+=21;
+        requireSpace(88);
+        right("Osnovica",RIGHT-130,y,10,GRAY,false);
+        right(Money.euros(d.netCents),RIGHT,y,10,NAVY,true);y+=19;
+        String vatLabel="PDV";
+        if(invoiceStyle&&!d.items.isEmpty()){
+            int rate=d.items.get(0).taxRate;
+            boolean singleRate=true;
+            for(Store.Item item:d.items)if(item.taxRate!=rate){
+                singleRate=false;break;
+            }
+            if(singleRate)vatLabel="PDV ("+rate+" %)";
+        }
+        right(vatLabel,RIGHT-130,y,10,GRAY,false);
+        right(Money.euros(d.taxCents),RIGHT,y,10,NAVY,true);y+=20;
+        if(invoiceStyle){
+            paint.setColor(RULE);paint.setStrokeWidth(0.7f);
+            canvas.drawLine(RIGHT-245,y-11,RIGHT,y-11,paint);
+        }
+        right("UKUPNO",RIGHT-130,y,14,NAVY,true);
+        right(Money.euros(d.totalCents),RIGHT,y,14,BLUE,true);y+=21;
         if(Store.INVOICE.equals(d.type)){
             right("Evidentirano plaćeno",RIGHT-130,y,9,GRAY,false);
             right(Money.euros(d.paidCents),RIGHT,y,10,NAVY,false);y+=19;
@@ -228,6 +276,7 @@ public final class PdfMaker {
         field("Napomena",d.notes);
     }
     private void render(Store.Document d){
+        invoiceStyle=Store.INVOICE.equals(d.type);
         newPage();
         requireSpace(58);
         text(Store.INVOICE.equals(d.type)?"RAČUN":"PONUDA",M,y,19,NAVY,true);
@@ -242,8 +291,8 @@ public final class PdfMaker {
         paired("IZDAVATELJ","KLIJENT");y+=4;
         pairedSection(company(d),customer(d));y+=9;
         requireSpace(20);rule();
-        paired("Datum izdavanja: "+safe(d.issueDate),
-            "Dospijeće / valjanost: "+safe(d.dueDate));
+        paired("Datum izdavanja: "+displayDate(d.issueDate),
+            "Dospijeće / valjanost: "+displayDate(d.dueDate));
         if(has(d.supplyDate))
             field(Store.QUOTE.equals(d.type)?"Rok izvedbe":
                 "Datum isporuke / obavljene usluge",d.supplyDate);
