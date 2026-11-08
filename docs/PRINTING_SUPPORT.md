@@ -10,7 +10,7 @@ Fakturiva can print its existing **invoices and quotes** through two distinct pa
 | Bluetooth Classic (paired) | 58 mm / 384 dots; 80 mm / 512 or 576 dots | ESC/POS over standard Bluetooth SPP / RFCOMM UUID 00001101-0000-1000-8000-00805F9B34FB | Implemented in code; real printer validation required |
 | Local TCP network printer | 58 mm / 384 dots; 80 mm / 512 or 576 dots | ESC/POS raw TCP (typically port 9100) with manually supplied RFC1918 IPv4 | Implemented in code; real printer validation required |
 | USB host (OTG), USB Printer Class | 58 mm / 384 dots; 80 mm / 512 or 576 dots | User-selected USB printer-class bulk OUT endpoint; Android device permission; ESC/POS raster | Implemented in development branch; real printer validation required |
-| SUNMI built-in thermal printer | Auto 58 mm or 80 mm | Official `com.sunmi:printerlibrary:1.0.18` SDK and SUNMI inner printer service; only shown on SUNMI hardware | Integrated in development branch; physical terminal test required |
+| SUNMI built-in thermal printer | Auto 58 mm or 80 mm | Official `com.sunmi:printerlibrary:1.0.24` SDK and SUNMI inner printer service; only shown on SUNMI hardware | Integrated in development branch; physical terminal test required |
 | Bluetooth LE only devices | None | Proprietary BLE GATT services vary | Not implemented |
 | Proprietary card-payment POS terminals | None | Vendor/acquirer approval and SDK are required | **Not implemented; does not process cards** |
 | Direct USB ESC/POS | None | Vendor USB endpoints and drivers vary | Use Android Print Framework/installed service; generic raw-USB driver not implemented |
