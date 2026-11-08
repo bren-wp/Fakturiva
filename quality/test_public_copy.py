@@ -35,10 +35,20 @@ class ProductionCopyTests(unittest.TestCase):
     def test_help_replaces_integration_in_screenshot_capture(self):
         source = MAIN.read_text(encoding="utf-8")
         harness = HARNESS.read_text(encoding="utf-8")
-        checker = CHECKER.read_text(encoding="utf-8")
         self.assertIn('case "guide":guide();break;', source)
         self.assertIn('case "17":call(a,"guide");break;', harness)
-        self.assertIn('"Naplata", "Pomoć", "Postavke"', checker)
+        # Import the active responsive checker to verify its screen-to-title
+        # mapping. Literal-line matching breaks when locales are added.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("fakturiva_responsive", CHECKER)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        self.assertEqual(len(checker.SCREEN_NAMES), 20)
+        names = checker.VISIBLE_HEADERS[16]
+        self.assertIn("Pomoć", names)
+        self.assertIn("Help", names)
+        self.assertIn("Naplata", checker.VISIBLE_HEADERS[15])
+        self.assertIn("Postavke", checker.VISIBLE_HEADERS[17])
 
     def test_invoice_confirmation_does_not_require_croatian_tax_id(self):
         source = STORE.read_text(encoding="utf-8")
