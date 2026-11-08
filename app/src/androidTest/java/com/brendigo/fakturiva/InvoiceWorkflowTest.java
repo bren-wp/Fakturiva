@@ -412,4 +412,45 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         assertFalse(IsoDates.valid(MainActivity.quoteDateToIso("32. 11. 2026.")));
     }
 
+
+    @Test
+    public void testInvoiceAcceptsOptionalInternationalTaxIdentifiers()throws Exception{
+        IsolatedContext context=new IsolatedContext(getContext());
+        Store db=null;
+        try{
+            db=new Store(context);
+            db.setting("name","International Design Studio");
+            db.setting("address","10 High Street, London");
+            db.setting("country","United Kingdom");
+            db.setting("oib","GB-AB123XYZ");
+            long client=db.saveClientDetailed("Partner Ltd","DE-TAX-789",
+                "Unter den Linden 1, Berlin","buyer@example.invalid","","");
+            Store.Item service=new Store.Item();
+            service.name="Design services";
+            service.qtyMilli=1000;
+            service.unitCents=12000;
+            service.taxRate=0;
+            long first=db.createDraft(Store.INVOICE,client,"2026-11-01",
+                "2026-11-15","Design",Arrays.asList(service));
+            assertEquals("R-2026-0001",db.confirm(first));
+            Store.Document issued=db.document(first);
+            assertEquals("GB-AB123XYZ",issued.issuerOib);
+            assertEquals("DE-TAX-789",issued.clientOib);
+            assertEquals(12000L,issued.totalCents);
+
+            db.setting("oib","");
+            long second=db.createDraft(Store.INVOICE,client,"2026-11-02",
+                "2026-11-16","Second invoice",Arrays.asList(service));
+            assertEquals("R-2026-0002",db.confirm(second));
+            assertEquals("",db.document(second).issuerOib);
+            assertEquals("GB-AB123XYZ",db.document(first).issuerOib);
+            ByteArrayOutputStream pdf=new ByteArrayOutputStream();
+            PdfMaker.write(db,db.document(second),pdf);
+            assertTrue(pdf.size()>1500);
+        }finally{
+            if(db!=null)db.close();
+            context.clean();
+        }
+    }
+
 }
