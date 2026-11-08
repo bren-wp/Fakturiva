@@ -1671,7 +1671,7 @@ public final class MainActivity extends Activity {
             place(form,product);
         }
         fieldLabel(form,"Količina",qty);
-        fieldLabel(form,"Jedinična cijena bez PDV-a",price);
+        fieldLabel(form,"Unit price before tax",price);
         fieldLabel(form,"Tax rate (%)",tax);
         AlertDialog.Builder editor=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi stavku":"Nova stavka")
@@ -2740,7 +2740,7 @@ public final class MainActivity extends Activity {
             editing?current.unit:"kom");
         fieldLabel(form,"Naziv",name);
         gap(form,9);place(form,label("Vrsta",12,ink(),true));place(form,kind);
-        fieldLabel(form,"Jedinična cijena bez PDV-a",price);
+        fieldLabel(form,"Unit price before tax",price);
         fieldLabel(form,"Mjerna jedinica",unit);
         fieldLabel(form,"Tax rate (%)",vat);
         AlertDialog dialog=new AlertDialog.Builder(this)
