@@ -715,7 +715,9 @@ public final class MainActivity extends Activity {
         alerts.setContentDescription("Obavijesti o neplaćenim računima");
         bar.addView(alerts,lp(42,42));alerts.setOnClickListener(v->showNotifications());
         // In dark mode, the reference greets lower without shifting its hero.
-        place(body,bar);gap(body,dark?41:25);
+        // The original 393dp home reference positions the greeting closer
+        // to the masthead than the former 41/25dp gaps.
+        place(body,bar);gap(body,dark?35:19);
 
         if(RecoveryVault.hasWorkingDraft(this)){
             LinearLayout resume=card();
@@ -747,7 +749,7 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,dark?9:21);
+        place(body,welcome);gap(body,dark?4:19);
 
         LinearLayout hero=vertical();pad(hero,19,dark?13:16);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -772,7 +774,7 @@ public final class MainActivity extends Activity {
         hero.addView(label(Money.euros(monthly[11]),31,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
-        hero.addView(new RevenueLine(this),lp(-1,45));
+        hero.addView(new RevenueLine(this),lp(-1,43));
         place(body,hero);gap(body,dark?10:16);
 
         LinearLayout stats=horizontal();
@@ -856,12 +858,12 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();pad(c,14,dark?10:9);
+        LinearLayout c=card();pad(c,14,8);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
         // Reference uses readable pastel icon tiles on both themes.
         image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
-        c.addView(image,lp(38,38));gap(c,7);
+        c.addView(image,lp(37,37));gap(c,6);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
@@ -1570,8 +1572,12 @@ public final class MainActivity extends Activity {
         amountRow(summary,"UKUPNO",Money.euros(Math.addExact(net,tax)),true);
         place(body,summary);gap(body,12);
         caption(body,"Iznosi se automatski računaju iz unesenih stavki i poreznih stopa.");
-        gap(body,13);
-        secondary(body,"‹ Natrag na podatke",this::editDocumentScreen);
+        // Screen 07 has only the native toolbar back arrow. Keep the
+        // extra back action on the quote workflow, where parity is separate.
+        if(!invoice){
+            gap(body,13);
+            secondary(body,"‹ Natrag na podatke",this::editDocumentScreen);
+        }
         stickyPrimary(Store.INVOICE.equals(editType)?"Pregled računa  ›":"Pregled ponude  ›",()->{
             if(draftItems.isEmpty())toast("Dodajte barem jednu stavku");
             else reviewDraft();
@@ -1797,7 +1803,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(50),1);
         left.rightMargin=dp(6);
         actions.addView(save,left);
-        TextView share=action(invoice?"➤  Pošalji":"➤  Podijeli ponudu",
+        TextView share=action(invoice?"➤  Pošalji":"➤  Pošalji ponudu",
             BLUE,true,()->sharePdf(id));
         share.setContentDescription("Podijeli stvarni PDF dokument");
         LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(50),1);
@@ -1878,8 +1884,10 @@ public final class MainActivity extends Activity {
         if(d.issuerAddress!=null&&!d.issuerAddress.isEmpty())
             place(paper,label(d.issuerAddress,Store.INVOICE.equals(d.type)?9:10,
                 0xff8798ad,false));
-        gap(paper,20);
-        paperRule(paper);gap(paper,17);
+        // Offer paper has a more compact row rhythm in the reference;
+        // all variable business text continues to grow naturally.
+        gap(paper,Store.QUOTE.equals(d.type)?14:20);
+        paperRule(paper);gap(paper,Store.QUOTE.equals(d.type)?14:17);
 
         LinearLayout contacts=horizontal();
         LinearLayout buyer=vertical();
@@ -1903,7 +1911,7 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams dateParams=new LinearLayout.LayoutParams(0,-2,1);
         dateParams.leftMargin=dp(12);
         contacts.addView(dates,dateParams);
-        place(paper,contacts);gap(paper,23);
+        place(paper,contacts);gap(paper,offer?18:23);
 
         LinearLayout columns=horizontal();
         columns.setBackground(shape(0xffeef1fc,6));
@@ -1915,7 +1923,7 @@ public final class MainActivity extends Activity {
 
         for(Store.Item item:d.items){
             LinearLayout line=horizontal();
-            line.setPadding(dp(5),dp(12),dp(5),dp(10));
+            line.setPadding(dp(5),dp(offer?10:12),dp(5),dp(offer?8:10));
             TextView description=label(item.name,11,0xff586c87,false);
             description.setMaxLines(2);
             description.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -1939,7 +1947,7 @@ public final class MainActivity extends Activity {
             paperRule(paper);
         }
 
-        gap(paper,16);
+        gap(paper,offer?12:16);
         paperAmount(paper,"Osnovica",Money.euros(d.netCents),false);
         gap(paper,9);
         String paperTaxLabel="PDV";
@@ -1963,7 +1971,7 @@ public final class MainActivity extends Activity {
         }
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
-        gap(paper,Store.QUOTE.equals(d.type)?34:31);
+        gap(paper,Store.QUOTE.equals(d.type)?29:31);
         paperRule(paper);gap(paper,12);
         place(paper,label(Store.QUOTE.equals(d.type)?
             "Ponuda nije račun niti dokaz o plaćanju.":
@@ -2763,8 +2771,8 @@ public final class MainActivity extends Activity {
             pendingReportCsvMonth=yearMonth;
             createFile(106,"text/csv","Fakturiva-izvjestaj-"+yearMonth+".csv");
         });
-        TextView options=label("☰",18,sub(),true);
-        options.setGravity(Gravity.CENTER);
+        ImageView options=icon(R.drawable.ic_filter,sub());
+        options.setPadding(dp(11),dp(11),dp(11),dp(11));
         options.setBackground(shape(panel(),12));
         options.setContentDescription("Odabir razdoblja");
         LinearLayout.LayoutParams optionsLp=lp(44,44);
@@ -2907,8 +2915,8 @@ public final class MainActivity extends Activity {
         heading.addView(label("Naplata",24,ink(),true));gap(heading,6);
         heading.addView(label("Evidencija uplata i potraživanja",12,sub(),false));
         top.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        TextView filterAction=label("☰",19,sub(),true);
-        filterAction.setGravity(Gravity.CENTER);
+        ImageView filterAction=icon(R.drawable.ic_filter,sub());
+        filterAction.setPadding(dp(10),dp(10),dp(10),dp(10));
         filterAction.setContentDescription("Filtriraj uplate");
         filterAction.setBackground(shape(panel(),12));
         top.addView(filterAction,lp(44,44));
@@ -3001,11 +3009,19 @@ public final class MainActivity extends Activity {
                 check.setBackground(shape(dark?0xff22463e:0xffdbf7ea,12));
                 row.addView(check,lp(42,42));
                 LinearLayout description=vertical();pad(description,10,0);
-                description.addView(label(p.clientName,13,ink(),true));
-                description.addView(label(p.invoiceNumber+" · "+readableDate(p.paidOn),
-                    11,sub(),false));
+                TextView clientName=label(p.clientName,13,ink(),true);
+                clientName.setMaxLines(3);
+                description.addView(clientName);
+                TextView documentInfo=label(p.invoiceNumber+" · "+readableDate(p.paidOn),
+                    11,sub(),false);
+                documentInfo.setMaxLines(2);
+                description.addView(documentInfo);
                 row.addView(description,new LinearLayout.LayoutParams(0,-2,1));
-                row.addView(label("+"+Money.euros(p.amountCents),12,TEAL,true));
+                TextView amount=label("+"+Money.euros(p.amountCents),12,TEAL,true);
+                amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+                amount.setMaxLines(3);
+                amount.setContentDescription("Evidentirana uplata: "+Money.euros(p.amountCents));
+                row.addView(amount);
                 place(card,row);
                 row.setOnClickListener(v->showDocument(p.documentId));
             }
