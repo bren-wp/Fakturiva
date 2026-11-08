@@ -27,6 +27,8 @@ public final class PdfMaker {
     private Canvas canvas;
     private int y,pageNumber=0;
     private boolean invoiceStyle;
+    private String documentCurrency=BillingCurrency.DEFAULT;
+    private String money(long value){return BillingCurrency.format(value,documentCurrency,java.util.Locale.ENGLISH);}
 
     private static boolean has(String s){return s!=null&&!s.trim().isEmpty();}
     private static String safe(String s){return s==null?"":s.trim();}
@@ -164,19 +166,26 @@ public final class PdfMaker {
     private static String[] company(Store.Document d){
         ArrayList<String> lines=new ArrayList<>();
         lines.add(safe(d.issuerName));
-        add(lines,"Adresa",d.issuerAddress);
-        add(lines,"Mjesto",join(d.issuerPostalCode,d.issuerCity,d.issuerCountry));
-        add(lines,"Porezni broj",d.issuerOib);add(lines,"PDV ID",d.issuerVatId);
-        add(lines,"E-mail",d.issuerEmail);add(lines,"Telefon",d.issuerPhone);
+        add(lines,"Legal form",d.issuerLegalForm);
+        add(lines,"Trading name",d.issuerTradingName);
+        add(lines,"Registered number",d.issuerCompanyNumber);
+        add(lines,"Register",d.issuerRegisterAuthority);
+        add(lines,"Registered address",d.issuerAddress);
+        add(lines,"Address line 2",d.issuerAddress2);
+        add(lines,"Region",d.issuerRegion);
+        add(lines,"Tax registration",d.issuerTaxRegistration);
+        add(lines,"City / country",join(d.issuerPostalCode,d.issuerCity,d.issuerCountry));
+        add(lines,"Tax ID",d.issuerOib);add(lines,"VAT ID",d.issuerVatId);
+        add(lines,"Email",d.issuerEmail);add(lines,"Phone",d.issuerPhone);
         add(lines,"Web",d.issuerWebsite);
         return lines.toArray(new String[0]);
     }
     private static String[] customer(Store.Document d){
         ArrayList<String> lines=new ArrayList<>();
         lines.add(safe(d.clientName));
-        add(lines,"Adresa",d.clientAddress);
-        add(lines,"Porezni broj",d.clientOib);add(lines,"PDV ID",d.clientVatId);
-        add(lines,"E-mail",d.clientEmail);add(lines,"Telefon",d.clientPhone);
+        add(lines,"Address",d.clientAddress);
+        add(lines,"Tax ID",d.clientOib);add(lines,"VAT ID",d.clientVatId);
+        add(lines,"Email",d.clientEmail);add(lines,"Phone",d.clientPhone);
         return lines.toArray(new String[0]);
     }
     private static String join(String... words){
@@ -211,9 +220,9 @@ public final class PdfMaker {
                 text(name,M,y,10,NAVY,false);
                 if(first){
                     right(Money.decimalQuantity(item.qtyMilli),307,y,9,GRAY,false);
-                    right(Money.euros(item.unitCents),396,y,9,GRAY,false);
+                    right(money(item.unitCents),396,y,9,GRAY,false);
                     right(item.taxRate+"%",447,y,9,GRAY,false);
-                    right(Money.euros(Math.addExact(item.net(),item.tax())),RIGHT,y,9,NAVY,true);
+                    right(money(Math.addExact(item.net(),item.tax())),RIGHT,y,9,NAVY,true);
                     first=false;
                 }
                 y+=14;
@@ -232,12 +241,12 @@ public final class PdfMaker {
             group[1]=Math.addExact(group[1],item.tax());
         }
         for(Map.Entry<Integer,long[]> e:groups.entrySet()){
-            field("PDV "+e.getKey()+"% · osnovica",Money.euros(e.getValue()[0]));
-            field("PDV "+e.getKey()+"% · porez",Money.euros(e.getValue()[1]));
+            field("PDV "+e.getKey()+"% · osnovica",money(e.getValue()[0]));
+            field("PDV "+e.getKey()+"% · porez",money(e.getValue()[1]));
         }
         requireSpace(88);
         right("Osnovica",RIGHT-130,y,10,GRAY,false);
-        right(Money.euros(d.netCents),RIGHT,y,10,NAVY,true);y+=19;
+        right(money(d.netCents),RIGHT,y,10,NAVY,true);y+=19;
         String vatLabel="PDV";
         if(invoiceStyle&&!d.items.isEmpty()){
             int rate=d.items.get(0).taxRate;
@@ -248,18 +257,18 @@ public final class PdfMaker {
             if(singleRate)vatLabel="PDV ("+rate+" %)";
         }
         right(vatLabel,RIGHT-130,y,10,GRAY,false);
-        right(Money.euros(d.taxCents),RIGHT,y,10,NAVY,true);y+=20;
+        right(money(d.taxCents),RIGHT,y,10,NAVY,true);y+=20;
         if(invoiceStyle){
             paint.setColor(RULE);paint.setStrokeWidth(0.7f);
             canvas.drawLine(RIGHT-245,y-11,RIGHT,y-11,paint);
         }
         right("UKUPNO",RIGHT-130,y,14,NAVY,true);
-        right(Money.euros(d.totalCents),RIGHT,y,14,BLUE,true);y+=21;
+        right(money(d.totalCents),RIGHT,y,14,BLUE,true);y+=21;
         if(Store.INVOICE.equals(d.type)){
             right("Evidentirano plaćeno",RIGHT-130,y,9,GRAY,false);
-            right(Money.euros(d.paidCents),RIGHT,y,10,NAVY,false);y+=19;
+            right(money(d.paidCents),RIGHT,y,10,NAVY,false);y+=19;
             right("Preostalo",RIGHT-130,y,10,GRAY,false);
-            right(Money.euros(d.outstanding()),RIGHT,y,11,NAVY,true);y+=21;
+            right(money(d.outstanding()),RIGHT,y,11,NAVY,true);y+=21;
         }
     }
     private void billing(Store.Document d){
@@ -272,11 +281,14 @@ public final class PdfMaker {
         field("Registarski podatak",d.issuerRegistry);
         field("Poslovni prostor",d.issuerBusinessUnit);
         field("Oznaka operatera",d.issuerOperator);
-        field("Porezni status",d.issuerTaxNote);
+        field("Payment terms",d.issuerPaymentTerms);
+        field("Additional information",d.issuerFooterNote);
+        field("Tax note",d.issuerTaxNote);
         field("Napomena",d.notes);
     }
     private void render(Store.Document d){
         invoiceStyle=Store.INVOICE.equals(d.type);
+        documentCurrency=BillingCurrency.canonical(d.currencyCode);
         newPage();
         requireSpace(58);
         text(Store.INVOICE.equals(d.type)?"RAČUN":"PONUDA",M,y,19,NAVY,true);
