@@ -779,7 +779,9 @@ public final class MainActivity extends Activity {
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
-        gap(body,dark?14:14);
+        // Keep the title's baseline unchanged while providing a 48dp
+        // accessible hit target for the arrow shown in both original homes.
+        gap(body,1);
         LinearLayout quickHeader=horizontal();
         quickHeader.addView(label("Brze radnje",18,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
