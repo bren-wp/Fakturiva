@@ -33,8 +33,11 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
     @Test public void testFormatsAndDocumentContents(){
         assertTrue(ThermalReceipt.supports(384));
         assertTrue(ThermalReceipt.supports(576));
-        assertFalse(ThermalReceipt.supports(512));
-        assertEquals(4,SystemInvoicePrinter.formats().length);
+        assertTrue(ThermalReceipt.supports(512));
+        assertFalse(ThermalReceipt.supports(448));
+        assertEquals(6,SystemInvoicePrinter.formats().length);
+        assertTrue(SystemInvoicePrinter.supports(SystemInvoicePrinter.A3));
+        assertTrue(SystemInvoicePrinter.supports(SystemInvoicePrinter.A6));
         assertTrue(SystemInvoicePrinter.supports(SystemInvoicePrinter.A4));
         assertTrue(SystemInvoicePrinter.supports(SystemInvoicePrinter.LEGAL));
         assertFalse(SystemInvoicePrinter.supports(-1));
@@ -45,9 +48,11 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
         assertTrue(rows.contains("TOTAL: 246.90 EUR"));
         assertTrue(rows.contains("Payment terms: Net 30"));
         assertTrue(rows.contains("Routing/ABA: 021000021"));
+        assertEquals(BrandAttribution.FOOTER,rows.get(rows.size()-1));
+        assertEquals("info@plati.com.hr",BrandAttribution.SUPPORT_EMAIL);
     }
     @Test public void testRasterStreamsForBothPaperWidths() throws Exception{
-        for(int dots:new int[]{384,576}){
+        for(int dots:new int[]{384,512,576}){
             ByteArrayOutputStream out=new ByteArrayOutputStream();
             ThermalReceipt.write(out,sample(),dots);
             byte[] bytes=out.toByteArray();
@@ -64,7 +69,8 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
         }
     }
     @Test public void testPdfPagesUseActualRequestedPaperDimensions()throws Exception{
-        int[][] papers={{595,842},{420,595},{612,792},{612,1008}};
+        int[][] papers={{595,842},{420,595},{612,792},{612,1008},
+            {842,1191},{298,420}};
         for(int[] paper:papers){
             java.io.File file=java.io.File.createTempFile(
                 "fakturiva-paper-",".pdf",getContext().getCacheDir());
@@ -87,11 +93,36 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
     @Test public void testUnsupportedPaperFailsInsteadOfSendingUnspecifiedCommands(){
         ByteArrayOutputStream out=new ByteArrayOutputStream();
         try{
-            ThermalReceipt.write(out,sample(),512);
+            ThermalReceipt.write(out,sample(),448);
             fail("Unknown width must be blocked");
         }catch(IllegalArgumentException expected){
             assertEquals(0,out.size());
         }catch(IOException e){fail(e.getMessage());}
+    }
+    @Test public void testPrivateLanIpv4NeverTargetsThePublicInternet(){
+        byte[] ip=NetworkReceiptPrinter.privateIpv4("192.168.1.50");
+        assertEquals(4,ip.length);
+        assertEquals((byte)192,ip[0]);
+        assertEquals((byte)50,ip[3]);
+        NetworkReceiptPrinter.privateIpv4("10.0.0.45");
+        NetworkReceiptPrinter.privateIpv4("172.20.10.4");
+        assertEquals(9100,NetworkReceiptPrinter.validPort(9100));
+        for(String address:new String[]{"8.8.8.8","1.1.1.1","127.0.0.1",
+                "192.168.1.255","192.168.1.0","localhost",
+                "printer.example.org","192.168.1.50:9100",
+                "192.168.1.50/24","192.168.01.50","172.32.1.9",
+                "169.254.1.2","0.0.0.0","255.255.255.255"}){
+            try{
+                NetworkReceiptPrinter.privateIpv4(address);
+                fail("Must block invalid or nonprivate printer: "+address);
+            }catch(IllegalArgumentException expected){}
+        }
+        for(int port:new int[]{0,80,443,1023,65536}){
+            try{
+                NetworkReceiptPrinter.validPort(port);
+                fail("Must block unsafe or out-of-range port");
+            }catch(IllegalArgumentException expected){}
+        }
     }
     @Test public void testVeryLongReceiptDoesNotSilentlyTruncate()throws Exception{
         Store.Document d=sample();
