@@ -495,8 +495,8 @@ public final class MainActivity extends Activity {
         name.setTranslationY(dp(.67f));
         place(center,name);gap(center,17);
         TextView subtitle=label("Računi i ponude, jednostavno.",13,0xffbdcde1,false);
-        subtitle.setTextScaleX(.994f);
-        subtitle.setTranslationY(-dp(.67f));
+        subtitle.setTextScaleX(.978f);
+        subtitle.setTranslationY(-dp(1f));
         subtitle.setGravity(Gravity.CENTER);place(center,subtitle);
         FrameLayout.LayoutParams middle=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
         middle.leftMargin=dp(18);middle.rightMargin=dp(18);frame.addView(center,middle);
@@ -546,10 +546,10 @@ public final class MainActivity extends Activity {
         ImageView mark=new ImageView(this);
         mark.setImageResource(R.drawable.brand_mark);brand.addView(mark,lp(40,40));
         // Reference masthead icon is 120px at 480dpi, not 129px.
-        mark.setTranslationX(-dp(1));
+        brand.setTranslationX(-dp(1));
         TextView brandName=label("Fakturiva",24,NAVY,true);
         brandName.setTextScaleX(.946f);
-        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(8);
+        LinearLayout.LayoutParams brandLp=lp(-2,-1);brandLp.leftMargin=dp(9);
         brand.addView(brandName,brandLp);
         place(body,brand);gap(body,22);
         body.addView(new WelcomeIllustration(this),lp(-1,345));gap(body,30);
@@ -563,11 +563,12 @@ public final class MainActivity extends Activity {
         heading.getPaint().setFakeBoldText(true);
         heading.setLineSpacing(dp(2),1.0f);
         heading.setTranslationX(dp(1));
-        heading.setTranslationY(-dp(.67f));
+        heading.setTranslationY(0);
         place(body,heading);gap(body,14);
         TextView info=label("Izradite profesionalne račune i ponude, pratite naplatu i organizirajte klijente.",12,MUTED,false);
         info.setTextScaleX(.97f);
         info.setTranslationX(dp(1));
+        info.setTranslationY(-dp(.67f));
         info.setLineSpacing(dp(4),1.0f);place(body,info);
         gap(body,21);
         LinearLayout dots=horizontal();
@@ -576,11 +577,17 @@ public final class MainActivity extends Activity {
             dot.setBackground(shape(n==0?BLUE:0xffdbe2ef,7));
             LinearLayout.LayoutParams p=lp(n==0?23:7,7);p.rightMargin=dp(6);dots.addView(dot,p);
         }
-        place(body,dots);gap(body,22);
+        place(body,dots);gap(body,20);
         // Match the reference CTA's 144px height, inset, rounded corners
         // and central arrow/text alignment. Keep the original real action.
         LinearLayout startButton=horizontal();startButton.setGravity(Gravity.CENTER);
-        startButton.setBackground(shape(BLUE,15));startButton.setElevation(dp(8));
+        startButton.setBackground(shape(BLUE,15));
+        startButton.setElevation(dp(5));
+        if(android.os.Build.VERSION.SDK_INT>=28){
+            // Reference has a soft indigo glow, not Android's default black shadow.
+            startButton.setOutlineAmbientShadowColor(0x225566f8);
+            startButton.setOutlineSpotShadowColor(0x335566f8);
+        }
         TextView startArrow=label("›",23,WHITE,true);
         startArrow.setGravity(Gravity.CENTER);
         startButton.addView(startArrow,lp(21,-2));
@@ -590,14 +597,14 @@ public final class MainActivity extends Activity {
         startButton.addView(startText,startTextLp);
         startButton.setContentDescription(ui("Započni"));
         startButton.setOnClickListener(v->securityScreen(false,false));
-        LinearLayout.LayoutParams startLp=lp(-1,48);
+        LinearLayout.LayoutParams startLp=lp(-1,49);
         startLp.leftMargin=dp(1);startLp.rightMargin=dp(1);
         body.addView(startButton,startLp);
         // Restore the split muted/blue login line from the owner's reference.
         // Both visible segments share a single accessible tap target.
         LinearLayout account=horizontal();
         account.setGravity(Gravity.CENTER);
-        account.setMinimumHeight(dp(42));
+        account.setMinimumHeight(dp(38));
         account.addView(label("Već imate račun? ",11,MUTED,false));
         TextView signIn=label("Prijavite se",11,BLUE,true);
         account.addView(signIn);
@@ -744,7 +751,7 @@ public final class MainActivity extends Activity {
             p.setColor(0xffd6e4fb);canvas.drawCircle(170,164,120,p);
             // Raise the invoice sheet ~6 design units to match the owner's
             // reference without changing the original illustration bitmap.
-            canvas.save();canvas.translate(0,-10);canvas.rotate(-5,170,174);
+            canvas.save();canvas.translate(0,-6);canvas.rotate(-5,170,174);
             p.setColor(0x330f2e72);p.setShadowLayer(19,0,16,0x330f2e72);
             canvas.drawRoundRect(74,63,281,288,20,20,p);p.clearShadowLayer();
             p.setColor(Color.WHITE);canvas.drawRoundRect(74,63,281,288,20,20,p);
@@ -762,22 +769,22 @@ public final class MainActivity extends Activity {
             // Small native verified stamp at the sheet's upper-right edge.
             p.setColor(0xff18c6b7);p.setStrokeWidth(1.6f);
             p.setStyle(android.graphics.Paint.Style.STROKE);
-            canvas.drawCircle(246,88,6.1f,p);
+            canvas.drawCircle(254.5f,88,6.1f,p);
             android.graphics.Path seal=new android.graphics.Path();
-            seal.moveTo(242.5f,88);
-            seal.lineTo(245.6f,91);
-            seal.lineTo(250.5f,84.5f);
+            seal.moveTo(251f,88);
+            seal.lineTo(254.1f,91);
+            seal.lineTo(259f,84.5f);
             canvas.drawPath(seal,p);
             p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
             p.setColor(0xff18c6b7);p.setShadowLayer(12,0,10,0x5518c6b7);
-            canvas.drawRoundRect(246,234,315,299,23,23,p);p.clearShadowLayer();
+            canvas.drawRoundRect(249,231,320,301,23,23,p);p.clearShadowLayer();
             p.setColor(Color.WHITE);p.setStrokeWidth(2.6f);
             p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
             p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
             p.setStyle(android.graphics.Paint.Style.STROKE);
             android.graphics.Path check=new android.graphics.Path();
-            check.moveTo(274,263);check.lineTo(281,270);check.lineTo(292,256);
+            check.moveTo(277,262);check.lineTo(284,269);check.lineTo(295,255);
             canvas.drawPath(check,p);p.setStyle(android.graphics.Paint.Style.FILL);
             canvas.restore();
         }
