@@ -873,7 +873,7 @@ public final class MainActivity extends Activity {
             .setMessage("Trenutačno nema nenaplaćenih potvrđenih računa.").setPositiveButton("U redu",null).show();return;}
         String[] items=new String[open.size()];
         for(int i=0;i<items.length;i++){Store.Document d=open.get(i);
-            items[i]=(d.number==null?"Nacrt":d.number)+" · "+d.clientName+" · "+Money.euros(d.outstanding());}
+            items[i]=(d.number==null?"Nacrt":d.number)+" · "+d.clientName+" · "+docMoney(d,d.outstanding());}
         new AlertDialog.Builder(this).setTitle("Nepodmireni računi").setItems(items,(dialog,position)->
             showDocument(open.get(position).id)).setNegativeButton("Zatvori",null).show();
     }
@@ -993,12 +993,16 @@ public final class MainActivity extends Activity {
         place(body,chips);gap(body,12);
 
         List<Store.Document> all=db.documents(type);
+        List<Store.Document> inCurrency=new ArrayList<>();
+        for(Store.Document document:all)
+            if(BillingCurrency.canonical(document.currencyCode).equals(selectedCurrency()))
+                inCurrency.add(document);
         if(!invoice){
             // Active = confirmed quote whose validity has not expired.
-            long[] overviewValues=activeQuoteTotals(all,DocumentStatus.today());
+            long[] overviewValues=activeQuoteTotals(inCurrency,DocumentStatus.today());
             LinearLayout overview=horizontal();
             quoteSummary(overview,"Aktivne ponude",String.valueOf(overviewValues[0]));
-            quoteSummary(overview,"Vrijednost ponuda",Money.euros(overviewValues[1]));
+            quoteSummary(overview,"Vrijednost ponuda",money(overviewValues[1]));
             place(body,overview);
             gap(body,14);
         }
@@ -1008,10 +1012,10 @@ public final class MainActivity extends Activity {
         totals.addView(total,new LinearLayout.LayoutParams(0,-2,1));
         if(invoice){
             long unpaid=0;
-            for(Store.Document document:all)
+            for(Store.Document document:inCurrency)
                 if(Store.ISSUED.equals(document.status))
                     unpaid=Math.addExact(unpaid,document.outstanding());
-            TextView remaining=label("Neplaćeno  "+Money.euros(unpaid),11,ink(),true);
+            TextView remaining=label("Neplaćeno  "+money(unpaid),11,ink(),true);
             remaining.setSingleLine(true);
             totals.addView(remaining);
         }
@@ -1103,7 +1107,7 @@ public final class MainActivity extends Activity {
         // Explicit width is essential: a weighted client description otherwise
         // measures at full width and silently clips the amount on Android 10.
         LinearLayout amount=vertical();amount.setGravity(Gravity.RIGHT);
-        TextView total=label(Money.euros(document.totalCents),12,ink(),true);
+        TextView total=label(docMoney(document,document.totalCents),12,ink(),true);
         total.setGravity(Gravity.RIGHT);
         total.setSingleLine(true);
         total.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -1123,7 +1127,7 @@ public final class MainActivity extends Activity {
         row.addView(amount,lp(109,-2));
         place(item,row);target.addView(item,new LinearLayout.LayoutParams(-1,-2));
         item.setContentDescription(number+", "+document.clientName+", "+
-            Money.euros(document.totalCents)+", "+status);
+            docMoney(document,document.totalCents)+", "+status);
         item.setOnClickListener(v->showDocument(document.id));
     }
 
@@ -1557,14 +1561,14 @@ public final class MainActivity extends Activity {
             edit.setOnClickListener(v->editLine(selected));
             place(c,header);gap(c,1);
             place(c,label(Money.decimalQuantity(item.qtyMilli)+" × "+
-                Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
+                draftMoney(item.unitCents)+" · PDV "+item.taxRate+"%",11,sub(),false));
             gap(c,4);
-            TextView amount=label(Money.euros(Math.addExact(item.net(),item.tax())),
+            TextView amount=label(draftMoney(Math.addExact(item.net(),item.tax())),
                 16,ink(),true);
             amount.setGravity(Gravity.RIGHT);
             place(c,amount);
             c.setContentDescription(item.name+" — "+
-                Money.euros(Math.addExact(item.net(),item.tax()))+
+                draftMoney(Math.addExact(item.net(),item.tax()))+
                 ". Dodirnite za uređivanje ili uklanjanje.");
             c.setFocusable(true);
             c.setOnClickListener(v->editLine(selected));
@@ -1589,16 +1593,16 @@ public final class MainActivity extends Activity {
         LinearLayout summary=card();
         title(summary,Store.INVOICE.equals(editType)?"Sažetak računa":"Sažetak ponude");
         gap(summary,14);
-        amountRow(summary,"Osnovica",Money.euros(net),false);
+        amountRow(summary,"Osnovica",draftMoney(net),false);
         gap(summary,12);
         String taxCaption=commonRate==null||mixedRates?"PDV":
             "PDV ("+commonRate+" %)";
-        amountRow(summary,taxCaption,Money.euros(tax),false);
+        amountRow(summary,taxCaption,draftMoney(tax),false);
         gap(summary,12);
         View line=new View(this);line.setBackgroundColor(border());
         summary.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
         gap(summary,15);
-        amountRow(summary,"UKUPNO",Money.euros(Math.addExact(net,tax)),true);
+        amountRow(summary,"UKUPNO",draftMoney(Math.addExact(net,tax)),true);
         place(body,summary);gap(body,12);
         caption(body,"Iznosi se automatski računaju iz unesenih stavki i poreznih stopa.");
         // Screen 07 has only the native toolbar back arrow. Keep the
@@ -1738,11 +1742,11 @@ public final class MainActivity extends Activity {
         }
         summary.addView(label(Store.QUOTE.equals(editType)?"Rok izvedbe: "+draftSupply:
             "Isporuka / usluga: "+draftSupply,11,sub(),false));gap(summary,16);
-        for(Store.Item i:draftItems){summary.addView(label(i.name+"  ·  "+Money.euros(i.net()+i.tax()),12,ink(),false));gap(summary,8);}
+        for(Store.Item i:draftItems){summary.addView(label(i.name+"  ·  "+draftMoney(i.net()+i.tax()),12,ink(),false));gap(summary,8);}
         long net=0,tax=0;for(Store.Item i:draftItems){net+=i.net();tax+=i.tax();}
-        gap(summary,15);summary.addView(label("Osnovica: "+Money.euros(net),12,sub(),false));
-        summary.addView(label("PDV: "+Money.euros(tax),12,sub(),false));gap(summary,9);
-        summary.addView(label("UKUPNO: "+Money.euros(net+tax),24,BLUE,true));place(body,summary);
+        gap(summary,15);summary.addView(label("Osnovica: "+draftMoney(net),12,sub(),false));
+        summary.addView(label("PDV: "+draftMoney(tax),12,sub(),false));gap(summary,9);
+        summary.addView(label("UKUPNO: "+draftMoney(net+tax),24,BLUE,true));place(body,summary);
         gap(body,16);button(body,"Spremi nacrt",()->saveNew(false));
         gap(body,8);secondary(body,"Potvrdi dokument",()->confirmWarning(()->saveNew(true)));
         gap(body,8);secondary(body,"‹ Uredi stavke",this::editItemsScreen);
@@ -1960,13 +1964,13 @@ public final class MainActivity extends Activity {
             // Keep the reference's clean document row while retaining the
             // exact quantity, unit price and VAT on tap and for accessibility.
             String breakdown=Money.decimalQuantity(item.qtyMilli)+" × "+
-                Money.euros(item.unitCents)+" · PDV "+item.taxRate+"%";
+                docMoney(d,item.unitCents)+" · PDV "+item.taxRate+"%";
             line.setContentDescription(item.name+", "+breakdown);
             line.setFocusable(true);
             line.setOnClickListener(v->new AlertDialog.Builder(this)
                 .setTitle(item.name).setMessage(breakdown)
                 .setPositiveButton("Zatvori",null).show());
-            TextView amount=label(Money.euros(
+            TextView amount=label(docMoney(d,
                 Math.addExact(item.net(),item.tax())),11,NAVY,true);
             amount.setGravity(Gravity.RIGHT);
             LinearLayout.LayoutParams sum=new LinearLayout.LayoutParams(-2,-2);
@@ -1977,7 +1981,7 @@ public final class MainActivity extends Activity {
         }
 
         gap(paper,offer?12:14);
-        paperAmount(paper,"Osnovica",Money.euros(d.netCents),false);
+        paperAmount(paper,"Osnovica",docMoney(d,d.netCents),false);
         gap(paper,9);
         String paperTaxLabel="PDV";
         if(Store.INVOICE.equals(d.type)&&!d.items.isEmpty()){
@@ -1988,15 +1992,15 @@ public final class MainActivity extends Activity {
             }
             if(onlyOneRate)paperTaxLabel="PDV ("+oneRate+" %)";
         }
-        paperAmount(paper,paperTaxLabel,Money.euros(d.taxCents),false);
+        paperAmount(paper,paperTaxLabel,docMoney(d,d.taxCents),false);
         gap(paper,12);
         paperRule(paper);gap(paper,12);
-        paperAmount(paper,"UKUPNO",Money.euros(d.totalCents),true);
+        paperAmount(paper,"UKUPNO",docMoney(d,d.totalCents),true);
         if(Store.INVOICE.equals(d.type) && d.paidCents>0){
             gap(paper,9);
-            paperAmount(paper,"Evidentirano plaćeno",Money.euros(d.paidCents),false);
+            paperAmount(paper,"Evidentirano plaćeno",docMoney(d,d.paidCents),false);
             gap(paper,7);
-            paperAmount(paper,"Preostalo",Money.euros(d.outstanding()),false);
+            paperAmount(paper,"Preostalo",docMoney(d,d.outstanding()),false);
         }
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
@@ -2049,7 +2053,7 @@ public final class MainActivity extends Activity {
             toast("Za ovaj račun nije moguće unijeti uplatu");return;
         }
         LinearLayout form=vertical();pad(form,17,7);
-        form.addView(label("Preostalo za naplatu: "+Money.euros(d.outstanding()),14,ink(),true));
+        form.addView(label("Preostalo za naplatu: "+docMoney(d,d.outstanding()),14,ink(),true));
         EditText amount=field("Iznos uplate",
             String.format(Locale.forLanguageTag("hr-HR"),"%.2f",d.outstanding()/100.0));
         amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -2354,7 +2358,8 @@ public final class MainActivity extends Activity {
                     if(doc.issueDate!=null&&doc.issueDate.startsWith(currentYear) &&
                         !Store.DRAFT.equals(doc.status)&&!Store.VOID.equals(doc.status))
                         yearInvoices++;
-                    paid=Math.addExact(paid,doc.paidCents);
+                    if(BillingCurrency.canonical(doc.currencyCode).equals(selectedCurrency()))
+                        paid=Math.addExact(paid,doc.paidCents);
                 }
             }
         }
@@ -2362,7 +2367,7 @@ public final class MainActivity extends Activity {
         LinearLayout statistics=horizontal();
         LinearLayout invoices=clientIndicator("Računi",String.valueOf(yearInvoices),
             "▤","U ovoj godini",BLUE);
-        LinearLayout revenue=clientIndicator("Naplaćeno",Money.euros(paid),
+        LinearLayout revenue=clientIndicator("Naplaćeno",money(paid),
             "▣","Ukupno",TEAL);
         // Two columns expand vertically for large system font sizes. Fixed
         // 128dp cards previously clipped monetary values on small phones.
@@ -2397,7 +2402,7 @@ public final class MainActivity extends Activity {
             for(int i=0;i<history.size();i++){
                 Store.Document d=history.get(i);
                 numbers[i]=(d.number==null?"Nacrt #"+d.id:d.number)+
-                    "  ·  "+Money.euros(d.totalCents);
+                    "  ·  "+docMoney(d,d.totalCents);
             }
             if(history.isEmpty()){
                 toast("Klijent još nema dokumenata");
@@ -2619,12 +2624,12 @@ public final class MainActivity extends Activity {
                 "PRODUCT".equals(item.kind)?"Proizvod":"Nerazvrstano";
             TextView hint=label(kind+" · 1 "+item.unit,11,sub(),false);
             hint.setSingleLine(true);description.addView(hint);
-            TextView amount=label(Money.euros(item.unitCents),12,ink(),true);
+            TextView amount=label(money(item.unitCents),12,ink(),true);
             amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
             row.addView(amount);
             row.setTag(item);
             row.setFocusable(true);row.setContentDescription(item.name+", "+kind+
-                ", "+Money.euros(item.unitCents)+", uredi stavku");
+                ", "+money(item.unitCents)+", uredi stavku");
             row.setOnClickListener(v->editProduct(item));
             grouped.addView(row);
         }
@@ -3026,7 +3031,7 @@ public final class MainActivity extends Activity {
                 detail.addView(label(d.number+" · "+d.dueDate,11,sub(),false));
                 row.addView(detail,new LinearLayout.LayoutParams(0,-2,1));
                 LinearLayout right=vertical();right.setGravity(Gravity.RIGHT);
-                right.addView(label(Money.euros(d.outstanding()),13,BLUE,true));
+                right.addView(label(docMoney(d,d.outstanding()),13,BLUE,true));
                 right.addView(label("Za naplatu",10,sub(),false));
                 row.addView(right);place(card,row);
                 row.setOnClickListener(v->showDocument(d.id));
