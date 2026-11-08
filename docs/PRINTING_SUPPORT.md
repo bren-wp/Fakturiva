@@ -10,6 +10,7 @@ Fakturiva can print its existing **invoices and quotes** through two distinct pa
 | Bluetooth Classic (paired) | 58 mm / 384 dots; 80 mm / 512 or 576 dots | ESC/POS over standard Bluetooth SPP / RFCOMM UUID 00001101-0000-1000-8000-00805F9B34FB | Implemented in code; real printer validation required |
 | Local TCP network printer | 58 mm / 384 dots; 80 mm / 512 or 576 dots | ESC/POS raw TCP (typically port 9100) with manually supplied RFC1918 IPv4 | Implemented in code; real printer validation required |
 | USB host (OTG), USB Printer Class | 58 mm / 384 dots; 80 mm / 512 or 576 dots | User-selected USB printer-class bulk OUT endpoint; Android device permission; ESC/POS raster | Implemented in development branch; real printer validation required |
+| SUNMI built-in thermal printer | Auto 58 mm or 80 mm | Official `com.sunmi:printerlibrary:1.0.18` SDK and SUNMI inner printer service; only shown on SUNMI hardware | Integrated in development branch; physical terminal test required |
 | Bluetooth LE only devices | None | Proprietary BLE GATT services vary | Not implemented |
 | Proprietary card-payment POS terminals | None | Vendor/acquirer approval and SDK are required | **Not implemented; does not process cards** |
 | Direct USB ESC/POS | None | Vendor USB endpoints and drivers vary | Use Android Print Framework/installed service; generic raw-USB driver not implemented |
@@ -22,9 +23,10 @@ The Android Print Framework selects the real destination printer. Compatibility 
 2. For page printers select A4, A5, US Letter or Legal. Android displays the normal printer-selection dialog. A matching-size **vector PDF** is prepared locally.
 3. For a compatible **Bluetooth Classic** thermal printer, pair the printer in Android's Bluetooth settings first, select 58 mm / 384 dots or 80 mm / 512 or 576 dots, and pick the paired device.
 4. For a **LAN ESC/POS** printer, select the corresponding LAN option and enter its private IPv4 (for example `192.168.1.50`) and raw TCP port (usually `9100`). Fakturiva does not scan the network or resolve arbitrary hostnames; public IP, loopback, multicast and broadcast are rejected. An unsafeguarded public-network print destination is not supported.
-5. For a USB thermal printer, connect an OTG-capable Android device to a USB **Printer Class** printer, select USB ESC/POS 58/80 mm in the document print dialog, choose the specific USB device and explicitly approve the data-transfer confirmation and Android device permission. USB vendor-specific interfaces without a printer-class bulk OUT endpoint are not automatically guessed or probed.
-6. The last chosen paper format and optional LAN address/port are saved in local app preferences. No Bluetooth printer identifier is saved in the Fakturiva database.
-7. Check paper and support for ESC/POS raster `GS v 0`. Some manufacturers use proprietary protocols/SDKs and will not work with generic SPP/TCP. Print-service support for USB, Wi-Fi Direct or network printers likewise depends on the installed Android driver.
+5. On a SUNMI terminal with a built-in printer, select **SUNMI built-in printer (SDK)**. The app binds to the official printer service, detects the paper width and submits ESC/POS data. If the service or paper format is unsupported, printing is blocked and an error is shown. The option is hidden on devices from other manufacturers.
+6. For a USB thermal printer, connect an OTG-capable Android device to a USB **Printer Class** printer, select USB ESC/POS 58/80 mm in the document print dialog, choose the specific USB device and explicitly approve the data-transfer confirmation and Android device permission. USB vendor-specific interfaces without a printer-class bulk OUT endpoint are not automatically guessed or probed.
+7. The last chosen paper format and optional LAN address/port are saved in local app preferences. No Bluetooth printer identifier is saved in the Fakturiva database.
+8. Check paper and support for ESC/POS raster `GS v 0`. Some manufacturers use proprietary protocols/SDKs and will not work with generic SPP/TCP. Print-service support for USB, Wi-Fi Direct or network printers likewise depends on the installed Android driver.
 
 Settings → Printers and paper lets users choose a default format and open Android Bluetooth settings. Settings → LAN receipt printer allows editing the stored local IP and port. All actual print operations require an explicit user action.
 
@@ -55,4 +57,4 @@ The automated checks cover raster command headers for 384/512/576-dot widths, Un
 
 ## Manufacturer SDK and Croatian payment-provider roadmap
 
-For Epson, Star Micronics, BIXOLON, Citizen, SUNMI, Xprinter (China), other OEMs and Croatian card-present providers including Monri, see the [provider matrix](POS_INTEGRATION_MATRIX.md). Official SDK availability is **not** the same as SDK integration: proprietary SDKs have not been embedded, and no card-present authorization or SoftPOS transaction is available in this build. Real devices and provider approval are required.
+For Epson, Star Micronics, BIXOLON, Citizen, SUNMI, Xprinter (China), other OEMs and Croatian card-present providers including Monri, see the [provider matrix](POS_INTEGRATION_MATRIX.md). Official SDK availability is **not** the same as SDK integration: the SUNMI printer SDK is integrated, while other proprietary SDKs have not been embedded, and no card-present authorization or SoftPOS transaction is available in this build. Real devices and provider approval are required.
