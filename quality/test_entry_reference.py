@@ -24,7 +24,12 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('account.addView(label("Već imate račun? "',MAIN)
         self.assertIn('TextView signIn=label("Prijavite se"',MAIN)
         self.assertIn('account.setOnClickListener(v->openExistingLocalAccess())',MAIN)
-        self.assertIn('if(prefs.getBoolean("device_lock",false))securityScreen(true,false)',MAIN)
+        # A real local account now replaces the former no-account unlock flow.
+        self.assertIn('if(LocalAccounts.hasAccounts(this))loginPinScreen()', MAIN)
+        self.assertIn('String id=LocalAccounts.verify(this,loginUsername,digits)', MAIN)
+        self.assertIn('openLocalSession(id)', MAIN)
+        self.assertIn('if(prefs.getBoolean("device_lock",false))', MAIN)
+        self.assertIn('securityScreen(true,false)', MAIN)
 
     def test_adaptive_launcher_uses_full_bleed_gradient_and_brand_glyph(self):
         self.assertIn('android:scaleX="1.35"',FOREGROUND)
