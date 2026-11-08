@@ -235,7 +235,7 @@ public final class MainActivity extends Activity {
                     documents(d.type);
                 }catch(Exception e){home();}
                 break;
-            case "catalog":case "reports":case "payments":case "company":case "eracun":
+            case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":settings();break;
             default:home();
         }
@@ -296,7 +296,7 @@ public final class MainActivity extends Activity {
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
         }else if("catalog".equals(screen)||"reports".equals(screen)||
                   "payments".equals(screen)||"company".equals(screen)||
-                  "eracun".equals(screen)||"backup".equals(screen)){
+                  "guide".equals(screen)||"backup".equals(screen)){
             active="settings";
         }else if("client_detail".equals(screen)){
             active="clients";
@@ -363,7 +363,7 @@ public final class MainActivity extends Activity {
             case "payments":payments();break;
             case "settings":settings();break;
             case "company":company();break;
-            case "eracun":eracun();break;
+            case "guide":guide();break;
             default:home();
         }
     }
@@ -525,7 +525,7 @@ public final class MainActivity extends Activity {
         place(body,dots);gap(body,23);
         button(body,"›  Započni",()->securityScreen(false,false));
         gap(body,11);
-        TextView note=label("Bez registracije. Vaši podaci ostaju na uređaju.",11,MUTED,false);
+        TextView note=label("Računi i ponude, jednostavno i pregledno.",11,MUTED,false);
         note.setGravity(Gravity.CENTER);place(body,note);gap(body,23);
     }
     /**
@@ -555,7 +555,7 @@ public final class MainActivity extends Activity {
         gap(body,9);
         place(body,label(locked?
             "Potvrdite identitet zaključavanjem uređaja.":
-            "Vaši računi i klijenti ostaju lokalno na uređaju.",13,MUTED,false));
+            "Odaberite želite li dodatnu zaštitu pristupa Fakturivi.",13,MUTED,false));
         gap(body,82);
 
         place(body,label("SIGURNOST APLIKACIJE",11,0xff6a81a5,true));
@@ -571,9 +571,9 @@ public final class MainActivity extends Activity {
         LinearLayout local=vertical();
         local.setBackground(outlined(WHITE));
         pad(local,15,5);
-        place(local,label("Bez registracije i cloud računa",14,NAVY,true));
+        place(local,label("Vaša poslovna dokumentacija",14,NAVY,true));
         gap(local,7);
-        place(local,label("Identitet provjerava Android, ne Fakturiva.",12,MUTED,false));
+        place(local,label("Zaštitu možete promijeniti u Postavkama.",12,MUTED,false));
         place(body,local);
         gap(body,62);
 
@@ -602,7 +602,7 @@ public final class MainActivity extends Activity {
                 }));
         }
         gap(body,84);
-        TextView note=label("Vaši poslovni podaci ostaju pod vašom kontrolom.",11,MUTED,false);
+        TextView note=label("Upravljajte računima i ponudama jednostavno.",11,MUTED,false);
         note.setGravity(Gravity.CENTER);
         place(body,note);
     }
@@ -1722,7 +1722,7 @@ public final class MainActivity extends Activity {
         gap(body,16);button(body,"Spremi nacrt",()->saveNew(false));
         gap(body,8);secondary(body,"Potvrdi dokument",()->confirmWarning(()->saveNew(true)));
         gap(body,8);secondary(body,"‹ Uredi stavke",this::editItemsScreen);
-        gap(body,15);caption(body,"Potvrda dodjeljuje broj dokumenta. Fiskalizacija i slanje strukturiranih eRačuna nisu podržani.");
+        gap(body,15);caption(body,"Broj dokumenta dodjeljuje se pri potvrdi.");
     }
     private void saveNew(boolean confirm){
         try{
@@ -1743,7 +1743,7 @@ public final class MainActivity extends Activity {
     }
     private void confirmWarning(Runnable yes){
         new AlertDialog.Builder(this).setTitle("Potvrda dokumenta")
-            .setMessage("Dodijelit će se konačni broj dokumenta. Ova aplikacija ne provodi fiskalizaciju niti šalje eRačun. Potvrdite samo ako to odgovara vašem poslovnom procesu.")
+            .setMessage("Dokument će dobiti konačni broj i više se neće moći uređivati kao nacrt. Želite li nastaviti?")
             .setNegativeButton("Odustani",null).setPositiveButton("Potvrdi",(d,w)->yes.run()).show();
     }
     /** Screen 08/11: actual persisted document, not a static design mockup. */
@@ -1790,7 +1790,7 @@ public final class MainActivity extends Activity {
         statusBar.addView(options,lp(38,38));
         options.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Dokument")
-            .setItems(new String[]{"Pregled stvarnog PDF-a","Spremi PDF","Podijeli PDF"},
+            .setItems(new String[]{"Pregledaj PDF","Spremi PDF","Podijeli PDF"},
                 (dialog,which)->{
                     if(which==0)showActualPdfPreview(d);
                     else if(which==1)savePdf(id);
@@ -1804,13 +1804,13 @@ public final class MainActivity extends Activity {
         LinearLayout actions=horizontal();
         TextView save=action(invoice?"↓  Preuzmi PDF":"↓  PDF",
             BLUE,false,()->savePdf(id));
-        save.setContentDescription("Spremi stvarni PDF dokument");
+        save.setContentDescription("Spremi PDF dokument");
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(50),1);
         left.rightMargin=dp(6);
         actions.addView(save,left);
         TextView share=action(invoice?"➤  Pošalji":"➤  Pošalji ponudu",
             BLUE,true,()->sharePdf(id));
-        share.setContentDescription("Podijeli stvarni PDF dokument");
+        share.setContentDescription("Podijeli PDF dokument");
         LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(50),1);
         right.leftMargin=dp(6);
         actions.addView(share,right);
@@ -1838,8 +1838,8 @@ public final class MainActivity extends Activity {
         }
         gap(body,12);
         caption(body,invoice?
-            "Potvrda nije fiskalizacija. PDF nije strukturirani eRačun.":
-            "Ponuda nije račun niti dokaz o plaćanju; dijeljenje ne potvrđuje primitak.");
+            "Račun možete spremiti kao PDF ili ga podijeliti.":
+            "Ponudu možete spremiti kao PDF ili je podijeliti.");
         gap(body,24);
     }
 
@@ -1978,9 +1978,6 @@ public final class MainActivity extends Activity {
         // customer and item rows with the invoice reference geometry.
         gap(paper,Store.QUOTE.equals(d.type)?29:28);
         paperRule(paper);gap(paper,12);
-        place(paper,label(Store.QUOTE.equals(d.type)?
-            "Ponuda nije račun niti dokaz o plaćanju.":
-            "Dokument za pregled • Nije fiskaliziran",9,0xff9eacbe,false));
         return paper;
     }
 
@@ -2015,7 +2012,7 @@ public final class MainActivity extends Activity {
         try{
             View preview=DocumentPreview.firstPage(this,db,d);
             new AlertDialog.Builder(this)
-                .setTitle("Prva stranica stvarnog PDF-a")
+                .setTitle("Pregled PDF-a")
                 .setView(preview)
                 .setPositiveButton("Zatvori",null).show();
         }catch(Exception error){error(error);}
@@ -2359,7 +2356,7 @@ public final class MainActivity extends Activity {
         place(data,label("Podaci o klijentu",16,ink(),true));gap(data,15);
         clientField(data,"Naziv",c.name);
         clientField(data,"Adresa",c.address);
-        clientField(data,"OIB",c.oib);
+        clientField(data,"Porezni broj",c.oib);
         clientField(data,"PDV ID",c.vatId);
         clientField(data,"E-pošta",c.email);
         clientField(data,"Telefon",c.phone);
@@ -2421,14 +2418,14 @@ public final class MainActivity extends Activity {
         LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
         TextView key=label(title,11,sub(),false);
         row.addView(key,new LinearLayout.LayoutParams(0,-2,1));
-        boolean oib="OIB".equals(title);
+        boolean oib="Porezni broj".equals(title);
         TextView text=label(oib?"•••••••••••":value,11,ink(),true);
         text.setMaxLines(3);text.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         row.addView(text,new LinearLayout.LayoutParams(0,-2,1.7f));
         if(oib){
-            text.setContentDescription("OIB je skriven. Dodirnite za prikaz.");
+            text.setContentDescription("Porezni broj je skriven. Dodirnite za prikaz.");
             text.setOnClickListener(v->new AlertDialog.Builder(this)
-                .setTitle("OIB klijenta").setMessage(value)
+                .setTitle("Porezni broj klijenta").setMessage(value)
                 .setPositiveButton("Zatvori",null).show());
         }
         place(target,row);gap(target,10);
@@ -2453,14 +2450,15 @@ public final class MainActivity extends Activity {
         boolean editing=saved!=null;
         LinearLayout form=vertical();pad(form,18,6);
         EditText name=field("Naziv tvrtke ili ime i prezime",editing?saved.name:"");
-        EditText oib=field("OIB",editing?saved.oib:"");
+        EditText oib=field("Porezni broj (neobavezno)",editing?saved.oib:"");
+        oib.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(40)});
         EditText vat=field("PDV ID (neobavezno)",editing?saved.vatId:"");
         EditText address=field("Adresa i mjesto",editing?saved.address:"");
         EditText email=field("E-mail",editing?saved.email:"");
         EditText phone=field("Telefon",editing?saved.phone:"");
         email.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         fieldLabel(form,"Naziv klijenta",name);
-        fieldLabel(form,"OIB (11 znamenaka)",oib);
+        fieldLabel(form,"Porezni identifikacijski broj (ako postoji)",oib);
         fieldLabel(form,"PDV identifikacijski broj",vat);
         fieldLabel(form,"Adresa / mjesto / poštanski broj",address);
         fieldLabel(form,"E-mail",email);
@@ -2479,8 +2477,8 @@ public final class MainActivity extends Activity {
                     if(company.isEmpty()){
                         name.setError("Unesite naziv klijenta");name.requestFocus();return;
                     }
-                    if(!id.isEmpty()&&!Oib.valid(id)){
-                        oib.setError("OIB nije valjan");oib.requestFocus();return;
+                    if(id.length()>40){
+                        oib.setError("Porezni broj može imati najviše 40 znakova");oib.requestFocus();return;
                     }
                     long customerId;
                     if(editing){
@@ -2867,8 +2865,7 @@ public final class MainActivity extends Activity {
         place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
         gap(body,20);
-        caption(body,"Prikazuje samo stvarne potvrđene račune i evidentirane uplate. "+
-            "Fakturirano nije isto što i naplaćeno.");
+        // Totals reflect the currently selected reporting month.
     }
     private void reportPeriodPicker(){
         DatePickerDialog dialog=new DatePickerDialog(this,(view,year,month,day)->{
@@ -3048,7 +3045,6 @@ public final class MainActivity extends Activity {
                 12,sub(),false));}
         }
         place(body,card);gap(body,15);
-        caption(body,"Uplate se prikazuju samo kada su stvarno evidentirane u aplikaciji.");
         gap(body,20);
     }
     private void paymentDivider(LinearLayout card){
@@ -3075,9 +3071,7 @@ public final class MainActivity extends Activity {
         help.setContentDescription("Informacije o aplikaciji");
         help.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Fakturiva "+getPackageVersion())
-            .setMessage("Računi, ponude i klijenti pohranjuju se lokalno. " +
-                "Prije promjene uređaja spremite šifriranu sigurnosnu kopiju. " +
-                "Elektroničko slanje eRačuna i fiskalizacija nisu povezani.")
+            .setMessage("Izrađujte račune i ponude, upravljajte klijentima, pratite naplatu te spremite ili podijelite PDF dokumente.")
             .setPositiveButton("Zatvori",null).show());
         heading.addView(help,lp(43,43));
         place(body,heading);gap(body,18);
@@ -3093,28 +3087,28 @@ public final class MainActivity extends Activity {
         brand.setContentDescription("Fakturiva, informacije o aplikaciji");
         brand.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Fakturiva "+getPackageVersion())
-            .setMessage("Nativna Android aplikacija za lokalno upravljanje računima i ponudama.")
+            .setMessage("Računi, ponude, klijenti i evidencija naplate na jednom mjestu.")
             .setPositiveButton("U redu",null).show());
         place(body,brand);gap(body,14);
 
         LinearLayout options=card();pad(options,0,2);
         place(body,options);
-        settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa, OIB, IBAN",this::company);
+        settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
             "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
-        settingRow(options,"▥","PDV i porezne postavke",
+        settingRow(options,"▥","Porezi i stope",
             "Porezni status i napomene u profilu tvrtke",this::company);
         settingRow(options,"▣","Načini plaćanja",
             "IBAN, banka i uvjeti plaćanja",this::company);
         settingRow(options,"✎","Podaci na dokumentima",
             "Profil izdavatelja za nove PDF dokumente",this::company);
-        settingRow(options,"⇄","eRačuni i fiskalizacija",
-            "Stanje integracije i preduvjeti",this::eracun);
+        settingRow(options,"?","Pomoć i upute",
+            "Računi, ponude i načini rada",this::guide);
         settingRow(options,"◈","Sigurnost",
             prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"PIN i privatnost",
             ()->securityScreen(false,true));
         settingRow(options,"♢","Izvoz i sigurnosne kopije",
-            "Lokalni podaci i dokumenti",this::backupScreen);
+            "Izvoz i obnova podataka",this::backupScreen);
         settingRow(options,"☼","Izgled aplikacije",
             dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
                 dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
@@ -3126,7 +3120,7 @@ public final class MainActivity extends Activity {
         settingRow(tools,"▥","Izvještaji","Analitika računa i naplate",this::reports);
         place(body,tools);
         gap(body,17);
-        caption(body,"Fakturiva "+getPackageVersion()+" · Brendigo");
+        caption(body,"Fakturiva · Brendigo");
         gap(body,19);
     }
     /** Read-only numbering status; no unsafe editing of confirmed sequences. */
@@ -3220,7 +3214,7 @@ public final class MainActivity extends Activity {
         LinearLayout form=card();
         place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note"};
-        String[] labels={"Naziv tvrtke","OIB","PDV identifikacijski broj (ako se primjenjuje)","Adresa","Poštanski broj","Grad / mjesto","Država","E-adresa","Telefon","Web stranica","IBAN","Naziv banke","BIC / SWIFT","Registarski podatak (npr. MBS)","Oznaka poslovnog prostora","Oznaka operatera","Način plaćanja","Poziv na broj / model plaćanja","Porezni status ili zakonska napomena"};
+        String[] labels={"Naziv izdavatelja","Porezni broj (neobavezno)","Porezni / VAT ID (ako postoji)","Adresa","Poštanski broj","Grad / mjesto","Država","E-adresa","Telefon","Web stranica","IBAN (ako se koristi)","Naziv banke","BIC / SWIFT","Registracijski broj (neobavezno)","Poslovna jedinica (neobavezno)","Referentna oznaka (neobavezno)","Način plaćanja","Referenca plaćanja","Porezna ili poslovna napomena"};
         EditText[] fields=new EditText[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
         int[][] sections={{0,1,3,7,8},{10,11,12,16,17},{2,4,5,6,9,13,14,15,18}};
@@ -3237,10 +3231,10 @@ public final class MainActivity extends Activity {
                     fields[index].setInputType(InputType.TYPE_CLASS_TEXT|
                         InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
                 }else if(index==1){
-                    fields[index].setInputType(InputType.TYPE_CLASS_NUMBER|
-                        InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+                    fields[index].setInputType(InputType.TYPE_CLASS_TEXT|
+                        InputType.TYPE_TEXT_VARIATION_PASSWORD);
                     fields[index].setFilters(new android.text.InputFilter[]{
-                        new android.text.InputFilter.LengthFilter(11)
+                        new android.text.InputFilter.LengthFilter(40)
                     });
                 }else if(index==8){
                     fields[index].setInputType(InputType.TYPE_CLASS_PHONE);
@@ -3258,9 +3252,9 @@ public final class MainActivity extends Activity {
                 fieldHeading.addView(fieldName,new LinearLayout.LayoutParams(0,-2,1));
                 if(index==1||index==8){
                     final int fieldIndex=index;
-                    TextView reveal=label("Prikaži "+(index==1?"OIB":"telefon"),11,BLUE,true);
+                    TextView reveal=label("Prikaži "+(index==1?"porezni broj":"telefon"),11,BLUE,true);
                     reveal.setContentDescription("Prikaži ili sakrij "+
-                        (index==1?"OIB":"telefon"));
+                        (index==1?"porezni broj":"telefon"));
                     reveal.setPadding(dp(6),dp(5),dp(6),dp(5));
                     reveal.setOnClickListener(v->{
                         EditText value=fields[fieldIndex];
@@ -3270,7 +3264,7 @@ public final class MainActivity extends Activity {
                             android.text.method.PasswordTransformationMethod.getInstance());
                         value.setSelection(value.length());
                         reveal.setText((masked?"Sakrij ":"Prikaži ")+
-                            (fieldIndex==1?"OIB":"telefon"));
+                            (fieldIndex==1?"porezni broj":"telefon"));
                     });
                     fieldHeading.addView(reveal);
                 }
@@ -3288,7 +3282,7 @@ public final class MainActivity extends Activity {
                 String oib=fields[1].getText().toString().trim();
                 String iban=fields[10].getText().toString().trim();
                 if(name.isEmpty())throw new IllegalArgumentException("Unesite naziv tvrtke ili obrta");
-                if(!oib.isEmpty()&&!Oib.valid(oib))throw new IllegalArgumentException("OIB nije valjan");
+                if(oib.length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
                 if(!iban.isEmpty()&&!Iban.valid(iban))throw new IllegalArgumentException("IBAN nije valjan");
                 String[] vals=new String[keys.length];
                 for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString().trim();
@@ -3303,112 +3297,42 @@ public final class MainActivity extends Activity {
         bottomAction.setBackgroundColor(bg());
         bottomAction.addView(action("✓  Spremi promjene",BLUE,true,saveCompany),lp(-1,52));
         root.addView(bottomAction,1,new LinearLayout.LayoutParams(-1,-2));
-        gap(body,12);caption(body,"Fiskalizacija nije podržana u ovoj verziji. Podaci o poslovnom prostoru i operateru služe samo za pripremu profila.");
         gap(body,16);
     }
-    private void eracun(){
-        setup("eracun",true);
-        pad(body,15,15);
-        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView back=icon(R.drawable.ic_back,sub());
-        back.setPadding(dp(8),dp(8),dp(8),dp(8));
-        back.setContentDescription("Natrag u postavke");
-        header.addView(back,lp(40,46));back.setOnClickListener(v->settings());
-        LinearLayout title=vertical();
-        title.addView(label("eRačuni",24,ink(),true));gap(title,5);
-        title.addView(label("Integracije i status usluge",11,sub(),false));
-        header.addView(title,new LinearLayout.LayoutParams(0,-2,1));
-        TextView help=label("?",17,sub(),true);
-        help.setGravity(Gravity.CENTER);help.setBackground(shape(panel(),13));
-        help.setContentDescription("Važno o eRačunu i fiskalizaciji");
-        help.setOnClickListener(v->showIntegrationRequirements());
-        header.addView(help,lp(43,43));place(body,header);gap(body,20);
-        // A slightly shorter hero leaves the integration notice legible
-        // above the persistent action even on 393dp and compact phones.
-        LinearLayout hero=vertical();hero.setGravity(Gravity.CENTER);pad(hero,16,20);
-        hero.setBackground(shape(dark?0xff243252:0xffecefff,21));
-        TextView symbol=label("⇄",31,BLUE,true);
-        symbol.setGravity(Gravity.CENTER);symbol.setBackground(shape(panel(),17));
-        LinearLayout.LayoutParams iconLp=lp(68,68);iconLp.gravity=Gravity.CENTER;
-        hero.addView(symbol,iconLp);gap(hero,14);
-        TextView heading=label("eRačuni i fiskalizacija",19,ink(),true);
-        heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,8);
-        TextView intro=label("Elektronička razmjena i fiskalizacija zahtijevaju provjerenu integraciju.",12,sub(),false);
-        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,12);
-        TextView state=label("Povezivanje nije dostupno",11,0xffb77312,true);
-        state.setGravity(Gravity.CENTER);state.setBackground(shape(dark?0xff584125:0xfffff0d3,13));
-        pad(state,12,6);
-        LinearLayout.LayoutParams stateLp=lp(-2,-2);stateLp.gravity=Gravity.CENTER;
-        hero.addView(state,stateLp);
-        place(body,hero);gap(body,13);
-
-        LinearLayout phases=card();
-        place(phases,label("Status integracije",16,ink(),true));gap(phases,10);
-        boolean hasCompany=!db.setting("name").trim().isEmpty()&&
-            Oib.valid(db.setting("oib"))&&!db.setting("address").trim().isEmpty();
-        integrationStep(phases,hasCompany?"✓":"1","Profil tvrtke",
-            hasCompany?"Osnovni podaci uneseni":"Unesite naziv, OIB i adresu",hasCompany,
-            this::company);
-        integrationStep(phases,"2","Informacijski posrednik",
-            "Pružatelj nije povezan",false,()->showIntegrationRequirements());
-        integrationStep(phases,"3","Ovlaštenja i testiranje",
-            "Nisu dostupni u ovoj verziji",false,()->showIntegrationRequirements());
-        place(body,phases);gap(body,12);
-
-        LinearLayout info=card();info.setBackground(shape(dark?0xff24314d:0xffedf1ff,17));
-        info.addView(label("Važno za eRačun",14,ink(),true));gap(info,8);
-        info.addView(label("PDF nije strukturirani eRačun ni dokaz fiskalizacije. Za slanje je potrebna ovlaštena integracija.",12,sub(),false));
-        place(body,info);gap(body,16);
-        // A persistent CTA matches the reference without pretending a network
-        // provider or fiscalization service has actually been connected.
-        stickyPrimary("Postavke integracije",this::integrationOptions);
-        gap(body,75);
+    /** Guidance to create an invoice or quote without obsolete integrations. */
+    private void guide(){
+        setup("guide",true);
+        toolbar("Pomoć","Računi, ponude i osnovne radnje",true);
+        LinearLayout intro=card();
+        title(intro,"Dobro došli u Fakturivu");
+        gap(intro,10);
+        caption(intro,"Izradite račun ili ponudu, odaberite klijenta i dodajte stavke. Dokument možete spremiti kao PDF i podijeliti.");
+        place(body,intro);gap(body,15);
+        LinearLayout steps=card();
+        title(steps,"Kako započeti");gap(steps,10);
+        place(steps,label("1. Unesite podatke izdavatelja.",13,ink(),false));gap(steps,9);
+        place(steps,label("2. Dodajte klijenta te artikle ili usluge.",13,ink(),false));gap(steps,9);
+        place(steps,label("3. Izradite račun ili ponudu i pregledajte iznose.",13,ink(),false));gap(steps,9);
+        place(steps,label("4. Potvrdite dokument i spremite ili podijelite PDF.",13,ink(),false));
+        place(body,steps);gap(body,15);
+        LinearLayout links=card();pad(links,0,2);
+        settingRow(links,"▤","Novi račun","Izradite račun",()->newDocument(Store.INVOICE));
+        settingRow(links,"▣","Nova ponuda","Pripremite ponudu",()->newDocument(Store.QUOTE));
+        settingRow(links,"♧","Klijenti","Pregledajte i uredite klijente",this::clients);
+        settingRow(links,"✎","Profil izdavatelja","Podaci na dokumentima",this::company);
+        settingRow(links,"◈","Sigurnosne kopije","Izvoz ili povrat podataka",this::backupScreen);
+        place(body,links);gap(body,20);
     }
-    private void integrationStep(LinearLayout parent,String number,String heading,
-            String description,boolean ok,Runnable action){
-        LinearLayout row=horizontal();pad(row,1,10);
-        TextView badge=label(number,16,ok?TEAL:sub(),true);
-        badge.setGravity(Gravity.CENTER);badge.setBackground(shape(ok?
-            (dark?0xff20483f:0xffddf8ec):(dark?0xff27354e:0xffeff1f8),14));
-        row.addView(badge,lp(39,39));
-        LinearLayout words=vertical();pad(words,12,0);
-        words.addView(label(heading,13,ink(),true));
-        words.addView(label(description,11,sub(),false));
-        row.addView(words,new LinearLayout.LayoutParams(0,-2,1));
-        row.addView(label("›",23,sub(),false));
-        place(parent,row);
-        row.setOnClickListener(v->action.run());
-        gap(parent,4);
-    }
-    /** Honest options: no network integration is available in this release. */
-    private void integrationOptions(){
-        new AlertDialog.Builder(this)
-            .setTitle("Postavke integracije")
-            .setMessage("Fakturiva trenutno nema spojenog informacijskog posrednika, " +
-                "sustav slanja eRačuna ni fiskalizacijsku autorizaciju. " +
-                "Možete urediti profil tvrtke ili pregledati preduvjete.")
-            .setItems(new String[]{"Uredi profil tvrtke","Provjeri preduvjete"},
-                (dialog,which)->{
-                    if(which==0)company();else showIntegrationRequirements();
-                })
-            .setNegativeButton("Zatvori",null).show();
-    }
-    private void showIntegrationRequirements(){
-        new AlertDialog.Builder(this).setTitle("eRačuni i fiskalizacija")
-            .setMessage("Fakturiva trenutačno nema mrežnu vezu, integriranog informacijskog posrednika, certifikate ili fiskalizacijski sustav. Dostupni su samo lokalni dokumenti i PDF izvoz. Ne možete slati eRačune ni fiskalizirati račune iz ove verzije.")
-            .setPositiveButton("U redu",null).show();
-    }
-    
     private void backupScreen(){
         setup("backup",true);toolbar("Sigurnosna kopija","Šifrirana kopija svih podataka",true);
         LinearLayout info=card();title(info,"Sačuvajte svoje poslovne podatke");
-        gap(info,11);caption(info,"Sigurnosna kopija šifrira se AES-256-GCM algoritmom. Lozinka mora imati barem 10 znakova. Ne postoji mogućnost oporavka ako je izgubite.");
+        gap(info,11);caption(info,"Za izvoz odaberite lozinku od najmanje 10 znakova. Sačuvajte je jer bez nje nije moguće vratiti kopiju.");
         gap(info,11);caption(info,"Uvoz u potpunosti zamjenjuje postojeće podatke. Prije uvoza izvezite aktualnu kopiju.");
         place(body,info);gap(body,15);
         LinearLayout local=card();
         title(local,"Automatska zaštita");gap(local,9);
         local.addView(label(db.backupSummary(),12,ink(),false));gap(local,7);
-        caption(local,"Posljednje tri lokalne kopije šifrirane su ključem uređaja. One ne preživljavaju brisanje aplikacije ili gubitak telefona.");
+        caption(local,"Automatske kopije pomažu pri oporavku. Prije promjene telefona izvezite zasebnu sigurnosnu kopiju.");
         if(!db.backupWarning().isEmpty()){gap(local,8);local.addView(label(db.backupWarning(),12,RED,true));}
         gap(local,12);
         secondary(local,"Vrati prethodno lokalno stanje",this::showLocalRecovery);
@@ -3416,18 +3340,18 @@ public final class MainActivity extends Activity {
         button(body,"Izvezi šifriranu kopiju",()->passwordPrompt(false));
         gap(body,10);secondary(body,"Uvezi sigurnosnu kopiju",()->passwordPrompt(true));
         gap(body,15);
-        caption(body,"Za zaštitu od krađe, kvara ili gubitka telefona kopirajte izvezenu datoteku na sigurno mjesto izvan uređaja. Bez te kopije ne možemo zajamčiti povrat dokumenata.");
+        caption(body,"Sačuvajte izvezenu kopiju na sigurnom mjestu kako biste kasnije mogli vratiti podatke.");
     }
     private void showLocalRecovery(){
         try{
             int count=RecoveryVault.count(this);
             if(count==0){toast("Nema dostupnih lokalnih kopija");return;}
             String[] labels=new String[count];
-            for(int i=0;i<count;i++)labels[i]="Lokalna kopija "+(i+1)+(i==0?" (najnovija)":"");
+            for(int i=0;i<count;i++)labels[i]="Kopija "+(i+1)+(i==0?" (najnovija)":"");
             new AlertDialog.Builder(this).setTitle("Odaberite kopiju za oporavak")
                 .setItems(labels,(dialog,index)->new AlertDialog.Builder(this)
                     .setTitle("Potvrdite zamjenu podataka")
-                    .setMessage("Oporavak mijenja trenutačno stanje. Postojeće stanje se prije promjene dodatno pohranjuje. Provjerite datume i izvezite lozinkom zaštićenu kopiju na drugi uređaj.")
+                    .setMessage("Odabrana kopija zamijenit će trenutačne podatke. Prije potvrde spremite aktualnu sigurnosnu kopiju.")
                     .setNegativeButton("Odustani",null)
                     .setPositiveButton("Vrati",(d,w)->{
                         try{db.restoreLocal(index);toast("Podaci su vraćeni");navigate("home");}
