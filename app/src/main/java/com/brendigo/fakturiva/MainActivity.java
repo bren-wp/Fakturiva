@@ -785,8 +785,23 @@ public final class MainActivity extends Activity {
             try{
                 for(String saved:LocalAccounts.names(this)){
                     if(saved.equalsIgnoreCase(name)){
-                        toast("Račun je već na ovom uređaju. Prijavite se PIN-om.");
-                        loginPinScreen();return;
+                        // The reference email/password form must verify web
+                        // credentials even if an offline profile already exists.
+                        // Local PIN remains a second, device-only unlock step.
+                        char[] secret=pass.getText().toString().toCharArray();
+                        selfHostedBusy=true;
+                        AccountBridge.verifyCredentials(this,name,secret,
+                            (error,id)->{
+                                selfHostedBusy=false;
+                                pass.setText("");
+                                if(error!=null)toast(error);
+                                else{
+                                    toast("Web račun potvrđen. Unesite lokalni PIN.");
+                                    loginPinScreen();
+                                }
+                            });
+                        Arrays.fill(secret,'\0');
+                        return;
                     }
                 }
             }catch(Exception e){accountStorageError(e);return;}
