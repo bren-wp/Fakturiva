@@ -32,6 +32,15 @@ public final class QuoteOverviewTest extends FakturivaTestCase {
     }
 
     @Test
+    public void testCroatianEuroSymbolAndForeignCurrencyCodes() {
+        java.util.Locale hr=java.util.Locale.forLanguageTag("hr-HR");
+        assertEquals("1.250,00 €",BillingCurrency.format(125000,"EUR",hr));
+        assertTrue(BillingCurrency.format(125000,"USD",hr).endsWith(" USD"));
+        assertTrue(BillingCurrency.format(125000,"EUR",java.util.Locale.ENGLISH)
+            .endsWith(" EUR"));
+    }
+
+    @Test
     public void testNoQuotesProducesZeroValues(){
         long[] totals=MainActivity.activeQuoteTotals(Collections.emptyList(),"2026-11-01");
         assertEquals(0L,totals[0]);
