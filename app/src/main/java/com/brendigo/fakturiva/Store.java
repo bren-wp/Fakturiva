@@ -44,6 +44,16 @@ public final class Store extends SQLiteOpenHelper {
             lastBackupWarning="Sigurnosnu kopiju nije bilo moguće ažurirati. Izvezite novu kopiju.";
             android.util.Log.e("FakturivaRecovery","Cannot write local recovery snapshot",e);
         }
+        // Every successful SQLite mutation gets a durable "pending upload"
+        // marker before its asynchronous server transfer. Local data is only
+        // an offline cache; the mirror must acknowledge each revision.
+        if(profileId!=null){
+            try{CloudMirror.changed(appContext,profileId);}
+            catch(Exception e){
+                lastBackupWarning="Promjene nisu potvrđene na serveru.";
+                android.util.Log.e("FakturivaCloud","Cannot enqueue server copy",e);
+            }
+        }
     }
     public String backupWarning(){return lastBackupWarning;}
     public String backupSummary(){return RecoveryVault.summary(appContext);}
