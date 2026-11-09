@@ -49,6 +49,20 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('if (!sha256(sealed).equals(remote.getString("sha256")))',bridge)
         self.assertIn('ensureNewLocalProfile(app, username)',bridge)
 
+    def test_reference_login_has_real_device_credential_then_pin_flow(self):
+        self.assertIn('action("◎  Prijava biometrijom",BLUE,false,',MAIN)
+        self.assertIn('this::deviceVerifiedLocalAccess',MAIN)
+        self.assertIn('confirmDeviceCredential(4)',MAIN)
+        self.assertIn('completedAction==4',MAIN)
+        self.assertIn('loginPinScreen()',MAIN)
+        self.assertIn('String id=LocalAccounts.verify(this,loginUsername,digits)',MAIN)
+
+    def test_dark_reference_background_and_eracun_surface_match_palette(self):
+        self.assertIn('dark?0xff0d1728:BG',MAIN)
+        self.assertIn('dark?0xff253451:0xffedf0ff',MAIN)
+        self.assertIn('dark?0xff263853:0xfff1f5ff',MAIN)
+        self.assertIn('"eracun".equals(screen)',MAIN)
+
     def test_adaptive_launcher_uses_full_bleed_gradient_and_brand_glyph(self):
         self.assertIn('android:scaleX="1.35"',FOREGROUND)
         self.assertIn('android:translateX="9.9"',FOREGROUND)

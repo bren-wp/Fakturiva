@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
     private FrameLayout adaptiveNavContainer;
     private LinearLayout adaptiveNavBar;
     private int paymentFilter=0;
+    private boolean showAllPaymentHistory=false;
     private String pendingPaymentsCsvMonth=null,pendingReportCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
@@ -211,7 +212,8 @@ public final class MainActivity extends Activity {
     private String draftMoney(long amount){
         return BillingCurrency.format(amount,draftCurrency(),selectedLocale());
     }
-    private int bg(){return dark?0xff0d182a:BG;}
+    // Exact dark canvas from owner reference #20: RGB(13,23,40).
+    private int bg(){return dark?0xff0d1728:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
     private int ink(){return dark?WHITE:TEXT;}
     private int sub(){return dark?0xffa3b2c9:MUTED;}
@@ -404,7 +406,7 @@ public final class MainActivity extends Activity {
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
         }else if("catalog".equals(screen)||"reports".equals(screen)||
                   "payments".equals(screen)||"company".equals(screen)||
-                  "guide".equals(screen)||"backup".equals(screen)||
+                  "guide".equals(screen)||"eracun".equals(screen)||"backup".equals(screen)||
                   "about".equals(screen)){
             active="settings";
         }else if("client_detail".equals(screen)){
@@ -848,7 +850,15 @@ public final class MainActivity extends Activity {
                     }
                 }).show();
         });
-        authPrimaryStyle(submit);place(body,submit);gap(body,103);
+        authPrimaryStyle(submit);place(body,submit);gap(body,20);
+        TextView separator=label("ili",11,MUTED,false);
+        separator.setGravity(Gravity.CENTER);
+        place(body,separator);gap(body,16);
+        TextView biometric=action("◎  Prijava biometrijom",BLUE,false,
+            this::deviceVerifiedLocalAccess);
+        biometric.setContentDescription(
+            "Provjerite identitet uređajem, zatim unesite lokalni PIN računa");
+        place(body,biometric);gap(body,15);
         TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
         create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
         create.setOnClickListener(v->registrationScreen());place(body,create);
@@ -860,6 +870,24 @@ public final class MainActivity extends Activity {
             }
         }catch(Exception e){accountStorageError(e);}
         gap(body,22);localPrivacyFooter();
+    }
+
+    /** Android's device identity check never bypasses the encrypted local
+     *  account PIN. No reusable biometric or PIN secret is stored.
+     */
+    private void deviceVerifiedLocalAccess(){
+        try{
+            if(!LocalAccounts.hasAccounts(this)){
+                new AlertDialog.Builder(this)
+                    .setTitle("Biometrijska prijava")
+                    .setMessage("Najprije se prijavite e-adresom i lozinkom te "+
+                        "postavite lokalni PIN. Nakon toga možete provjeriti "+
+                        "identitet zaključavanjem uređaja.")
+                    .setPositiveButton("U redu",null).show();
+                return;
+            }
+            confirmDeviceCredential(4);
+        }catch(Exception e){accountStorageError(e);}
     }
 
     /** Server-backed registration styled from the white/blue reference. */
@@ -1479,7 +1507,7 @@ public final class MainActivity extends Activity {
             return;
         }
         Intent request=manager.createConfirmDeviceCredentialIntent("Fakturiva",
-            action==2?"Potvrdite identitet za pristup podacima":
+            (action==2||action==4)?"Potvrdite identitet za pristup podacima":
                 "Potvrdite identitet za promjenu zaštite");
         if(request==null){toast("Provjera identiteta nije dostupna");return;}
         deviceAuthAction=action;
@@ -1628,9 +1656,11 @@ public final class MainActivity extends Activity {
         gap(words,5);
         words.addView(label("Evo pregleda vašeg poslovanja.",12,sub(),false));
         welcome.addView(words,new LinearLayout.LayoutParams(0,-2,1));
-        String issuer=db.setting("name").trim();
-        String initial=issuer.isEmpty()?"B":issuer.substring(0,1)
-            .toUpperCase(Locale.forLanguageTag("hr-HR"));
+        // Avatar reflects the signed-in user, not the issuer's company name.
+        // The screenshot fixture has no active profile and uses neutral B.
+        String profileName=LocalAccounts.activeName();
+        String initial=(profileName==null || profileName.isEmpty())?"B":
+            profileName.substring(0,1).toUpperCase(Locale.forLanguageTag("hr-HR"));
         TextView avatar=label(initial,23,BLUE,true);
         avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(dark?0xff273962:0xffe6e9ff,16));
         avatar.setContentDescription("Profil tvrtke");
@@ -4106,7 +4136,8 @@ public final class MainActivity extends Activity {
             .setTitle("Prikaz naplate")
             .setSingleChoiceItems(new String[]{"Sve uplate","Ovaj mjesec","Za naplatu"},
                 paymentFilter,(dialog,which)->{
-                    paymentFilter=which;dialog.dismiss();payments();
+                    paymentFilter=which;showAllPaymentHistory=false;
+                    dialog.dismiss();payments();
                 }).setNegativeButton("Zatvori",null).show());
         place(body,top);gap(body,21);
         List<Store.Payment> history=db.payments();
@@ -4152,16 +4183,23 @@ public final class MainActivity extends Activity {
             if(paymentFilter==n)tab.setBackground(shape(panel(),12));
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
             filters.addView(tab,p);
-            tab.setOnClickListener(v->{paymentFilter=selected;payments();});
+            tab.setOnClickListener(v->{paymentFilter=selected;
+                showAllPaymentHistory=false;payments();});
         }
         place(body,filters);gap(body,8);
         LinearLayout listHeading=horizontal();
         listHeading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",
             17,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
-        TextView viewAll=label("›",21,BLUE,true);
-        viewAll.setContentDescription("Prikaži sve uplate");
+        TextView viewAll=label(showAllPaymentHistory?"Sažmi":"›",
+            showAllPaymentHistory?11:21,BLUE,true);
+        viewAll.setContentDescription(showAllPaymentHistory?
+            "Sažmi nedavne uplate":"Prikaži sve uplate");
         listHeading.addView(viewAll);
-        viewAll.setOnClickListener(v->{paymentFilter=0;payments();});
+        viewAll.setOnClickListener(v->{
+            paymentFilter=0;
+            showAllPaymentHistory=!showAllPaymentHistory;
+            payments();
+        });
         // Source has a compact 10dp gap from section heading to its first
         // list card; the heading's own accessible row supplies that spacing.
         place(body,listHeading);
@@ -4191,6 +4229,7 @@ public final class MainActivity extends Activity {
             for(Store.Payment p:history){
                 if(paymentFilter==1&&!p.paidOn.startsWith(month))continue;
                 if(!BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency()))continue;
+                if(paymentFilter==0 && !showAllPaymentHistory && n>=4)break;
                 if(n++>0)paymentDivider(card);
                 LinearLayout row=horizontal();pad(row,12,17);
                 TextView check=label("✓",19,TEAL,true);check.setGravity(Gravity.CENTER);
@@ -5136,18 +5175,18 @@ public final class MainActivity extends Activity {
 
         LinearLayout hero=vertical();
         hero.setGravity(Gravity.CENTER);
-        pad(hero,18,21);
-        hero.setBackground(shape(dark?0xff253451:0xffe9edff,20));
+        pad(hero,18,16);
+        hero.setBackground(shape(dark?0xff253451:0xffedf0ff,20));
         TextView symbol=label("⇄",35,BLUE,true);
         symbol.setGravity(Gravity.CENTER);
         symbol.setBackground(shape(panel(),17));
-        hero.addView(symbol,lp(70,70));gap(hero,12);
+        hero.addView(symbol,lp(65,65));gap(hero,10);
         TextView heading=label("eRačuni i fiskalizacija",20,ink(),true);
         heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,9);
         TextView intro=label(
             "Pripremite aplikaciju za elektroničku razmjenu i fiskalizaciju računa.",
-            12,sub(),false);
-        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,16);
+            10,sub(),false);
+        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,13);
         TextView state=label("Povezivanje potrebno",11,0xffae6b00,true);
         state.setPadding(dp(10),dp(5),dp(10),dp(5));
         state.setBackground(shape(dark?0xff56472a:0xffffefd2,15));
@@ -5156,8 +5195,8 @@ public final class MainActivity extends Activity {
         hero.addView(state,statusLp);
         place(body,hero);gap(body,15);
 
-        LinearLayout section=card();pad(section,15,13);
-        place(section,label("Status integracije",15,ink(),true));gap(section,14);
+        LinearLayout section=card();pad(section,15,12);
+        place(section,label("Status integracije",15,ink(),true));gap(section,8);
         eracunStatusRow(section,profileComplete?"✓":"1","Profil tvrtke",
             profileComplete?"Osnovni podaci uneseni":"Unesite naziv, OIB i adresu",
             profileComplete,()->company());
@@ -5174,12 +5213,11 @@ public final class MainActivity extends Activity {
         place(body,section);gap(body,15);
 
         LinearLayout notice=vertical();pad(notice,17,16);
-        notice.setBackground(shape(dark?0xff263853:0xffeef2ff,18));
+        notice.setBackground(shape(dark?0xff263853:0xfff1f5ff,18));
         place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,8);
         place(notice,label(
             "PDF datoteka nije strukturirani eRačun. Za razmjenu je potrebna "+
-            "odgovarajuća integracija i provjera ovlaštenja. Ovaj zaslon ne "+
-            "potvrđuje aktivnu fiskalizaciju ni slanje eRačuna.",
+            "odgovarajuća integracija.",
             11,sub(),false));
         place(body,notice);gap(body,14);
         TextView configure=action("⚙  Postavke integracije",BLUE,true,
@@ -5398,6 +5436,11 @@ public final class MainActivity extends Activity {
                 if(!"security_unlock".equals(screen))return;
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                 navigate("home");offerWorkingDraftRecovery();
+            }else if(completedAction==4){
+                // OS confirmation is an additional factor. Never open SQLite
+                // until LocalAccounts verifies the user's PIN.
+                if(!"server_login".equals(screen))return;
+                loginPinScreen();
             }else if(completedAction==3){
                 prefs.edit().putBoolean("device_lock",false).apply();
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
