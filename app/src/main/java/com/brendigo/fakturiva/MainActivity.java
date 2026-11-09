@@ -52,6 +52,7 @@ public final class MainActivity extends Activity {
     private static final int BG=0xfff6f8fc, WHITE=Color.WHITE, NAVY=0xff14263f,
         TEXT=0xff253449, MUTED=0xff8592a5, BLUE=0xff5566f8,
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
+    private static final int SPLASH_DURATION_MS=4500;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
     private static final int PICK_BRANDING_LOGO=121;
     private String pendingBrandProfile;
@@ -621,8 +622,9 @@ public final class MainActivity extends Activity {
         down.bottomMargin=dp(57);frame.addView(bottom,down);
         if(animate){
             frame.setContentDescription("Fakturiva — učitavanje aplikacije");
-            frame.setOnClickListener(v->finishSplash());
-            frame.postDelayed(this::finishSplash,1150);
+            // Keep the brand splash visible 4.5 seconds on genuine launches.
+            // Debug screenshot harness calls splash(false) without a delay.
+            frame.postDelayed(this::finishSplash,SPLASH_DURATION_MS);
         }
     }
     /** Launch navigation respects first-run state and never invents a cloud login. */
@@ -852,7 +854,7 @@ public final class MainActivity extends Activity {
         place(body,label("Kreirajte novi račun i započnite s poslovanjem.",
             14,MUTED,false));
         gap(body,32);
-        place(body,label("Korisničko ime",14,0xff53627b,true));gap(body,10);
+        place(body,label("E-adresa",14,0xff53627b,true));gap(body,10);
         EditText username=field("ime@tvrtka.hr","");
         username.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
@@ -888,6 +890,10 @@ public final class MainActivity extends Activity {
             char[] digits=pin.getText().toString().toCharArray();
             char[] secret=password.getText().toString().toCharArray();
             try{
+                if(!android.util.Patterns.EMAIL_ADDRESS.matcher(
+                        username.getText().toString().trim()).matches()){
+                    toast("Unesite ispravnu e-adresu.");return;
+                }
                 boolean first=!LocalAccounts.hasAccounts(this);
                 selfHostedBusy=true;
                 AccountBridge.register(this,username.getText().toString(),
@@ -1796,7 +1802,7 @@ public final class MainActivity extends Activity {
         });
         String[] states=invoice?
             new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:
-            new String[]{"Svi","Potvrđene","Skice"};
+            new String[]{"Svi","Poslane","Prihvaćene","Skice"};
         Runnable chooseFilter=()->new AlertDialog.Builder(this)
             .setTitle("Filtriraj "+(invoice?"račune":"ponude"))
             .setSingleChoiceItems(states,java.util.Arrays.asList(states).indexOf(filter),
@@ -1844,7 +1850,8 @@ public final class MainActivity extends Activity {
         if(invoice){
             long unpaid=0;
             for(Store.Document document:inCurrency)
-                if(Store.ISSUED.equals(document.status))
+                if(!Store.DRAFT.equals(document.status) &&
+                   !Store.VOID.equals(document.status))
                     unpaid=Math.addExact(unpaid,document.outstanding());
             TextView remaining=label("Neplaćeno  "+money(unpaid),11,ink(),true);
             remaining.setSingleLine(true);
@@ -1881,7 +1888,8 @@ public final class MainActivity extends Activity {
     static long[] activeQuoteTotals(List<Store.Document> documents,String today){
         long count=0,value=0;
         for(Store.Document quote:documents){
-            if(Store.QUOTE.equals(quote.type) && Store.SENT.equals(quote.status)
+            if(Store.QUOTE.equals(quote.type) &&
+                (Store.SENT.equals(quote.status)||Store.ACCEPTED.equals(quote.status))
                 && quote.dueDate!=null && quote.dueDate.compareTo(today)>=0){
                 count=Math.addExact(count,1);
                 value=Math.addExact(value,quote.totalCents);
@@ -2013,7 +2021,9 @@ public final class MainActivity extends Activity {
         if("Neplaćeni".equals(f))
             return Store.INVOICE.equals(d.type) && !Store.DRAFT.equals(d.status)
                 && !Store.VOID.equals(d.status) && d.outstanding()>0;
-        if("Potvrđene".equals(f)||"Poslane".equals(f))return Store.SENT.equals(d.status);
+        if("Poslane".equals(f))return Store.QUOTE.equals(d.type) && Store.SENT.equals(d.status);
+        if("Prihvaćene".equals(f))return Store.QUOTE.equals(d.type) && Store.ACCEPTED.equals(d.status);
+        if("Potvrđene".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
     private void documentRow(Store.Document document){
@@ -2500,7 +2510,7 @@ public final class MainActivity extends Activity {
             place(form,product);
         }
         fieldLabel(form,"Količina",qty);
-        fieldLabel(form,"Unit price before tax",price);
+        fieldLabel(form,"Jedinična cijena bez PDV-a",price);
         fieldLabel(form,"Tax rate (%)",tax);
         AlertDialog.Builder editor=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi stavku":"Nova stavka")
@@ -2685,10 +2695,22 @@ public final class MainActivity extends Activity {
                 })));
             gap(body,9);
             secondary(body,"Uredi nacrt",()->resumeSavedDraft(id));
-        }else if(invoice && Store.ISSUED.equals(d.status) && d.outstanding()>0){
+        }else if(invoice && !Store.DRAFT.equals(d.status) &&
+                !Store.VOID.equals(d.status) && d.outstanding()>0){
             place(body,action("Evidentiraj uplatu",0xff17b99a,true,
                 ()->payDialog(id)));
         }else if(!invoice && Store.SENT.equals(d.status)){
+            place(body,action("Označi ponudu kao prihvaćenu",0xff17b99a,true,()->
+                new AlertDialog.Builder(this)
+                    .setTitle("Potvrda prihvata ponude")
+                    .setMessage("Potvrdite samo ako je klijent stvarno prihvatio ovu ponudu.")
+                    .setNegativeButton("Odustani",null)
+                    .setPositiveButton("Potvrdi prihvat",(dialog,which)->{
+                        try{db.acceptQuote(id);showDocument(id);}
+                        catch(Exception e){error(e);}
+                    }).show()));
+        }
+        if(!invoice && (Store.SENT.equals(d.status)||Store.ACCEPTED.equals(d.status))){
             place(body,action("Pretvori u nacrt računa",0xff17b99a,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
@@ -3568,7 +3590,7 @@ public final class MainActivity extends Activity {
         boolean editing=current!=null;
         LinearLayout form=vertical();pad(form,18,5);
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
-        EditText price=field("Unit price ("+(editing?
+        EditText price=field("Jedinična cijena ("+(editing?
             BillingCurrency.canonical(current.currencyCode):selectedCurrency())+")",editing?
             String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -3577,7 +3599,7 @@ public final class MainActivity extends Activity {
         kind.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,kinds));
         if(editing)kind.setSelection("SERVICE".equals(current.kind)?1:
             "PRODUCT".equals(current.kind)?2:3);
-        EditText vat=field("Tax rate (%)",editing?
+        EditText vat=field("Stopa PDV-a (%)",editing?
             Money.rateLabel(current.taxRate).replace("%",""):"0");
         vat.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         EditText unit=field("Mjerna jedinica (kom, sat, mj...)",
@@ -3586,7 +3608,7 @@ public final class MainActivity extends Activity {
         gap(form,9);place(form,label("Vrsta",12,ink(),true));place(form,kind);
         fieldLabel(form,"Unit price before tax",price);
         fieldLabel(form,"Mjerna jedinica",unit);
-        fieldLabel(form,"Tax rate (%)",vat);
+        fieldLabel(form,"Stopa PDV-a (%)",vat);
         AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi artikl ili uslugu":"Novi artikl ili usluga")
             .setView(form).setNegativeButton("Odustani",null)
@@ -4105,7 +4127,9 @@ public final class MainActivity extends Activity {
         if(paymentFilter==2){
             int n=0;
             for(Store.Document d:db.documents(Store.INVOICE)){
-                if(!Store.ISSUED.equals(d.status)||d.outstanding()<=0)continue;
+                if(Store.DRAFT.equals(d.status)||Store.VOID.equals(d.status)||
+                   d.outstanding()<=0 ||
+                   !BillingCurrency.canonical(d.currencyCode).equals(selectedCurrency()))continue;
                 if(n++>0)paymentDivider(card);
                 LinearLayout row=horizontal();pad(row,14,15);
                 LinearLayout detail=vertical();
@@ -4123,6 +4147,7 @@ public final class MainActivity extends Activity {
             int n=0;
             for(Store.Payment p:history){
                 if(paymentFilter==1&&!p.paidOn.startsWith(month))continue;
+                if(!BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency()))continue;
                 if(n++>0)paymentDivider(card);
                 LinearLayout row=horizontal();pad(row,12,17);
                 TextView check=label("✓",19,TEAL,true);check.setGravity(Gravity.CENTER);
@@ -4136,10 +4161,10 @@ public final class MainActivity extends Activity {
                     11,sub(),false);
                 documentInfo.setMaxLines(2);
                 description.addView(documentInfo);
-                TextView amount=label("+"+BillingCurrency.format(p.amountCents,p.currencyCode,Locale.ENGLISH),12,TEAL,true);
+                TextView amount=label("+"+BillingCurrency.format(p.amountCents,p.currencyCode,selectedLocale()),12,TEAL,true);
                 amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
                 amount.setMaxLines(3);
-                amount.setContentDescription("Evidentirana uplata: "+BillingCurrency.format(p.amountCents,p.currencyCode,Locale.ENGLISH));
+                amount.setContentDescription("Evidentirana uplata: "+BillingCurrency.format(p.amountCents,p.currencyCode,selectedLocale()));
                 // Avoid competing horizontal widths on 280/320dp screens or
                 // when the user selects large accessibility font scaling.
                 float widthDp=getResources().getDisplayMetrics().widthPixels/
