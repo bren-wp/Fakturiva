@@ -235,7 +235,7 @@ public final class Store extends SQLiteOpenHelper {
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
         try{
             for(int i=0;i<keys.length;i++){
-                if(!java.util.Arrays.asList("name","oib","address","email","iban","phone","tax_note","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","currency","legal_form","trading_name","company_number","register_authority","tax_registration","address_2","region","payment_terms","footer_note","contact_person","bank_account_number","bank_routing_number","bank_sort_code","bank_address","invoice_reference").contains(keys[i]))
+                if(!java.util.Arrays.asList("name","oib","address","email","iban","phone","tax_note","vat_id","postal_code","city","country","website","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","currency","legal_form","trading_name","company_number","register_authority","tax_registration","address_2","region","payment_terms","footer_note","contact_person","bank_account_number","bank_routing_number","bank_sort_code","bank_address","invoice_reference","invoice_theme","invoice_accent","logo_sha256").contains(keys[i]))
                     throw new IllegalArgumentException("Nepoznata postavka");
                 ContentValues v=new ContentValues();v.put("key",keys[i]);v.put("value",values[i].trim());
                 db.insertWithOnConflict("company",null,v,SQLiteDatabase.CONFLICT_REPLACE);
