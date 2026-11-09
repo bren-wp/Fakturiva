@@ -53,6 +53,8 @@ public final class MainActivity extends Activity {
         TEXT=0xff253449, MUTED=0xff8592a5, BLUE=0xff5566f8,
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
+    private static final int PICK_BRANDING_LOGO=121;
+    private String pendingBrandProfile;
     private static final int BLUETOOTH_PRINT_PERMISSION_REQUEST=108;
     private static final int HR_KPR_PDF=115,HR_POSD_PDF=116,HR_POSD_XML=117;
     private CroatianTaxReports.Book pendingHrBook;
@@ -100,6 +102,7 @@ public final class MainActivity extends Activity {
         }
         dark=prefs.getBoolean("dark",false);
         if(b!=null){
+            pendingBrandProfile=b.getString("pendingBrandProfile");
             pendingPdfId=b.getLong("pendingPdfId",-1);
             pendingPaymentsCsvMonth=b.getString("pendingPaymentsCsvMonth");
             pendingReportCsvMonth=b.getString("pendingReportCsvMonth");
@@ -115,6 +118,7 @@ public final class MainActivity extends Activity {
         splash(true);
     }
     @Override protected void onSaveInstanceState(Bundle outState){
+        outState.putString("pendingBrandProfile",pendingBrandProfile);
         outState.putLong("pendingPdfId",pendingPdfId);
         outState.putString("pendingPaymentsCsvMonth",pendingPaymentsCsvMonth);
         outState.putString("pendingReportCsvMonth",pendingReportCsvMonth);
@@ -326,7 +330,7 @@ public final class MainActivity extends Activity {
                 }catch(Exception e){home();}
                 break;
             case "local_accounts":case "self_host":case "privacy":settings();break;
-            case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
+            case "invoice_appearance":case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":case "about":settings();break;
             default:home();
         }
@@ -4064,6 +4068,9 @@ public final class MainActivity extends Activity {
             "IBAN, banka i uvjeti plaćanja",this::company);
         settingRow(options,"✎","Podaci na dokumentima",
             "Profil izdavatelja za nove PDF dokumente",this::company);
+        settingRow(options,"◈","Dizajn računa i vlastiti logo",
+            "Četiri izgleda · boja · vaš logo ili Fakturiva",
+            this::invoiceAppearance);
         settingRow(options,"?","Pomoć i upute",
             "Računi, ponude i načini rada",this::guide);
         settingRow(options,"☁","Pohrana na serveru i oporavak",
@@ -4723,6 +4730,7 @@ public final class MainActivity extends Activity {
             return;
         }
         if(result!=RESULT_OK||data==null||data.getData()==null){
+            if(code==PICK_BRANDING_LOGO)pendingBrandProfile=null;
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
             if(code==104)pendingPaymentsCsvMonth=null;
             if(code==106)pendingReportCsvMonth=null;
@@ -4731,6 +4739,21 @@ public final class MainActivity extends Activity {
             return;
         }
         Uri uri=data.getData();
+        if(code==PICK_BRANDING_LOGO){
+            try{
+                if(db==null||pendingBrandProfile==null||
+                   !pendingBrandProfile.equals(LocalAccounts.activeId())||
+                   !pendingBrandProfile.equals(db.profileId()))
+                    throw new SecurityException("Profil se promijenio, odaberite logo ponovno.");
+                byte[] image=prepareBrandingLogo(uri);
+                try{db.saveBrandingLogo(image);}
+                finally{Arrays.fill(image,(byte)0);}
+                toast("Logo spremljen i uključit će se u nove dokumente.");
+                invoiceAppearance();
+            }catch(Exception e){error(e);}
+            finally{pendingBrandProfile=null;}
+            return;
+        }
         if((code==BACKUP_EXPORT||code==BACKUP_IMPORT)&&pendingPassword==null){
             toast("Lozinka nije dostupna nakon ponovnog pokretanja. Ponovite izvoz ili uvoz.");
             return;
