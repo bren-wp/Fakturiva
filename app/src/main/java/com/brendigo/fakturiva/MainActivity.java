@@ -727,7 +727,116 @@ public final class MainActivity extends Activity {
         button.setElevation(dp(6));
     }
 
-    /** Local registration modeled on the supplied white/blue reference. */
+
+    /** Reference email/password login backed by the same Fakturiva web account. */
+    private void loginServerScreen(){
+        if(selfHostedBusy){toast("Povezivanje je u tijeku");return;}
+        setup("server_login",false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
+        pad(body,25,55);
+        localBrand();gap(body,28);
+        place(body,label("Dobro došli natrag",29,NAVY,true));gap(body,10);
+        place(body,label("Prijavite se i nastavite s poslovanjem.",
+            14,MUTED,false));gap(body,38);
+        place(body,label("E-adresa ili korisničko ime",14,NAVY,true));gap(body,10);
+        EditText username=field("ime@tvrtka.hr",
+            prefs.getString("remember_web_user",""));
+        username.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        place(body,username);gap(body,20);
+        place(body,label("Lozinka",14,NAVY,true));gap(body,10);
+        EditText pass=field("","");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setSaveEnabled(false);
+        if(Build.VERSION.SDK_INT>=26)
+            pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        place(body,pass);gap(body,14);
+        android.widget.CheckBox remember=new android.widget.CheckBox(this);
+        remember.setText("Zapamti me");
+        remember.setTextColor(NAVY);remember.setTextSize(13);
+        remember.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE));
+        remember.setChecked(!prefs.getString("remember_web_user","").isEmpty());
+        place(body,remember);gap(body,10);
+        TextView help=label("Zaboravili ste lozinku?",13,BLUE,true);
+        help.setGravity(Gravity.RIGHT);help.setMinimumHeight(dp(43));
+        help.setOnClickListener(v->{
+            try{startActivity(new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://fakturiva.eu/password-help.php")));}
+            catch(Exception e){toast("Stranica pomoći nije dostupna");}
+        });
+        place(body,help);gap(body,15);
+        TextView submit=action("›   Prijavi se",BLUE,true,()->{
+            if(selfHostedBusy)return;
+            String name=username.getText().toString().trim();
+            if(name.length()<3||pass.length()<12){
+                toast("Unesite korisničko ime i lozinku od najmanje 12 znakova.");
+                return;
+            }
+            if(remember.isChecked())
+                prefs.edit().putString("remember_web_user",name).apply();
+            else prefs.edit().remove("remember_web_user").apply();
+            try{
+                for(String saved:LocalAccounts.names(this)){
+                    if(saved.equalsIgnoreCase(name)){
+                        toast("Račun je već na ovom uređaju. Prijavite se PIN-om.");
+                        loginPinScreen();return;
+                    }
+                }
+            }catch(Exception e){accountStorageError(e);return;}
+            EditText localPin=field("PIN 4–6 znamenki","");
+            localPin.setInputType(InputType.TYPE_CLASS_NUMBER|
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            localPin.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(6)});
+            localPin.setSaveEnabled(false);
+            new AlertDialog.Builder(this)
+                .setTitle("Zaštitite račun na ovom uređaju")
+                .setMessage("Nakon provjere web računa preuzet ćemo šifriranu "+
+                    "sigurnosnu kopiju. Odaberite lokalni PIN za rad bez interneta.")
+                .setView(localPin)
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Prijava i obnova",(dialog,which)->{
+                    char[] digits=localPin.getText().toString().toCharArray();
+                    char[] secret=pass.getText().toString().toCharArray();
+                    try{
+                        if(!new String(digits).matches("[0-9]{4,6}")){
+                            toast("PIN mora imati 4–6 znamenki");return;
+                        }
+                        selfHostedBusy=true;
+                        AccountBridge.restoreLogin(this,name,secret,digits,
+                            (error,id)->{
+                                selfHostedBusy=false;
+                                pass.setText("");localPin.setText("");
+                                if(error!=null)toast(error);
+                                else openLocalSession(id);
+                            });
+                    }catch(Exception error){
+                        selfHostedBusy=false;
+                        toast(error.getMessage()==null?
+                            "Povezivanje nije uspjelo":error.getMessage());
+                    }finally{
+                        Arrays.fill(digits,'\\0');
+                        Arrays.fill(secret,'\\0');
+                    }
+                }).show();
+        });
+        authPrimaryStyle(submit);place(body,submit);gap(body,22);
+        TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
+        create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
+        create.setOnClickListener(v->registrationScreen());place(body,create);
+        try{
+            if(LocalAccounts.hasAccounts(this)){
+                gap(body,10);
+                secondary(body,"Prijava lokalnim PIN-om (bez interneta)",
+                    this::loginPinScreen);
+            }
+        }catch(Exception e){accountStorageError(e);}
+        gap(body,22);localPrivacyFooter();
+    }
+
+    /** Server-backed registration styled from the white/blue reference. */
     private void registrationScreen(){
         if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
         enteredLocalPin.setLength(0);
