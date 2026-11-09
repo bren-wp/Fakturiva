@@ -211,7 +211,8 @@ public final class MainActivity extends Activity {
     private String draftMoney(long amount){
         return BillingCurrency.format(amount,draftCurrency(),selectedLocale());
     }
-    private int bg(){return dark?0xff0d182a:BG;}
+    // Exact dark canvas from owner reference #20: RGB(13,23,40).
+    private int bg(){return dark?0xff0d1728:BG;}
     private int panel(){return dark?0xff14233b:WHITE;}
     private int ink(){return dark?WHITE:TEXT;}
     private int sub(){return dark?0xffa3b2c9:MUTED;}
