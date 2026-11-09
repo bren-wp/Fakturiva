@@ -849,7 +849,15 @@ public final class MainActivity extends Activity {
                     }
                 }).show();
         });
-        authPrimaryStyle(submit);place(body,submit);gap(body,103);
+        authPrimaryStyle(submit);place(body,submit);gap(body,20);
+        TextView separator=label("ili",11,MUTED,false);
+        separator.setGravity(Gravity.CENTER);
+        place(body,separator);gap(body,16);
+        TextView biometric=action("◎  Prijava biometrijom",BLUE,false,
+            this::deviceVerifiedLocalAccess);
+        biometric.setContentDescription(
+            "Provjerite identitet uređajem, zatim unesite lokalni PIN računa");
+        place(body,biometric);gap(body,15);
         TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
         create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
         create.setOnClickListener(v->registrationScreen());place(body,create);
@@ -861,6 +869,24 @@ public final class MainActivity extends Activity {
             }
         }catch(Exception e){accountStorageError(e);}
         gap(body,22);localPrivacyFooter();
+    }
+
+    /** Android's device identity check never bypasses the encrypted local
+     *  account PIN. No reusable biometric or PIN secret is stored.
+     */
+    private void deviceVerifiedLocalAccess(){
+        try{
+            if(!LocalAccounts.hasAccounts(this)){
+                new AlertDialog.Builder(this)
+                    .setTitle("Biometrijska prijava")
+                    .setMessage("Najprije se prijavite e-adresom i lozinkom te "+
+                        "postavite lokalni PIN. Nakon toga možete provjeriti "+
+                        "identitet zaključavanjem uređaja.")
+                    .setPositiveButton("U redu",null).show();
+                return;
+            }
+            confirmDeviceCredential(4);
+        }catch(Exception e){accountStorageError(e);}
     }
 
     /** Server-backed registration styled from the white/blue reference. */
@@ -1480,7 +1506,7 @@ public final class MainActivity extends Activity {
             return;
         }
         Intent request=manager.createConfirmDeviceCredentialIntent("Fakturiva",
-            action==2?"Potvrdite identitet za pristup podacima":
+            (action==2||action==4)?"Potvrdite identitet za pristup podacima":
                 "Potvrdite identitet za promjenu zaštite");
         if(request==null){toast("Provjera identiteta nije dostupna");return;}
         deviceAuthAction=action;
@@ -5400,6 +5426,11 @@ public final class MainActivity extends Activity {
                 if(!"security_unlock".equals(screen))return;
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                 navigate("home");offerWorkingDraftRecovery();
+            }else if(completedAction==4){
+                // OS confirmation is an additional factor. Never open SQLite
+                // until LocalAccounts verifies the user's PIN.
+                if(!"server_login".equals(screen))return;
+                loginPinScreen();
             }else if(completedAction==3){
                 prefs.edit().putBoolean("device_lock",false).apply();
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
