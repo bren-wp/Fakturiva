@@ -171,6 +171,64 @@ public final class Store extends SQLiteOpenHelper {
         getWritableDatabase().insertWithOnConflict("company",null,v,SQLiteDatabase.CONFLICT_REPLACE);
         snapshotAfterWrite();
     }
+    /** Store a single reusable image per SHA-256, not once per invoice.
+     * Confirmed documents freeze its digest, so changing the company logo
+     * cannot silently rewrite a previously issued invoice.
+     */
+    public String saveBrandingLogo(byte[] image) {
+        if(image==null||image.length<32||image.length>180000)
+            throw new IllegalArgumentException("Logo mora biti PNG/JPEG do 180 KB nakon obrade.");
+        boolean png=image.length>=8&&(image[0]&255)==137&&image[1]==80
+            &&image[2]==78&&image[3]==71;
+        boolean jpeg=image.length>=4&&(image[0]&255)==255&&
+            (image[1]&255)==216&&(image[image.length-2]&255)==255&&
+            (image[image.length-1]&255)==217;
+        if(!png&&!jpeg)throw new IllegalArgumentException("Odaberite PNG ili JPEG logotip.");
+        String digest;
+        try{
+            byte[] sha=java.security.MessageDigest.getInstance("SHA-256").digest(image);
+            StringBuilder hex=new StringBuilder(64);
+            for(byte octet:sha)hex.append(String.format(java.util.Locale.ROOT,
+                "%02x",octet&255));
+            digest=hex.toString();
+        }catch(java.security.NoSuchAlgorithmException e){
+            throw new IllegalStateException(e);
+        }
+        SQLiteDatabase database=getWritableDatabase();database.beginTransaction();
+        boolean saved=false;
+        try{
+            ContentValues asset=new ContentValues();
+            asset.put("sha256",digest);
+            asset.put("image_base64",android.util.Base64.encodeToString(
+                image,android.util.Base64.NO_WRAP));
+            database.insertWithOnConflict("branding_assets",null,asset,
+                SQLiteDatabase.CONFLICT_IGNORE);
+            ContentValues profile=new ContentValues();
+            profile.put("key","logo_sha256");profile.put("value",digest);
+            database.insertWithOnConflict("company",null,profile,
+                SQLiteDatabase.CONFLICT_REPLACE);
+            database.setTransactionSuccessful();saved=true;
+        }finally{database.endTransaction();if(saved)snapshotAfterWrite();}
+        return digest;
+    }
+    public byte[] brandingLogo(String sha256) {
+        if(sha256==null||sha256.trim().isEmpty())return null;
+        if(!sha256.matches("[a-f0-9]{64}"))
+            throw new IllegalArgumentException("Neispravan otisak logotipa");
+        try(Cursor c=getReadableDatabase().rawQuery(
+            "SELECT image_base64 FROM branding_assets WHERE sha256=?",
+            new String[]{sha256})){
+            if(!c.moveToFirst())throw new IllegalStateException(
+                "Nedostaje logotip koji pripada izdanom računu");
+            byte[] logo=android.util.Base64.decode(c.getString(0),
+                android.util.Base64.DEFAULT);
+            if(logo.length>180000)throw new IllegalStateException(
+                "Neispravan logotip");
+            return logo;
+        }
+    }
+    public void clearBrandingLogo(){setting("logo_sha256","");}
+
     /** Update the company profile atomically instead of saving each field separately. */
     public void companySettings(String[] keys,String[] values){
         if(keys.length!=values.length)throw new IllegalArgumentException("Neispravna polja");
@@ -696,6 +754,13 @@ public final class Store extends SQLiteOpenHelper {
             }
             try(Cursor c=db.rawQuery("PRAGMA foreign_key_check",null)){
                 if(c.moveToFirst()) throw new IllegalArgumentException("Neispravne veze u sigurnosnoj kopiji");
+            }
+            try(Cursor missingLogo=db.rawQuery(
+                "SELECT id FROM documents WHERE issuer_logo_sha256!='' "+
+                "AND NOT EXISTS(SELECT 1 FROM branding_assets a WHERE "+
+                "a.sha256=documents.issuer_logo_sha256) LIMIT 1",null)){
+                if(missingLogo.moveToFirst())throw new IllegalArgumentException(
+                    "Nedostaju logotipi prethodno izdanih dokumenata");
             }
             verifyRestoredAmounts(db);
             db.setTransactionSuccessful();saved=true;
