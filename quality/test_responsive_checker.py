@@ -59,6 +59,30 @@ class ResponsiveCheckerTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "outside viewport"):
                 qa.examine_hierarchy(path, 560, 1120, "Postavke", 320)
 
+    def test_real_account_login_screen_03_is_required(self):
+        # Screens 01/02 are branding/onboarding. Screen 03 is now the
+        # email/password account form, NOT the retired device-lock prompt.
+        self.assertEqual(qa.VISIBLE_HEADERS[2], ("Dobro došli natrag",))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "03_prijava.xml"
+            path.write_text(
+                '<hierarchy>'
+                '<node package="com.brendigo.fakturiva" '
+                'text="Dobro došli natrag" bounds="[20,50][500,130]" clickable="false"/>'
+                '<node package="com.brendigo.fakturiva" '
+                'text="E-adresa" bounds="[20,200][500,260]" clickable="false"/>'
+                '<node package="com.brendigo.fakturiva" '
+                'text="Prijavi se" bounds="[20,350][500,410]" clickable="true"/>'
+                '</hierarchy>',
+                encoding="utf-8",
+            )
+            observed = qa.examine_hierarchy(path, 560, 1120,
+                qa.VISIBLE_HEADERS[2], 320)
+            self.assertEqual(observed["clickables"], 1)
+            with self.assertRaisesRegex(ValueError, "not visible"):
+                qa.examine_hierarchy(path, 560, 1120,
+                    ("Zaštitite svoje poslovanje",), 320)
+
     def test_all_twenty_screen_identifiers_are_unique(self):
         self.assertEqual(len(qa.SCREEN_NAMES), 20)
         self.assertEqual(len(set(qa.SCREEN_NAMES)), 20)
