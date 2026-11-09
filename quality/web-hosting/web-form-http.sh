@@ -31,7 +31,8 @@ status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \
   --data-urlencode "csrf=$csrf" --data-urlencode "action=register" \
   --data-urlencode "username=$username" \
-  --data-urlencode "passphrase=$passphrase")"
+  --data-urlencode "passphrase=$passphrase" \\
+  --data-urlencode "confirm_passphrase=$passphrase")"
 test "$status" = 303
 grep -iq 'location: dashboard.php' "$temp/headers"
 curl -fsS -b "$jar" -c "$jar" "$base/dashboard.php" > "$temp/dashboard.html"
