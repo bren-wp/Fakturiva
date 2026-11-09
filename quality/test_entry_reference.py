@@ -63,6 +63,31 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('dark?0xff263853:0xfff1f5ff',MAIN)
         self.assertIn('"eracun".equals(screen)',MAIN)
 
+    def test_android_email_registration_requires_matching_password_before_pin(self):
+        registration=MAIN.split("private void registrationScreen(){",1)[1].split(
+            "private void localBrand(){",1)[0]
+        self.assertIn('place(body,label("E-adresa"',registration)
+        self.assertIn('place(body,label("Lozinka"',registration)
+        self.assertIn('place(body,label("Ponovite lozinku"',registration)
+        self.assertIn('firstPassword.equals(confirm.getText().toString())',registration)
+        self.assertIn('AlertDialog dialog=new AlertDialog.Builder(this)',registration)
+        self.assertIn('AccountBridge.register(this,username,secret,digits',registration)
+        # PIN belongs exclusively to the modal, not the initial form.
+        self.assertLess(registration.index('place(body,label("Lozinka"'),
+                        registration.index('EditText pin=field('))
+        self.assertIn('https://fakturiva.eu/uvjeti-koristenja/',registration)
+
+    def test_failed_first_cloud_upload_never_leaves_an_unlinked_local_profile(self):
+        bridge=(ROOT/"app/src/main/java/com/brendigo/fakturiva/AccountBridge.java").read_text(
+            encoding="utf-8")
+        self.assertIn('staged = new Store(app, stagedId)',bridge)
+        self.assertIn('app.deleteDatabase(Store.databaseName(stagedId))',bridge)
+        self.assertIn('if (remoteRevision != 1)',bridge)
+        self.assertLess(bridge.index('JSONObject ack = SelfHostedSyncClient.request('),
+                        bridge.index('id = LocalAccounts.register(app, username, digits)'))
+        self.assertLess(bridge.index('ensureNewLocalProfile(app, username);\n                id ='),
+                        bridge.index('CloudMirror.connectAcknowledged(app, id'))
+
     def test_adaptive_launcher_uses_full_bleed_gradient_and_brand_glyph(self):
         self.assertIn('android:scaleX="1.35"',FOREGROUND)
         self.assertIn('android:translateX="9.9"',FOREGROUND)
