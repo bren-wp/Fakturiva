@@ -225,7 +225,25 @@ public final class ScreenshotHarness {
                 set(a,"draftQuoteTitle","Usluge digitalnog marketinga");
                 call(a,"editDocumentScreen");
                 break;
-            case "11":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.QUOTE).get(0).id);break;
+            case "11":{
+                // Actual persisted two-line offer, matching the structure and
+                // VAT arithmetic of reference 11 without drawing a mockup.
+                Store.Item campaign=new Store.Item();
+                campaign.name="Vođenje kampanje";
+                campaign.unit="kom";campaign.qtyMilli=1000;
+                campaign.unitCents=80000;campaign.taxRate=25;
+                Store.Item content=new Store.Item();
+                content.name="Izrada sadržaja";
+                content.unit="kom";content.qtyMilli=1000;
+                content.unitCents=40000;content.taxRate=25;
+                long quote=db.createDraft(Store.QUOTE,
+                    fixtureClient(db.clients(),"Terra Projekt j.d.o.o."),
+                    "2026-10-27","2026-11-10","2026-11-15",
+                    "Ponuda za usluge","",Arrays.asList(campaign,content));
+                db.confirm(quote);
+                call(a,"showDocument",new Class<?>[]{long.class},quote);
+                break;
+            }
             case "12":call(a,"clients");break;
             case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
             case "14":call(a,"catalog");break;
