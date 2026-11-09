@@ -39,7 +39,11 @@ public final class InvoiceListFiltersTest extends FakturivaTestCase {
     @Test
     public void testQuotesNeverAppearInInvoicePaymentFilters(){
         Store.Document quote=doc(Store.QUOTE,Store.SENT,12500,0);
-        assertTrue(MainActivity.matches(quote,"Potvrđene"));
+        assertTrue(MainActivity.matches(quote,"Poslane"));
+        assertFalse(MainActivity.matches(quote,"Prihvaćene"));
+        quote.status=Store.ACCEPTED;
+        assertFalse(MainActivity.matches(quote,"Poslane"));
+        assertTrue(MainActivity.matches(quote,"Prihvaćene"));
         assertFalse(MainActivity.matches(quote,"Neplaćeni"));
         assertFalse(MainActivity.matches(quote,"Plaćeni"));
     }
