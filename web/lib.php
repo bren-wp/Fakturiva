@@ -22,18 +22,34 @@ final class HttpFailure extends \RuntimeException {
     }
 }
 
-function storage(): string { return __DIR__ . '/storage/data'; }
-function keyFile(): string { return __DIR__ . '/storage/secret.php'; }
+/**
+ * Production operators can keep both encrypted records and the master key
+ * OUTSIDE the public PHP document root. Never migrate existing data silently:
+ * changing FAKTURIVA_STORAGE_ROOT requires copying data and secret.php together
+ * while the service is offline and verifying recovery before reopening.
+ */
+function privateRoot(): string {
+    $configured=getenv('FAKTURIVA_STORAGE_ROOT');
+    if($configured===false||trim($configured)==='')return __DIR__.'/storage';
+    $root=rtrim(trim($configured),'/');
+    if($root===''||strlen($root)>1024||$root[0]!=='/'||
+       str_contains($root,"\\0")||
+       preg_match('~(?:^|/)\\.\\.?(?:/|$)~D',$root))
+        throw new \\RuntimeException('Invalid private storage root');
+    return $root;
+}
+function storage(): string { return privateRoot().'/data'; }
+function keyFile(): string { return privateRoot().'/secret.php'; }
 
 function ensureStorage(): void {
-    foreach ([__DIR__.'/storage',storage(),storage().'/accounts',
+    foreach ([privateRoot(),storage(),storage().'/accounts',
               storage().'/index',storage().'/limits'] as $path) {
         if (!is_dir($path) && !mkdir($path,0700,true) && !is_dir($path))
             throw new \RuntimeException('Cannot create storage');
     }
     $deny = "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n".
         "<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n";
-    foreach ([__DIR__.'/storage',storage()] as $dir) {
+    foreach ([privateRoot(),storage()] as $dir) {
         $file=$dir.'/.htaccess';
         if (!is_file($file) && file_put_contents($file,$deny,LOCK_EX)===false)
             throw new \RuntimeException('Cannot protect storage');
