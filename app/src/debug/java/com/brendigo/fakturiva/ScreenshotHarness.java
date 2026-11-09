@@ -25,6 +25,13 @@ public final class ScreenshotHarness {
         Method m=MainActivity.class.getDeclaredMethod(name,types);m.setAccessible(true);m.invoke(a,params);
     }
     private static void call(MainActivity a,String name)throws Exception{call(a,name,new Class<?>[0]);}
+    /**
+     * A repeatable sample dataset is essential for meaningful screenshot
+     * comparison: comparing a six-row reference with a one-row emulator is
+     * mostly a DATA mismatch rather than a geometry mismatch. All records
+     * below are fictional and created through production Store APIs on a
+     * throwaway emulator, never through mocked views or bundled PNGs.
+     */
     private static void seed(Store store){
         if(store.clients().isEmpty()){
             store.setting("name","Fakturiva Demo d.o.o.");
@@ -32,35 +39,74 @@ public final class ScreenshotHarness {
             store.setting("address","Primjer adrese 15, Rijeka");
             store.setting("email","primjer@example.invalid");
             store.setting("iban","HR0000000000000000000");
-            store.saveClient("Studio Primjer d.o.o.","12345678903","Primjer ulica 3, Rijeka","studio@example.invalid");
-            store.saveClient("Obrt Primjer","12345678903","Trg Primjera 8, Rijeka","obrt@example.invalid");
-            store.saveProduct("Dizajn web stranice",100000,25,"SERVICE","kom");
-            store.saveProduct("Tehnička podrška",5000,25,"SERVICE","sat");
+            String[] clients={"Obrt Primjer","Studio Sjever d.o.o.",
+                "Adria Digital d.o.o.","Marin Kovač",
+                "Terra Projekt j.d.o.o.","Lana Horvat"};
+            for(int i=0;i<clients.length;i++)
+                store.saveClient(clients[i],"","Primjer ulica "+(i+1)+", Rijeka",
+                    "primjer"+i+"@example.invalid");
+            String[] products={"Izrada web stranice","SEO optimizacija",
+                "Poslovno savjetovanje","Održavanje weba",
+                "Dizajn logotipa","Hosting i podrška"};
+            long[] prices={60000,25000,7500,10000,18000,12000};
+            String[] units={"kom","sat","sat","mjesec","kom","godina"};
+            for(int i=0;i<products.length;i++)
+                store.saveProduct(products[i],prices[i],25,"SERVICE",units[i]);
         }
         if(store.documents(Store.INVOICE).isEmpty()){
-            long client=store.clients().get(0).id;
-            Store.Item item=new Store.Item();item.name="Dizajn web stranice";item.unitCents=100000;item.qtyMilli=1000;item.taxRate=25;
-            long id=store.createDraft(Store.INVOICE,client,"2026-10-28","2026-11-12","Primjer dokumenta",Arrays.asList(item));
-            store.confirm(id);
-            store.pay(id,125000,"2026-10-28");
-            Store.Item smaller=new Store.Item();smaller.name="Tehnička podrška";smaller.qtyMilli=1000;smaller.unitCents=5000;smaller.taxRate=25;
-            long second=store.createDraft(Store.INVOICE,store.clients().get(1).id,"2026-10-28","2026-11-12","Primjer",Arrays.asList(smaller));
-            store.confirm(second);
+            List<Store.Client> people=store.clients();
+            // Oldest first; Store.documents renders actual database rows newest
+            // first, as in the visual reference, without fake invoice numbering.
+            int[] clientAt={0,1,1,5,4,3,2,1};
+            int[] gross={100000,67000,69000,18000,215000,32000,85000,125000};
+            String[] dates={"2026-10-02","2026-10-06","2026-10-09",
+                "2026-10-15","2026-10-19","2026-10-21",
+                "2026-10-24","2026-10-26"};
+            boolean[] paid={true,false,false,true,false,true,false,true};
+            for(int i=0;i<gross.length;i++){
+                Store.Item line=new Store.Item();
+                line.name="Poslovna usluga";
+                line.qtyMilli=1000;
+                line.unitCents=gross[i]*4L/5L;
+                line.taxRate=25;
+                String due=i==6?"2026-11-12":"2026-12-20";
+                long invoice=store.createDraft(Store.INVOICE,
+                    people.get(clientAt[i]).id,dates[i],due,"Primjer dokumenta",
+                    Arrays.asList(line));
+                store.confirm(invoice);
+                if(paid[i])store.pay(invoice,gross[i],dates[i]);
+            }
         }
         if(store.documents(Store.QUOTE).isEmpty()){
-            Store.Item item=new Store.Item();item.name="Izrada web stranice";item.qtyMilli=1000;item.unitCents=80000;item.taxRate=25;
-            long id=store.createDraft(Store.QUOTE,store.clients().get(0).id,
-                "2026-10-28","2026-11-28","2026-11-15",
-                "Primjer ponude","Usluge digitalnog marketinga",Arrays.asList(item));
-            store.confirm(id);
+            List<Store.Client> people=store.clients();
+            int[] clientAt={4,5,3,2,1,4};
+            int[] gross={98000,32000,45000,87000,125000,240000};
+            String[] dates={"2026-10-16","2026-10-17","2026-10-18",
+                "2026-10-21","2026-10-23","2026-10-25"};
+            for(int i=0;i<gross.length;i++){
+                Store.Item item=new Store.Item();
+                item.name="Izrada web stranice";
+                item.qtyMilli=1000;
+                item.unitCents=gross[i]*4L/5L;
+                item.taxRate=25;
+                long quote=store.createDraft(Store.QUOTE,
+                    people.get(clientAt[i]).id,dates[i],"2026-11-28",
+                    "2026-11-15","Primjer ponude",
+                    "Usluge digitalnog marketinga",Arrays.asList(item));
+                store.confirm(quote);
+                if(i==2||i==4)store.acceptQuote(quote);
+            }
         }
     }
     @SuppressWarnings("unchecked")
     public static void show(MainActivity a,String screen)throws Exception{
         Store db=(Store)get(a,"db");
-        seed(db);
-        RecoveryVault.clearWorkingDraft(a);
         String page=screen==null?"04":screen;
+        // Entry references never require financial fixtures; defer one-time
+        // seeding to the first business screen to keep splash/login QA fast.
+        if(!"01".equals(page)&&!"02".equals(page)&&!"03".equals(page))
+            seed(db);
+        RecoveryVault.clearWorkingDraft(a);
         // All twenty owner's original PNGs are in Croatian. Force the
         // screenshot harness language only for this debug emulator capture;
         // never write a user preference or change production locale.
