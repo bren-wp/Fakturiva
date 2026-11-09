@@ -60,6 +60,37 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.INVOICE).isEmpty()){
             List<Store.Client> people=store.clients();
+            // Historical receipts make the October 27 dashboard reference
+            // reproducible, but only inside a throwaway debug emulator.
+            Store.Item previous=new Store.Item();
+            previous.name="Usluge prethodnog mjeseca";
+            previous.qtyMilli=1000;previous.unitCents=597200;
+            previous.taxRate=25;
+            long september=store.createDraft(Store.INVOICE,
+                fixtureClient(people,"Obrt Primjer"),
+                "2026-09-20","2026-09-30","Ranije usluge",
+                Arrays.asList(previous));
+            store.confirm(september);
+            store.pay(september,746500,"2026-09-20");
+            // Fifteen earlier October records + eight visible reference rows
+            // produce 24 invoices, and confirmed October receipts total
+            // €8,420 (rather than hardcoding a KPI into the native UI).
+            for(int i=0;i<15;i++){
+                long gross=i<14?35000:77000;
+                Store.Item prior=new Store.Item();
+                prior.name="Usluge listopada";
+                prior.qtyMilli=1000;
+                prior.unitCents=gross*4/5;
+                prior.taxRate=25;
+                String paidAt=String.format(java.util.Locale.ROOT,
+                    "2026-10-%02d",2+i);
+                long id=store.createDraft(Store.INVOICE,
+                    fixtureClient(people,"Obrt Primjer"),
+                    paidAt,"2026-12-20","Raniji račun",
+                    Arrays.asList(prior));
+                store.confirm(id);
+                store.pay(id,gross,paidAt);
+            }
             // Oldest first; Store.documents renders actual database rows newest
             // first, as in the visual reference, without fake invoice numbering.
             String[] clientAt={"Obrt Primjer","Studio Sjever d.o.o.",
@@ -87,6 +118,22 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.QUOTE).isEmpty()){
             List<Store.Client> people=store.clients();
+            // Six earlier confirmed quotes plus six visible reference quotes
+            // yield 12 active offers worth €7,870, computed by Store.
+            for(int i=0;i<6;i++){
+                long gross=i<5?25000:35000;
+                Store.Item line=new Store.Item();
+                line.name="Ponuda usluga";
+                line.qtyMilli=1000;line.unitCents=gross*4/5;
+                line.taxRate=25;
+                String issued=String.format(java.util.Locale.ROOT,
+                    "2026-10-%02d",1+i);
+                long quote=store.createDraft(Store.QUOTE,
+                    fixtureClient(people,"Obrt Primjer"),
+                    issued,"2026-11-28","2026-11-15",
+                    "Ponuda usluga","",Arrays.asList(line));
+                store.confirm(quote);
+            }
             String[] clientAt={"Terra Projekt j.d.o.o.","Lana Horvat",
                 "Marin Kovač","Adria Digital d.o.o.",
                 "Studio Sjever d.o.o.","Terra Projekt j.d.o.o."};
