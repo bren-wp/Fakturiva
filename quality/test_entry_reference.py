@@ -15,9 +15,9 @@ ADAPTIVE=(ROOT/"app/src/main/res/drawable/brand_adaptive_bg.xml").read_text(enco
 
 class EntryReferenceTest(unittest.TestCase):
     def test_debug_reference_language_is_not_persisted(self):
-        self.assertIn('set(a,"qaReferenceCroatian","01".equals(page)||"02".equals(page))',HARNESS)
+        self.assertIn('set(a,"qaReferenceCroatian",true)',HARNESS)
         self.assertIn('if(qaReferenceCroatian)return "hr"',MAIN)
-        self.assertIn('prefs.getString("ui_language","en")',MAIN)
+        self.assertIn('prefs.getString("ui_language",preferred)',MAIN)
         self.assertNotIn('putString("ui_language"',HARNESS)
 
     def test_welcome_reference_link_is_functional(self):
@@ -60,6 +60,11 @@ class EntryReferenceTest(unittest.TestCase):
             launcher=(ROOT/"app/src/main/res/mipmap-anydpi-v26"/path).read_text(encoding="utf-8")
             self.assertIn('@drawable/brand_adaptive_bg',launcher)
             self.assertIn('@drawable/brand_fg',launcher)
+
+    def test_owner_requested_splash_duration_is_four_to_five_seconds(self):
+        self.assertIn('SPLASH_DURATION_MS=4500',MAIN)
+        self.assertIn('frame.postDelayed(this::finishSplash,SPLASH_DURATION_MS)',MAIN)
+        self.assertNotIn('frame.setOnClickListener(v->finishSplash())',MAIN)
 
     def test_splash_and_welcome_are_real_native_views_not_static_pngs(self):
         self.assertIn('new SplashBackdrop(this)',MAIN)
