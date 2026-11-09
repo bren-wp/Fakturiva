@@ -86,3 +86,40 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 @media(max-height:770px){.auth-page{padding-top:44px;padding-bottom:25px}.auth-register .auth-form{margin-top:38px}.auth-login .auth-form{margin-top:43px}.auth-footer{padding-top:25px}.auth-switch{margin-top:28px}}
 @media(min-width:630px){body{background:#f6f8fc}.auth-page{background:white;box-shadow:0 14px 60px #22334f12;max-width:465px;padding-left:45px;padding-right:45px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Actual business data from the encrypted account mirror; never a mockup. */
+.account-page{max-width:920px}
+.finance-page .panel{border-color:#dfe5f0}
+.finance-page .brand-mark{box-shadow:0 9px 20px #0d2b5530}
+.finance-page .finance-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.finance-page .finance-dates label{display:block}
+.finance-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+.finance-kpis>div{border-radius:14px;background:#edf2fb;padding:14px 12px;min-width:0}
+.finance-kpis strong{display:block;color:#0b2546;font-size:22px;margin-top:8px;overflow-wrap:anywhere}
+.finance-kpis small{color:#667e9d;font-size:12px;line-height:1.3}
+.finance-table-wrap{width:100%;max-width:100%;overflow-x:auto;border:1px solid #dae3f1;border-radius:12px;margin:12px 0 20px}
+.finance-table{border-collapse:collapse;min-width:540px;width:100%;font-size:13px;text-align:left}
+.finance-table th{font-weight:730;background:#e9edf6;color:#163559}
+.finance-table th,.finance-table td{padding:11px 12px;border-bottom:1px solid #dfe5f0;white-space:normal}
+.finance-table tbody tr:last-child td{border-bottom:0}
+.finance-table tbody tr:nth-child(2n){background:#f8faff}
+.finance-page .print-button{width:100%;min-height:45px;font-size:15px}
+.finance-page .primary-action{text-decoration:none}
+@media(max-width:650px){
+  .finance-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .finance-page .finance-dates{grid-template-columns:1fr;gap:0}
+  .account-page{padding:25px 15px 45px}
+  .panel{padding:18px}
+}
+@media print{
+  body,html{background:white!important;color:#121212!important}
+  .account-page{max-width:none;padding:0}
+  .account-page>.brand-mark,.account-page>h1,.account-page>p,
+  .account-page>.panel:not(.print-report),.account-links,.print-button,
+  .error-note{display:none!important}
+  .print-report{display:block;box-shadow:none;border:0;padding:0;margin:0}
+  .finance-table{font-size:10pt}
+  .finance-table-wrap{overflow:visible}
+  .finance-kpis{break-inside:avoid}
+  @page{size:A4;margin:15mm}
+}
