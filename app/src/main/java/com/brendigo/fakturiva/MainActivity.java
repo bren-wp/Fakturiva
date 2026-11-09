@@ -184,8 +184,12 @@ public final class MainActivity extends Activity {
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
     private String selectedLanguage(){
         if(qaReferenceCroatian)return "hr";
+        // Follow the device locale until the user explicitly chooses an
+        // application language. Croatian reference devices thus see Croatian
+        // strings, while English and other selected languages remain intact.
+        String preferred=Locale.getDefault().getLanguage().equals("hr")?"hr":"en";
         return UiStrings.normalized(
-            prefs==null?"en":prefs.getString("ui_language","en"));
+            prefs==null?preferred:prefs.getString("ui_language",preferred));
     }
     private Locale selectedLocale(){
         return "hr".equals(selectedLanguage())?Locale.forLanguageTag("hr-HR"):Locale.ENGLISH;
