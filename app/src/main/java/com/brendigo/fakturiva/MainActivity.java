@@ -3507,34 +3507,25 @@ public final class MainActivity extends Activity {
         empty.setGravity(Gravity.CENTER);
         gap(body,12);place(body,empty);
         final Runnable refresh=()->{
-            int visible=0;boolean previousVisible=false;
+            // Single O(n) pass: visibility and separators depend only on the
+            // preceding visible item, not quadratic look-ahead scans.
+            int visible=0;
+            View pendingDivider=null;
             for(int i=0;i<grouped.getChildCount();i++){
-                View row=grouped.getChildAt(i);
-                if(row.getTag() instanceof Store.Item){
-                    boolean matches=catalogMatches((Store.Item)row.getTag(),
+                View child=grouped.getChildAt(i);
+                if(child.getTag() instanceof Store.Item){
+                    boolean matches=catalogMatches((Store.Item)child.getTag(),
                         search.getText().toString(),selected[0]);
-                    row.setVisibility(matches?View.VISIBLE:View.GONE);
-                    if(matches)visible++;
-                    previousVisible=matches || previousVisible;
-                }else{
-                    row.setVisibility(View.GONE);
-                }
-            }
-            boolean hasPrevious=false;
-            for(int i=0;i<grouped.getChildCount();i++){
-                View view=grouped.getChildAt(i);
-                if(view.getTag() instanceof Store.Item){
-                    if(view.getVisibility()==View.VISIBLE)hasPrevious=true;
-                    continue;
-                }
-                boolean nextVisible=false;
-                for(int j=i+1;j<grouped.getChildCount();j++){
-                    if(grouped.getChildAt(j).getTag() instanceof Store.Item){
-                        nextVisible=grouped.getChildAt(j).getVisibility()==View.VISIBLE;
-                        break;
+                    child.setVisibility(matches?View.VISIBLE:View.GONE);
+                    if(matches){
+                        if(visible>0 && pendingDivider!=null)
+                            pendingDivider.setVisibility(View.VISIBLE);
+                        visible++;
                     }
+                }else{
+                    child.setVisibility(View.GONE);
+                    pendingDivider=child;
                 }
-                view.setVisibility(hasPrevious&&nextVisible?View.VISIBLE:View.GONE);
             }
             grouped.setVisibility(visible>0?View.VISIBLE:View.GONE);
             empty.setVisibility(visible==0?View.VISIBLE:View.GONE);
@@ -3585,7 +3576,6 @@ public final class MainActivity extends Activity {
         return kind&&text.contains(term);
     }
 
-    private void addProduct(){editProduct(null);}
     private void editProduct(Store.Item current){
         boolean editing=current!=null;
         LinearLayout form=vertical();pad(form,18,5);
