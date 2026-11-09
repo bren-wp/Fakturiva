@@ -44,7 +44,10 @@ status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \
   --data-urlencode "csrf=$csrf" --data-urlencode "action=logout")"
 test "$status" = 303
-curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/login.html"
+curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/password-login.html"
+grep -Fq 'Dobro došli natrag' "$temp/password-login.html"
+grep -Fq 'name="passphrase"' "$temp/password-login.html"
+curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
 grep -Fq 'Prijava PIN-om' "$temp/login.html"
 grep -Fq 'data-keypad' "$temp/login.html"
 grep -Fq 'data-backspace' "$temp/login.html"
@@ -56,7 +59,7 @@ status="$(curl -sS -o /dev/null -w '%{http_code}' \
 test "$status" = 303
 status="$(curl -sS -o /dev/null -w '%{http_code}' -b "$jar" -c "$jar" "$base/dashboard.php")"
 test "$status" = 303
-curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/login.html"
+curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
 csrf="$(extract_csrf "$temp/login.html")"
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \

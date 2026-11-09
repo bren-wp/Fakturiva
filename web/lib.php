@@ -528,6 +528,25 @@ function webLogin(string $username,string $pin,string $address): array {
             'username'=>$account['username']];
     });
 }
+/** Password-based web sign-in uses the same server identity as Android.
+ * Legacy PIN sign-in stays available separately for existing accounts.
+ */
+function webLoginPassword(string $username,string $passphrase,string $address): array {
+    return transaction(function()use($username,$passphrase,$address):array{
+        rateLimit($address,false);
+        $account=accountByName($username);
+        $hash=$account['password_hash']??null;
+        if(!is_string($hash)||strlen($passphrase)<12||
+           !password_verify($passphrase,$hash)){
+            rateLimit($address,true);
+            fail(401,'Korisničko ime ili lozinka nisu ispravni');
+        }
+        if(!empty($account['suspended']))fail(403,'Račun je privremeno onemogućen.');
+        $token=issueWebSession($account);
+        writeRecord(accountPath($account['id']),$account);
+        return ['id'=>$account['id'],'token'=>$token,'username'=>$account['username']];
+    });
+}
 function webAuthorized(string $id,string $token): array {
     if(!preg_match('/^[a-f0-9]{32}$/D',$id) ||
        !preg_match('/^[a-f0-9]{64}$/D',$token))

@@ -4,6 +4,7 @@ require_once __DIR__.'/../../web/lib.php';
 
 use function FakturivaSelfHost\webRegister;
 use function FakturivaSelfHost\webLogin;
+use function FakturivaSelfHost\webLoginPassword;
 use function FakturivaSelfHost\webAuthorized;
 use function FakturivaSelfHost\webLogout;
 use function FakturivaSelfHost\webDeleteAccount;
@@ -38,6 +39,11 @@ $serverPassB='Another-long-server-passphrase-'.$suffix;
 $a=webRegister($userA,$pinA,$ip,$serverPassA);
 $b=webRegister($userB,$pinB,$ip,$serverPassB);
 assertWeb($a['id']!==$b['id'],'Profiles share an ID');
+$passwordLogin=webLoginPassword($userA,$serverPassA,$ip);
+assertWeb($passwordLogin['id']===$a['id'],
+    'Password login must resolve exactly the same web tenant');
+assertWeb(webAuthorized($a['id'],$passwordLogin['token'])['username']===$userA,
+    'Password session does not authorize account');
 assertWeb(webAuthorized($a['id'],$a['token'])['username']===$userA,
     'Web A session not bound to account');
 assertWeb(webAuthorized($b['id'],$b['token'])['username']===$userB,
