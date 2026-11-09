@@ -8,7 +8,8 @@ namespace FakturivaSelfHost;
  * library as an account API: api.php enforces TLS and JSON POST.
  */
 const MAX_BACKUP_BYTES = 25000000;
-const MAX_ACCOUNT_BYTES = 60000000;
+const MAX_ACCOUNT_BYTES = 45000000;
+const MAX_ENVELOPE_BYTES = 62500000;
 const SESSION_SECONDS = 86400;
 const AAD = 'Fakturiva:encrypted-JSON:v1';
 
@@ -108,8 +109,8 @@ function decryptRecord(string $encoded): array {
 
 function readRecord(string $path): ?array {
     if (!is_file($path))return null;
-    $bytes=@file_get_contents($path,false,null,0,MAX_ACCOUNT_BYTES+1000000);
-    if($bytes===false||strlen($bytes)>MAX_ACCOUNT_BYTES+500000)
+    $bytes=@file_get_contents($path,false,null,0,MAX_ENVELOPE_BYTES+1);
+    if($bytes===false||strlen($bytes)>MAX_ENVELOPE_BYTES)
         throw new \RuntimeException('Cannot read account record');
     return decryptRecord($bytes);
 }
@@ -290,7 +291,7 @@ function loadBackup(string $token): array {
                 'current'=>$row['current']],$rows)];
     });
 }
-function appendPreviousBackup(array &$account): void {
+function appendPreviousBackup(array &$account,int $incomingLength): void {
     if(!is_string($account['backup']??null))return;
     $history=$account['backup_history']??[];
     if(!is_array($history))$history=[];
@@ -301,7 +302,7 @@ function appendPreviousBackup(array &$account): void {
     ]);
     // Preserve the latest plus at most two prior snapshots, within the 60MB
     // account record cap. Never drop the current snapshot.
-    $limit=40000000; $used=strlen((string)$account['backup']);
+    $limit=44000000; $used=$incomingLength;
     $kept=[];
     foreach($history as $candidate){
         if(!is_array($candidate)||!is_string($candidate['backup_b64']??null))continue;
@@ -321,7 +322,7 @@ function saveBackup(string $token,string $backup,int $expected): array {
         $account=authorized($token);
         if((int)$account['revision']!==$expected)
             fail(409,'Remote revision changed. Download and review before replacing it');
-        appendPreviousBackup($account);
+        appendPreviousBackup($account,strlen($backup));
         $account['revision']=(int)$account['revision']+1;
         $account['backup']=$backup;
         $account['saved_at']=gmdate('c');
@@ -344,7 +345,7 @@ function restoreEncryptedRevision(string $token,int $revision,int $expected): ar
             }
         }
         if(!is_string($copy))fail(404,'Encrypted revision not retained');
-        appendPreviousBackup($account);
+        appendPreviousBackup($account,strlen($copy));
         $account['backup']=$copy;
         $account['revision']=$expected+1;
         $account['saved_at']=gmdate('c');
