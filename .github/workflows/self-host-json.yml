@@ -24,7 +24,7 @@ jobs:
           php -r 'if(!extension_loaded("openssl") || !extension_loaded("json")) exit(2);'
       - name: Lint all PHP source files
         run: |
-          find server -name '*.php' -print0 | xargs -0 -n1 php -l
+          find web -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Test tenant isolation, optimistic revisions and deletion
         run: php web/tests/smoke.php
       - name: Verify web PIN registration and Android credential separation
