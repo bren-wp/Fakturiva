@@ -39,7 +39,7 @@ VISIBLE_HEADERS = [
     ("Products and services", "Artikli i usluge"),
     ("Reports", "Izvještaji"),
     ("Payments", "Naplata"),
-    ("Help", "Pomoć"),
+    ("eRačuni",),
     ("Settings", "Postavke"),
     ("Company profile", "Profil tvrtke"),
     ("Fakturiva",),
