@@ -41,6 +41,11 @@ public final class PdfMaker {
     private int y,pageNumber=0;
     private boolean invoiceStyle;
     private String documentCurrency=BillingCurrency.DEFAULT;
+    private String theme=InvoiceTheme.CLASSIC;
+    private int accent=BLUE;
+    private byte[] logoBytes;
+    private android.graphics.Bitmap logoBitmap;
+
     private String money(long value){return BillingCurrency.format(value,documentCurrency,java.util.Locale.ENGLISH);}
 
     private static boolean has(String s){return s!=null&&!s.trim().isEmpty();}
@@ -91,26 +96,48 @@ public final class PdfMaker {
         canvas.translate(paperOffsetX,paperOffsetY);
         canvas.scale(paperScale,paperScale);
         y=43;
-        if(invoiceStyle){
-            // A small native vector mark mirrors the invoice sheet preview;
-            // no background bitmap or fabricated customer fields are used.
+        if(InvoiceTheme.MODERN.equals(theme)){
+            paint.setColor(accent);paint.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(M-12,16,RIGHT+12,72,7,7,paint);
+        }
+        if(logoBitmap!=null){
+            // Frozen document-specific uploaded logo replaces the default F mark.
+            float maxWidth=108,maxHeight=33;
+            float scale=Math.min(maxWidth/logoBitmap.getWidth(),
+                maxHeight/logoBitmap.getHeight());
+            float width=logoBitmap.getWidth()*scale;
+            float height=logoBitmap.getHeight()*scale;
+            paint.setFilterBitmap(true);paint.setColor(Color.WHITE);
+            if(InvoiceTheme.MODERN.equals(theme))
+                canvas.drawRoundRect(M-3,y-28,M+width+6,y+8,4,4,paint);
+            canvas.drawBitmap(logoBitmap,null,
+                new android.graphics.RectF(M,y-20,M+width,y-20+height),paint);
+        }else if(InvoiceTheme.MINIMAL.equals(theme)){
+            text("FAKTURIVA",M,y,17,accent,true);
+        }else if(InvoiceTheme.FORMAL.equals(theme)){
+            text("FAKTURIVA",M,y,18,accent,true);
+            paint.setColor(accent);paint.setStrokeWidth(2f);
+            canvas.drawLine(M,y+9,RIGHT,y+9,paint);
+        }else{
+            // The owner's Fakturiva mark remains the primary/default brand.
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(BLUE);
+            paint.setColor(InvoiceTheme.MODERN.equals(theme)?Color.WHITE:accent);
             canvas.drawRoundRect(M,y-16,M+17,y+1,1,1,paint);
-            paint.setColor(Color.WHITE);
+            paint.setColor(InvoiceTheme.MODERN.equals(theme)?accent:Color.WHITE);
             android.graphics.Path triangle=new android.graphics.Path();
             triangle.moveTo(M+4,y-2);
             triangle.lineTo(M+15,y-13);
             triangle.lineTo(M+15,y-2);
             triangle.close();
             canvas.drawPath(triangle,paint);
-            text("Fakturiva",M+25,y,19,NAVY,true);
-            right("BUSINESS DOCUMENT",RIGHT,y,9,GRAY,false);
-        }else{
-            text("Fakturiva",M,y,20,NAVY,true);
-            right("QUOTE",RIGHT,y,9,BLUE,false);
+            text("Fakturiva",M+25,y,19,
+                InvoiceTheme.MODERN.equals(theme)?Color.WHITE:NAVY,true);
         }
-        y+=18;rule();y+=6;
+        right(invoiceStyle?"RAČUN":"PONUDA",RIGHT,y,10,
+            InvoiceTheme.MODERN.equals(theme)?Color.WHITE:accent,true);
+        y+=18;
+        if(!InvoiceTheme.MODERN.equals(theme))rule();
+        y+=6;
     }
     private void requireSpace(int height){
         if(y+height>CONTENT_BOTTOM)newPage();
@@ -215,7 +242,7 @@ public final class PdfMaker {
     }
     private void heading(String title){
         requireSpace(38);
-        text(title,M,y,12,BLUE,true);y+=10;rule();
+        text(title,M,y,12,accent,true);y+=10;rule();
     }
     private void printItems(Store.Document d){
         heading(invoiceStyle?"INVOICE ITEMS":"DOCUMENT ITEMS");
@@ -225,11 +252,11 @@ public final class PdfMaker {
             paint.setColor(Color.rgb(238,241,252));
             canvas.drawRoundRect(M-5,y-15,RIGHT+5,y+7,6,6,paint);
         }
-        text(invoiceStyle?"PRODUCT / SERVICE":"DESCRIPTION",M,y,9,BLUE,true);
-        right("QTY",307,y,9,BLUE,true);
-        right("PRICE",396,y,9,BLUE,true);
-        right("Tax",447,y,9,BLUE,true);
-        right("AMOUNT",RIGHT,y,9,BLUE,true);
+        text(invoiceStyle?"PRODUCT / SERVICE":"DESCRIPTION",M,y,9,accent,true);
+        right("QTY",307,y,9,accent,true);
+        right("PRICE",396,y,9,accent,true);
+        right("Tax",447,y,9,accent,true);
+        right("AMOUNT",RIGHT,y,9,accent,true);
         y+=10;rule();
         for(Store.Item item:d.items){
             List<String> nameLines=wrap(item.name,210,10,false);
@@ -283,7 +310,7 @@ public final class PdfMaker {
             canvas.drawLine(RIGHT-245,y-11,RIGHT,y-11,paint);
         }
         right("TOTAL",RIGHT-130,y,14,NAVY,true);
-        right(money(d.totalCents),RIGHT,y,14,BLUE,true);y+=21;
+        right(money(d.totalCents),RIGHT,y,14,accent,true);y+=21;
         if(Store.INVOICE.equals(d.type)){
             right("Paid",RIGHT-130,y,9,GRAY,false);
             right(money(d.paidCents),RIGHT,y,10,NAVY,false);y+=19;
@@ -311,13 +338,36 @@ public final class PdfMaker {
         field("Tax note",d.issuerTaxNote);
         field("Notes",d.notes);
     }
-    private void render(Store.Document d){
+    private void render(Store db,Store.Document d){
         invoiceStyle=Store.INVOICE.equals(d.type);
         documentCurrency=BillingCurrency.canonical(d.currencyCode);
+        // Drafts use current issuer preferences. Issued documents use their
+        // frozen design, preventing a later logo/color change rewriting an old PDF.
+        boolean draft=Store.DRAFT.equals(d.status);
+        theme=InvoiceTheme.validated(draft?
+            db.setting("invoice_theme"):d.issuerInvoiceTheme);
+        accent=InvoiceTheme.accent(draft?
+            db.setting("invoice_accent"):d.issuerInvoiceAccent,theme);
+        String sha=draft?db.setting("logo_sha256"):d.issuerLogoSha256;
+        if(sha!=null&&!sha.isEmpty()){
+            logoBytes=db.brandingLogo(sha);
+            android.graphics.BitmapFactory.Options bounds=
+                new android.graphics.BitmapFactory.Options();
+            bounds.inJustDecodeBounds=true;
+            android.graphics.BitmapFactory.decodeByteArray(logoBytes,0,
+                logoBytes.length,bounds);
+            if(bounds.outWidth<=0||bounds.outHeight<=0||
+               bounds.outWidth>2048||bounds.outHeight>2048)
+                throw new IllegalStateException("Logotip nije ispravan");
+            logoBitmap=android.graphics.BitmapFactory.decodeByteArray(
+                logoBytes,0,logoBytes.length);
+            if(logoBitmap==null)throw new IllegalStateException(
+                "Logotip nije moguće učitati");
+        }
         newPage();
         requireSpace(58);
         text(Store.INVOICE.equals(d.type)?"INVOICE":"QUOTE",M,y,19,NAVY,true);
-        right(d.number==null?"DRAFT #"+d.id:d.number,RIGHT,y,13,BLUE,true);y+=21;
+        right(d.number==null?"DRAFT #"+d.id:d.number,RIGHT,y,13,accent,true);y+=21;
         text(Store.DRAFT.equals(d.status)?"Draft — not yet confirmed":
             Store.PAID.equals(d.status)?"Paid":
             Store.SENT.equals(d.status)?"Confirmed quote":"Confirmed",M,y,10,GRAY,false);y+=25;
@@ -346,8 +396,12 @@ public final class PdfMaker {
                              int pageWidth,int pageHeight)throws IOException{
         PdfMaker maker=new PdfMaker(pageWidth,pageHeight);
         try{
-            maker.render(d);
+            maker.render(db,d);
             maker.document.writeTo(out);
-        }finally{maker.document.close();}
+        }finally{
+            if(maker.logoBitmap!=null)maker.logoBitmap.recycle();
+            if(maker.logoBytes!=null)java.util.Arrays.fill(maker.logoBytes,(byte)0);
+            maker.document.close();
+        }
     }
 }
