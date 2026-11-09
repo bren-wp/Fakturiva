@@ -2019,13 +2019,15 @@ public final class MainActivity extends Activity {
     }
 
     private int badgeForeground(String status){
-        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xff078a65;
+        if("Plaćen".equals(status)||"Potvrđena".equals(status)||"Prihvaćena".equals(status))return 0xff078a65;
+        if("Poslana".equals(status))return 0xff5269e7;
         if("Dospijeva".equals(status))return 0xffaf6c08;
         if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffd44759;
         return dark?0xffd0d9ee:0xff61718b;
     }
     private int badgeBackground(String status){
-        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xffdcf8ec;
+        if("Plaćen".equals(status)||"Potvrđena".equals(status)||"Prihvaćena".equals(status))return 0xffdcf8ec;
+        if("Poslana".equals(status))return 0xffe8edff;
         if("Dospijeva".equals(status))return 0xfffff1d8;
         if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffffe8eb;
         return dark?0xff273953:0xffe9eef7;
@@ -2057,7 +2059,8 @@ public final class MainActivity extends Activity {
     }
     private String status(String s){switch(s){
         case Store.DRAFT:return "Nacrt";case Store.ISSUED:return "Potvrđeno";
-        case Store.SENT:return "Potvrđena";case Store.PAID:return "Plaćeno";
+        case Store.SENT:return "Poslana";case Store.ACCEPTED:return "Prihvaćena";
+        case Store.PAID:return "Plaćeno";
         case Store.VOID:return "Stornirano";default:return s;
     }}
     private EditText field(String hint,String value){
