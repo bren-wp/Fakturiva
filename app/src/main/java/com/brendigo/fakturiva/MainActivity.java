@@ -1126,19 +1126,42 @@ public final class MainActivity extends Activity {
             String id=LocalAccounts.activeId();
             prefs.edit().putString("host_url_"+id,api)
                 .putString("host_user_"+id,user).apply();
+            final char[] syncSecret=action==SelfHostedSyncClient.Action.DELETE?
+                null:code.clone();
+            if(action==SelfHostedSyncClient.Action.DOWNLOAD)
+                CloudMirror.suspend(this,id);
             selfHostedBusy=true;
             SelfHostedSyncClient.execute(this,action,api,user,code,db,(error,result)->{
                 selfHostedBusy=false;
-                if(error!=null)toast(error);
-                else{
-                    toast(result);
+                if(error!=null){
                     if(action==SelfHostedSyncClient.Action.DOWNLOAD)
-                        navigate("home");
-                    else selfHostedSettings();
+                        CloudMirror.resume(this,id);
+                    if(syncSecret!=null)Arrays.fill(syncSecret,'\0');
+                    toast(error);
+                }else if(action==SelfHostedSyncClient.Action.DELETE){
+                    CloudMirror.disconnect(this,id);
+                    toast(result);
+                    selfHostedSettings();
+                }else{
+                    // The server has just acknowledged the initial upload or
+                    // the complete restored snapshot. Save the remote credential
+                    // in Keystore-sealed form for automatic future uploads.
+                    CloudMirror.enable(this,id,api,user,syncSecret,cloudError->{
+                        if(cloudError==null){
+                            toast("Podatci povezani. Buduće promjene spremaju "+
+                                "se automatski na server.");
+                            CloudMirror.runPending(this,id);
+                        }else toast("Kopija je poslana, ali automatska "+
+                            "sinkronizacija nije aktivirana: "+cloudError);
+                        if(action==SelfHostedSyncClient.Action.DOWNLOAD)
+                            navigate("home");
+                        else selfHostedSettings();
+                    });
+                    Arrays.fill(syncSecret,'\0');
                 }
             });
             pass.setText("");
-            toast("Pokrenut je samo odabrani zahtjev prema vašem hostingu");
+            toast("Zahtjev poslan na vaš HTTPS hosting");
         }catch(Exception error){toast(error.getMessage()==null?
             "Neispravne postavke hostinga":error.getMessage());}
         finally{Arrays.fill(code,'\0');}
