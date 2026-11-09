@@ -16,13 +16,25 @@ import java.util.Calendar;
 /** Single-device storage. All document state transitions are transactional. */
 public final class Store extends SQLiteOpenHelper {
     private static final String DB_NAME = "fakturiva.db";
-    public static final int VERSION = 6;
+    public static final int VERSION = 7;
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
     public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
     private final Context appContext;
+    private final String profileId;
     private volatile String lastBackupWarning="";
-    public Store(Context c) {
-        super(c, DB_NAME, null, VERSION);
+    /** Legacy/test-only store; production sessions always provide a verified profile id. */
+    public Store(Context c) { this(c,null); }
+    public static String databaseName(String profileId) {
+        if (profileId == null) return DB_NAME;
+        if (!LocalAccounts.validProfileId(profileId))
+            throw new IllegalArgumentException("Neispravan korisnički profil");
+        return "fakturiva-" + profileId + ".db";
+    }
+    public String databaseFileName() { return databaseName(profileId); }
+    public String profileId() { return profileId; }
+    public Store(Context c,String profileId) {
+        super(c, databaseName(profileId), null, VERSION);
+        this.profileId = profileId;
         appContext=c.getApplicationContext();
         setWriteAheadLoggingEnabled(true);
     }
@@ -51,7 +63,7 @@ public final class Store extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE catalog (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL CHECK(price_cents>=0), tax_rate INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'UNSPECIFIED', unit TEXT NOT NULL DEFAULT 'kom', currency_code TEXT NOT NULL DEFAULT 'EUR')");
         db.execSQL("CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, number TEXT UNIQUE, client_id INTEGER NOT NULL REFERENCES clients(id), issue_date TEXT NOT NULL, due_date TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL, total_cents INTEGER NOT NULL, created_at INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', client_address TEXT NOT NULL DEFAULT '', client_oib TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', issuer_address TEXT NOT NULL DEFAULT '', issuer_oib TEXT NOT NULL DEFAULT '', issuer_email TEXT NOT NULL DEFAULT '', issuer_iban TEXT NOT NULL DEFAULT '', issuer_tax_note TEXT NOT NULL DEFAULT '', client_email TEXT NOT NULL DEFAULT '', client_phone TEXT NOT NULL DEFAULT '', client_vat_id TEXT NOT NULL DEFAULT '', issuer_phone TEXT NOT NULL DEFAULT '', issuer_vat_id TEXT NOT NULL DEFAULT '', issuer_postal_code TEXT NOT NULL DEFAULT '', issuer_city TEXT NOT NULL DEFAULT '', issuer_country TEXT NOT NULL DEFAULT '', issuer_website TEXT NOT NULL DEFAULT '', issuer_bank_name TEXT NOT NULL DEFAULT '', issuer_swift TEXT NOT NULL DEFAULT '', issuer_registry TEXT NOT NULL DEFAULT '', issuer_business_unit TEXT NOT NULL DEFAULT '', issuer_operator TEXT NOT NULL DEFAULT '', issuer_payment_method TEXT NOT NULL DEFAULT '', issuer_payment_reference TEXT NOT NULL DEFAULT '', supply_date TEXT NOT NULL DEFAULT '', quote_title TEXT NOT NULL DEFAULT '', currency_code TEXT NOT NULL DEFAULT 'EUR', issuer_legal_form TEXT NOT NULL DEFAULT '', issuer_trading_name TEXT NOT NULL DEFAULT '', issuer_company_number TEXT NOT NULL DEFAULT '', issuer_register_authority TEXT NOT NULL DEFAULT '', issuer_tax_registration TEXT NOT NULL DEFAULT '', issuer_address_2 TEXT NOT NULL DEFAULT '', issuer_region TEXT NOT NULL DEFAULT '', issuer_payment_terms TEXT NOT NULL DEFAULT '', issuer_footer_note TEXT NOT NULL DEFAULT '', issuer_contact_person TEXT NOT NULL DEFAULT '', issuer_bank_account_number TEXT NOT NULL DEFAULT '', issuer_bank_routing_number TEXT NOT NULL DEFAULT '', issuer_bank_sort_code TEXT NOT NULL DEFAULT '', issuer_bank_address TEXT NOT NULL DEFAULT '', issuer_invoice_reference TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE TABLE lines (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), name TEXT NOT NULL, qty_milli INTEGER NOT NULL CHECK(qty_milli>0), unit_cents INTEGER NOT NULL CHECK(unit_cents>=0), tax_rate INTEGER NOT NULL, net_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL)");
-        db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), paid_on TEXT NOT NULL)");
+        db.execSQL("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL REFERENCES documents(id), amount_cents INTEGER NOT NULL CHECK(amount_cents>0), paid_on TEXT NOT NULL, channel TEXT NOT NULL DEFAULT 'UNKNOWN', business_unit TEXT NOT NULL DEFAULT 'PP1')");
         db.execSQL("CREATE TABLE sequences (type TEXT NOT NULL, year INTEGER NOT NULL, last_num INTEGER NOT NULL, PRIMARY KEY(type,year))");
         db.execSQL("CREATE INDEX idx_documents_type ON documents(type,created_at DESC)");
         db.execSQL("CREATE INDEX idx_documents_client ON documents(client_id)");
@@ -62,7 +74,7 @@ public final class Store extends SQLiteOpenHelper {
         }
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldV,int newV) {
-        if(oldV<1||oldV>6||newV!=VERSION)throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
+        if(oldV<1||oldV>7||newV!=VERSION)throw new IllegalStateException("Nepodržana migracija baze: "+oldV+" -> "+newV);
         if(oldV==1) {
             for(String column:new String[]{"client_name","client_address","client_oib","issuer_name","issuer_address","issuer_oib","issuer_email","issuer_iban","issuer_tax_note"})
                 db.execSQL("ALTER TABLE documents ADD COLUMN "+column+" TEXT NOT NULL DEFAULT ''");
@@ -99,6 +111,12 @@ public final class Store extends SQLiteOpenHelper {
                 "register_authority","tax_registration","address_2","region",
                 "payment_terms","footer_note","contact_person","bank_account_number","bank_routing_number","bank_sort_code","bank_address","invoice_reference"})
                 db.execSQL("INSERT OR IGNORE INTO company(key,value) VALUES('"+key+"','')");
+        }
+        if(oldV<=6){
+            // Legacy receipts have no proven payment channel; never infer it
+            // from invoice status or the issuer's preferred payment method.
+            db.execSQL("ALTER TABLE payments ADD COLUMN channel TEXT NOT NULL DEFAULT 'UNKNOWN'");
+            db.execSQL("ALTER TABLE payments ADD COLUMN business_unit TEXT NOT NULL DEFAULT 'PP1'");
         }
     }
     public static final class Client {
@@ -438,6 +456,17 @@ public final class Store extends SQLiteOpenHelper {
         } finally {db.endTransaction();if(saved)snapshotAfterWrite();}
     }
     public void pay(long id,long amount,String date) {
+        pay(id,amount,date,"UNKNOWN");
+    }
+    public static String validatedPaymentChannel(String channel){
+        if(!"CASH".equals(channel) && !"CHEQUE".equals(channel) &&
+           !"BANK".equals(channel) && !"CARD".equals(channel) &&
+           !"UNKNOWN".equals(channel))
+            throw new IllegalArgumentException("Odaberite stvarni način primitka");
+        return channel;
+    }
+    public void pay(long id,long amount,String date,String channel) {
+        validatedPaymentChannel(channel);
         if(!IsoDates.valid(date))throw new IllegalArgumentException("Datum uplate nije valjan");
         SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
         boolean saved=false;
@@ -447,6 +476,9 @@ public final class Store extends SQLiteOpenHelper {
                 throw new IllegalStateException("Moguće je naplatiti samo potvrđen račun");
             if(amount<=0||amount>d.outstanding()) throw new IllegalArgumentException("Uplata premašuje preostali iznos");
             ContentValues v=new ContentValues();v.put("document_id",id);v.put("amount_cents",amount);v.put("paid_on",date);
+            v.put("channel",channel);
+            String unit=d.issuerBusinessUnit==null?"":d.issuerBusinessUnit.trim();
+            v.put("business_unit",unit.isEmpty()?"PP1":unit);
             db.insertOrThrow("payments",null,v);
             if(amount==d.outstanding()){ContentValues p=new ContentValues();p.put("status",PAID);db.update("documents",p,"id=?",new String[]{String.valueOf(id)});}
             db.setTransactionSuccessful();saved=true;
@@ -496,18 +528,30 @@ public final class Store extends SQLiteOpenHelper {
     /** Individually logged payments; never infer a receipt from invoice status alone. */
     public static final class Payment {
         public long id,documentId,amountCents;
-        public String paidOn,invoiceNumber,clientName,currencyCode;
+        public String paidOn,invoiceNumber,clientName,currencyCode,channel,businessUnit;
+    }
+    /** Explicit classification for migrated receipts: require human verification. */
+    public void classifyPayment(long paymentId,String channel){
+        if("UNKNOWN".equals(validatedPaymentChannel(channel)))
+            throw new IllegalArgumentException("Odaberite način naplate");
+        ContentValues v=new ContentValues();v.put("channel",channel);
+        int changed=getWritableDatabase().update("payments",v,"id=?",
+            new String[]{String.valueOf(paymentId)});
+        if(changed!=1)throw new IllegalArgumentException("Uplata ne postoji");
+        snapshotAfterWrite();
     }
     public List<Payment> payments() {
         ArrayList<Payment> out=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery(
-            "SELECT p.id,p.document_id,p.amount_cents,p.paid_on,COALESCE(d.number,'Nacrt'),d.client_name,d.currency_code "+
+            "SELECT p.id,p.document_id,p.amount_cents,p.paid_on,COALESCE(d.number,'Nacrt'),d.client_name,d.currency_code,p.channel,p.business_unit "+
             "FROM payments p JOIN documents d ON d.id=p.document_id ORDER BY p.paid_on DESC,p.id DESC",null)){
             while(c.moveToNext()){
                 Payment item=new Payment();item.id=c.getLong(0);item.documentId=c.getLong(1);
                 item.amountCents=c.getLong(2);item.paidOn=c.getString(3);
                 item.invoiceNumber=c.getString(4);item.clientName=c.getString(5);
-                item.currencyCode=BillingCurrency.canonical(c.getString(6));out.add(item);
+                item.currencyCode=BillingCurrency.canonical(c.getString(6));
+                item.channel=c.getString(7);item.businessUnit=c.getString(8);
+                out.add(item);
             }
         }
         return out;

@@ -39,9 +39,58 @@ public final class RecoveryVault {
     private RecoveryVault(){}
 
     private static File directory(Context ctx){
-        File dir=new File(ctx.getFilesDir(),"recovery");
+        return directory(ctx,LocalAccounts.activeId());
+    }
+    private static File directory(Context ctx,String id){
+        File dir;
+        if(id==null){
+            // Legacy/test mode only. Authenticated accounts never read this path.
+            dir=new File(ctx.getFilesDir(),"recovery");
+        }else{
+            if(!LocalAccounts.validProfileId(id))
+                throw new SecurityException("Neispravan lokalni profil");
+            dir=new File(new File(ctx.getFilesDir(),"recovery-profiles"),id);
+        }
         if(!dir.exists()&&!dir.mkdirs())throw new IllegalStateException("Nije moguće stvoriti mapu za oporavak");
         return dir;
+    }
+
+    /** Remove only the named profile's recovery snapshots; never access another profile. */
+    public static synchronized void deleteProfile(Context ctx,String id) {
+        if(!LocalAccounts.validProfileId(id))
+            throw new IllegalArgumentException("Neispravan lokalni profil");
+        File dir=new File(new File(ctx.getFilesDir(),"recovery-profiles"),id);
+        if(!dir.exists())return;
+        File[] files=dir.listFiles();
+        if(files==null)throw new IllegalStateException("Nije moguće pročitati kopije profila");
+        for(File f:files){
+            if(!f.isFile() || !f.delete())
+                throw new IllegalStateException("Nije moguće ukloniti sigurnosnu kopiju profila");
+        }
+        if(!dir.delete())throw new IllegalStateException("Nije moguće ukloniti podatke profila");
+    }
+
+    /** Wipe pre-account recovery snapshots when their migrated owner is deleted. */
+    public static synchronized void deleteLegacyCopies(Context ctx) {
+        File dir=new File(ctx.getFilesDir(),"recovery");
+        if(!dir.exists())return;
+        File[] files=dir.listFiles();
+        if(files==null)throw new IllegalStateException("Ne mogu pročitati stare kopije");
+        for(File file:files){
+            if(!file.isFile()||!file.delete())
+                throw new IllegalStateException("Nije moguće ukloniti staru kopiju");
+        }
+        if(!dir.delete())
+            throw new IllegalStateException("Nije moguće ukloniti stare kopije");
+    }
+
+    /** Bring forward a legacy unfinished draft into the *first* profile only. */
+    public static synchronized void migrateLegacyDraft(Context ctx) throws Exception {
+        if(LocalAccounts.activeId()==null)
+            throw new SecurityException("Prije migracije odaberite korisnički profil");
+        File old=new File(new File(ctx.getFilesDir(),"recovery"),"working-draft.fv");
+        if(!old.isFile())return;
+        copyAtomically(old,workingFile(ctx));
     }
     private static File file(File dir,int index){return new File(dir,PREFIX+index+".fv");}
     private static SecretKey secretKey() throws Exception{
@@ -117,7 +166,9 @@ public final class RecoveryVault {
         try{compressed=gzip(plain);}finally{Arrays.fill(plain,(byte)0);}
         byte[] sealed;
         try{sealed=seal(compressed);}finally{Arrays.fill(compressed,(byte)0);}
-        File dir=directory(ctx),tmp=new File(dir,"recovery-tmp.fv");
+        // Bind each snapshot to the Store that produced it, even if an
+        // Activity is recreated or a different user signs in concurrently.
+        File dir=directory(ctx,store.profileId()),tmp=new File(dir,"recovery-tmp.fv");
         try(FileOutputStream out=new FileOutputStream(tmp)){
             out.write(sealed);out.flush();out.getFD().sync();
         }finally{Arrays.fill(sealed,(byte)0);}

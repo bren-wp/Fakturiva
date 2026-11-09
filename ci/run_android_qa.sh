@@ -41,6 +41,13 @@ if [ "$gradle_status" -eq 0 ]; then
   set -e
 else
   echo "::error::Instrumentation Gradle task exited with $gradle_status"
+  # Print bounded failure summaries so a red PR shows the *actual* failing
+  # Android instrumented test, not just a Gradle exit code. No customer data.
+  find app/build/outputs/androidTest-results/connected -type f -name '*.xml' 2>/dev/null |
+    while IFS= read -r report; do
+      echo "Android test results: $report"
+      grep -E '<testsuite |<testcase |<failure |<error ' "$report" | head -n 70 || true
+    done
 fi
 
 if [ "$capture_status" -ne 0 ]; then

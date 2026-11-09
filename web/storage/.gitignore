@@ -1,0 +1,9 @@
+/secret.php
+/data/*.json
+/data/*.lock
+/data/accounts/*
+/data/index/*
+/data/limits/*
+/data/*.tmp
+!/data/.htaccess
+!/data/index.php

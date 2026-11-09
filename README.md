@@ -31,6 +31,53 @@
 
 Već potvrđeni dokumenti čuvaju izvorne podatke izdavatelja i kupca, pa izmjene profila ne mijenjaju njihovu povijest.
 
+## Hrvatska: KPR i PO-SD (lokalno, bez slanja podataka)
+
+Za hrvatske samostalne djelatnosti Fakturiva sada priprema **Knjigu prometa**
+prema datumu stvarne naplate i godišnji **PO-SD** za paušalne obveznike.
+KPR možete izvesti u PDF za odabrani raspon datuma, a PO-SD u PDF za
+2025. ili 2026. godinu. Upute, ograničenja, porezni razredi i provjere:
+[Hrvatski KPR i PO-SD](docs/HR_KPR_POSD.md).
+
+**Važno:** PO-SD XML trenutno se može preuzeti samo kao **radna datoteka
+koja NIJE službeni XML za uvoz u ePoreznu**. Potvrda važeće XSD sheme
+i probni uvoz obvezni su prije najave punog XML izvoza. Podatci u
+referentnim PDF-ovima korisnika nisu kopirani u projekt.
+
+## Lokalni računi i vlastiti hosting — razvojna grana
+
+Fakturiva ostaje **Android aplikacija**, namijenjena radu bez interneta.
+Novi zasloni **Registracija** i **Prijava PIN-om** izrađeni su kao nativne
+kontrole prema dostavljenim vizualnim referencama (nisu PNG pozadine).
+Korisnik stvara lokalno korisničko ime i PIN od 4–6 znamenki.
+
+- **Lokalno po zadanim postavkama:** profil je vezan uz ovaj Android
+  uređaj. Korisnička imena i PIN-ovi ne šalju se ni na jedan server.
+  Registar je zaštićen Android Keystoreom, PIN se provjerava putem
+  usporenog sažetka i pokušaji su ograničeni.
+- **Bez miješanja korisnika:** svaki lokalni profil koristi zasebnu
+  SQLite bazu i odvojene lokalne šifrirane oporavke. Prije stvaranja
+  prvog profila postojeći podaci stare verzije migriraju se samo
+  tom prvom korisniku, uz očuvanje izvornog sadržaja.
+- **Opcionalni vlastiti hosting:** ako korisnik **izričito želi**,
+  Android aplikacija podržava ručno slanje i vraćanje šifrirane kopije
+  na vlastiti HTTPS PHP hosting bez SQL baze. Podaci i zapisi korisnika
+  pohranjuju se u šifriranim JSON datotekama pod `storage/data`.
+  Poslužiteljska lozinka (najmanje 12 znakova) odvojena je od kratkog
+  lokalnog PIN-a; automatska pozadinska sinkronizacija nije uključena.
+- **Brisanje korisničkih podataka:** zasebno lokalno i udaljeno brisanje,
+  uz dodatnu potvrdu. Vanjski obrazac za udaljeno brisanje isporučen je
+  s poslužiteljskom skriptom.
+
+[Postavljanje na bilo koju HTTPS domenu](web/README.md) ·
+[Pravila autentikacije, privatnosti i testiranja](docs/ACCOUNT_AUTH_AND_HOSTING.md)
+
+**Napomena:** implementacija je u PR-u #26, a ne u trenutačno objavljenom
+APK-u. 0% odstupanja na dva nova referentna ekrana još nije verificirano
+pomoću stvarnih snimki istih dimenzija. Produkcijska Google Play objava
+zahtijeva prolazak QA-a, prilagođenu politiku privatnosti na javnoj
+HTTPS adresi, ispravan Data safety obrazac i testirano brisanje računa.
+
 ## Fakturiva u radu
 
 Prikazane su stvarne snimke aplikacije, a ne dizajnerski prikazi.

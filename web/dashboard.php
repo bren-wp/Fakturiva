@@ -1,0 +1,59 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/bootstrap.php';
+$account=requireWeb();
+$flash=takeFlash();
+$canSync=is_string($account['password_hash']??null) &&
+          (string)$account['password_hash']!=='';
+?><!doctype html>
+<html lang="hr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff"><meta name="robots" content="noindex,nofollow">
+<title>Moj račun — Fakturiva</title>
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/app.css">
+<script src="assets/auth.js" defer></script>
+</head><body>
+<main class="account-page">
+<?=logoMarkup()?>
+<h1>Moj korisnički račun</h1>
+<p>Prijavljeni ste kao <strong><?=h((string)$account['username'])?></strong>.
+Na ovoj domeni možete upravljati svojom web prijavom i dozvolom za
+Android sinkronizaciju. Poslovni podaci ostaju odvojeni po korisničkim računima.</p>
+<?php if($flash!==''):?><p class="success-note" role="status"><?=h($flash)?></p><?php endif;?>
+<section class="panel">
+<h2>Pohrana na hostingu</h2>
+<p>Vaš poslužiteljski račun ima zaseban šifrirani JSON zapis.</p>
+<p>Sigurnosna kopija: <strong><?=empty($account['backup'])?'Nema pohranjene kopije':'Pohranjena šifrirana kopija'?></strong></p>
+<p>Revizija podataka: <strong><?= (int)($account['revision']??0)?></strong></p>
+<p>Android sinkronizacija: <strong><?=$canSync?'Postavljena zasebna lozinka':'Nije aktivirana'?></strong></p>
+<small>Poslužitelj ne prikazuje sadržaj šifrirane preslike. Izvoz/uvoz pokrećete u Android aplikaciji.</small>
+</section>
+<section class="panel">
+<h2>Lozinka za Android sinkronizaciju</h2>
+<p>Web PIN služi za prijavu na ovu web-stranicu. Za prijenos šifriranih
+preslika s Android uređaja potrebna je <strong>odvojena lozinka od najmanje
+12 znakova</strong>. Njezinim mijenjanjem prestaju vrijediti postojeće Android API sesije.</p>
+<form method="post" action="auth.php" data-auth-form autocomplete="off">
+<input type="hidden" name="csrf" value="<?=h(csrf())?>">
+<input type="hidden" name="action" value="set-sync">
+<label for="current-pin">Potvrdite svoj web PIN</label>
+<input id="current-pin" name="pin" type="password" inputmode="numeric"
+pattern="[0-9]{4,6}" maxlength="6" minlength="4" autocomplete="off"
+data-numeric-pin required>
+<label for="sync-password">Nova zasebna lozinka hostinga</label>
+<input id="sync-password" name="passphrase" type="password"
+minlength="12" maxlength="256" autocomplete="new-password" required>
+<button class="primary-action" type="submit">Spremi lozinku hostinga</button>
+</form>
+</section>
+<nav class="account-links" aria-label="Korisnički račun">
+<form action="auth.php" method="post">
+<input type="hidden" name="csrf" value="<?=h(csrf())?>">
+<input type="hidden" name="action" value="logout">
+<button type="submit">Odjava</button>
+</form>
+<a href="delete-account.php">Izbriši račun</a>
+<a href="privacy.php">Privatnost</a>
+</nav>
+</main></body></html>

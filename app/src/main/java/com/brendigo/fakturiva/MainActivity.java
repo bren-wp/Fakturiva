@@ -54,7 +54,15 @@ public final class MainActivity extends Activity {
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
     private static final int BLUETOOTH_PRINT_PERMISSION_REQUEST=108;
+    private static final int HR_KPR_PDF=115,HR_POSD_PDF=116,HR_POSD_XML=117;
+    private CroatianTaxReports.Book pendingHrBook;
+    private CroatianTaxReports.Posd pendingHrPosd;
+    private CroatianTaxReports.Business pendingHrBusiness;
+    private String pendingHrProfile;
     private Store db; private SharedPreferences prefs;
+    private String loginUsername="";
+    private boolean selfHostedBusy=false;
+    private final StringBuilder enteredLocalPin=new StringBuilder();
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
     private FrameLayout adaptiveNavContainer;
@@ -81,7 +89,8 @@ public final class MainActivity extends Activity {
     private final SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT);
 
     @Override public void onCreate(Bundle b){super.onCreate(b);
-        db=new Store(this);prefs=getSharedPreferences("ui",MODE_PRIVATE);
+        LocalAccounts.lock();
+        prefs=getSharedPreferences("ui",MODE_PRIVATE);
         // Android 13+ gesture back bypasses deprecated Activity.onBackPressed.
         // Use the platform callback so no AndroidX runtime dependency is needed.
         if(android.os.Build.VERSION.SDK_INT>=33){
@@ -101,15 +110,9 @@ public final class MainActivity extends Activity {
             securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
         if(runScreenshotHarness())return;
-        try{
-            try(android.database.Cursor check=db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
-                if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
-                    throw new IllegalStateException("Neuspjela provjera baze");
-            }
-            // Show the branded launch screen on every cold start. New users
-            // continue to onboarding; returning users go to their live home.
-            splash(true);
-        }catch(Exception openError){damagedDatabase(openError);}
+        // Never open private financial data before authenticating a local account.
+        // The old single-device database is migrated only after first registration.
+        splash(true);
     }
     @Override protected void onSaveInstanceState(Bundle outState){
         outState.putLong("pendingPdfId",pendingPdfId);
@@ -123,8 +126,9 @@ public final class MainActivity extends Activity {
         super.onSaveInstanceState(outState);
     }
     @Override protected void onStop(){
-        if("new_doc".equals(screen)||"edit_items".equals(screen)||"review".equals(screen))
-            saveWorkingDraft();
+        if(db!=null&&("new_doc".equals(screen)||"edit_items".equals(screen)||
+            "review".equals(screen)))saveWorkingDraft();
+        if("local_login".equals(screen))enteredLocalPin.setLength(0);
         super.onStop();
     }
     /** Allows debug-only emulator screenshots without introducing preview screens in release builds. */
@@ -146,6 +150,7 @@ public final class MainActivity extends Activity {
             return false;
         }
         try{
+            db=new Store(this); // Debug-only sample store; never used by release login.
             Class<?> harness=Class.forName("com.brendigo.fakturiva.ScreenshotHarness");
             harness.getMethod("show",MainActivity.class,String.class)
                 .invoke(null,this,getIntent().getStringExtra("screen"));
@@ -159,7 +164,9 @@ public final class MainActivity extends Activity {
         if(android.os.Build.VERSION.SDK_INT>=33&&systemBackCallback!=null)
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
         if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
-        db.close();super.onDestroy();
+        if(db!=null)db.close();
+        enteredLocalPin.setLength(0);
+        super.onDestroy();
     }
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
     private String selectedLanguage(){
@@ -318,7 +325,8 @@ public final class MainActivity extends Activity {
                     documents(d.type);
                 }catch(Exception e){home();}
                 break;
-            case "catalog":case "reports":case "payments":case "company":case "guide":
+            case "local_accounts":case "self_host":case "privacy":settings();break;
+            case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":case "about":settings();break;
             default:home();
         }
@@ -449,20 +457,31 @@ public final class MainActivity extends Activity {
         try{
             JSONObject snapshot=RecoveryVault.read(this,0);
             db.close();
-            File old=getDatabasePath("fakturiva.db");
+            File old=getDatabasePath(db.databaseFileName());
             File location=new File(getFilesDir(),"damaged-db-"+System.currentTimeMillis());
             if(!location.mkdirs())throw new IllegalStateException("Nema mjesta za spremanje oštećene baze");
             for(String suffix:new String[]{"","-wal","-shm","-journal"}){
                 File original=new File(old.getAbsolutePath()+suffix);
-                if(original.exists()&&!original.renameTo(new File(location,"fakturiva.db"+suffix)))
+                if(original.exists()&&!original.renameTo(
+                    new File(location,db.databaseFileName()+suffix)))
                     throw new IllegalStateException("Nije moguće sigurno arhivirati bazu");
             }
-            db=new Store(this);db.restore(snapshot);
+            db=new Store(this,LocalAccounts.activeId());db.restore(snapshot);
             toast("Oporavak je dovršen. Pregledajte dokumente i izvezite novu kopiju.");
             navigate("home");
         }catch(Exception e){error(e);damagedDatabase(e);}
     }
+    /** Only the debug emulator's screenshot harness may navigate without a PIN. */
+    private boolean runScreenshotModeOnly(){
+        return db!=null &&
+            (getApplicationInfo().flags &
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0 &&
+            "com.brendigo.fakturiva.SCREENSHOT".equals(getIntent().getAction());
+    }
     private void navigate(String dest){
+        if(db==null || (LocalAccounts.activeId()==null && !runScreenshotModeOnly())){
+            openExistingLocalAccess();return;
+        }
         filter="Svi";
         documentSearchQuery="";
         switch(dest){
@@ -597,14 +616,11 @@ public final class MainActivity extends Activity {
     /** Launch navigation respects first-run state and never invents a cloud login. */
     private void finishSplash(){
         if(!"splash".equals(screen)||isFinishing()||isDestroyed())return;
-        if(prefs.getBoolean("welcomed",false)){
-            if(prefs.getBoolean("device_lock",false))securityScreen(true,false);
-            else{
-                navigate("home");
-                offerWorkingDraftRecovery();
-            }
-        }else{
-            welcome();
+        try{
+            if(LocalAccounts.hasAccounts(this))loginPinScreen();
+            else welcome();
+        }catch(Exception e){
+            accountStorageError(e);
         }
     }
     private void welcome(){
@@ -666,7 +682,7 @@ public final class MainActivity extends Activity {
         startTextLp.leftMargin=dp(7);
         startButton.addView(startText,startTextLp);
         startButton.setContentDescription(ui("Započni"));
-        startButton.setOnClickListener(v->securityScreen(false,false));
+        startButton.setOnClickListener(v->registrationScreen());
         LinearLayout.LayoutParams startLp=lp(-1,48);
         startLp.leftMargin=dp(1);startLp.rightMargin=dp(1);
         body.addView(startButton,startLp);
@@ -682,15 +698,472 @@ public final class MainActivity extends Activity {
         account.setOnClickListener(v->openExistingLocalAccess());
         place(body,account);gap(body,15);
     }
-    /** Local access only: Fakturiva has no fictitious cloud account. */
+    /** Account selection always precedes access to any locally stored invoice. */
     private void openExistingLocalAccess(){
-        if(prefs.getBoolean("welcomed",false)){
-            if(prefs.getBoolean("device_lock",false))securityScreen(true,false);
-            else home();
-        }else{
-            securityScreen(false,false);
+        try{
+            if(LocalAccounts.hasAccounts(this))loginPinScreen();
+            else registrationScreen();
+        }catch(Exception e){accountStorageError(e);}
+    }
+    private void authPrimaryStyle(TextView button){
+        // Preserve a genuine accessible TextView click action while matching
+        // the supplied cobalt-to-indigo CTA rather than a flat Android button.
+        GradientDrawable gradient=new GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[]{0xff4c67fb,0xff414ef5});
+        gradient.setCornerRadius(dp(16));
+        button.setBackground(gradient);
+        button.setTextSize(17);
+        button.setMinimumHeight(dp(55));
+        button.setElevation(dp(6));
+    }
+
+    /** Local registration modeled on the supplied white/blue reference. */
+    private void registrationScreen(){
+        if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
+        enteredLocalPin.setLength(0);
+        setup("local_register",false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
+        pad(body,25,60);
+        localBrand();gap(body,25);
+        place(body,label("Registracija",30,NAVY,true));gap(body,9);
+        place(body,label("Kreirajte novi račun i započnite s poslovanjem.",
+            14,MUTED,false));
+        gap(body,62);
+        place(body,label("Korisničko ime",14,0xff53627b,true));gap(body,10);
+        EditText username=field("ime@tvrtka.hr","");
+        username.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        username.setTextSize(17);username.setMinimumHeight(dp(54));
+        place(body,username);
+        gap(body,19);
+        place(body,label("PIN",14,NAVY,true));gap(body,10);
+        EditText pin=field("4–6 znamenki","");
+        pin.setInputType(InputType.TYPE_CLASS_NUMBER|
+            InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pin.setFilters(new android.text.InputFilter[]{
+            new android.text.InputFilter.LengthFilter(6)});
+        pin.setTextSize(18);pin.setMinimumHeight(dp(54));
+        place(body,pin);gap(body,10);
+        place(body,label("ⓘ  Unesite sigurnosni PIN (4–6 znamenki).",
+            12,0xff64738d,false));
+        gap(body,48);
+        TextView submit=action("♙   Registracija",BLUE,true,()->{
+            char[] digits=pin.getText().toString().toCharArray();
+            try{
+                boolean first=!LocalAccounts.hasAccounts(this);
+                String id=LocalAccounts.register(this,username.getText().toString(),digits);
+                pin.setText("");
+                if(first&&getDatabasePath("fakturiva.db").isFile()){
+                    // Explicitly reserve the legacy database for the first
+                    // profile; later accounts can never claim its records.
+                    prefs.edit().putString("legacy_owner",id).commit();
+                }
+                openLocalSession(id);
+            }catch(Exception e){toast(e.getMessage()==null?
+                "Registracija nije uspjela":e.getMessage());}
+            finally{Arrays.fill(digits,'\0');}
+        });
+        authPrimaryStyle(submit);
+        submit.setContentDescription("Registracija lokalnog korisničkog računa");
+        place(body,submit);gap(body,46);
+        TextView login=label("Već imate račun?  Prijavite se",14,BLUE,true);
+        login.setGravity(Gravity.CENTER);
+        login.setMinimumHeight(dp(48));
+        login.setOnClickListener(v->openExistingLocalAccess());
+        place(body,login);
+        gap(body,64);
+        localPrivacyFooter();
+    }
+
+    private void localBrand(){
+        ImageView image=new ImageView(this);
+        image.setImageResource(R.drawable.brand_mark);
+        LinearLayout.LayoutParams mark=lp(72,72);
+        body.addView(image,mark);
+    }
+
+    private void localPrivacyFooter(){
+        TextView footer=label("◇  Zaštita vaših poslovnih podataka",12,
+            0xff7b8ba5,false);
+        footer.setGravity(Gravity.CENTER);
+        place(body,footer);gap(body,16);
+    }
+
+    private void loginPinScreen(){
+        try{
+            String[] names=LocalAccounts.names(this);
+            if(names.length==0){registrationScreen();return;}
+            String last=prefs.getString("local_last_user",names[0]);
+            boolean found=false;
+            for(String n:names)if(n.equals(last))found=true;
+            if(!found)last=names[0];
+            loginUsername=last;
+            enteredLocalPin.setLength(0);
+            setup("local_login",false);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
+            pad(body,25,59);
+            localBrand();gap(body,26);
+            place(body,label("Prijava PIN-om",30,NAVY,true));gap(body,9);
+            place(body,label("Unesite svoj sigurnosni PIN za pristup računu.",
+                14,MUTED,false));gap(body,44);
+            TextView chosen=label("Korisnik: "+loginUsername+(names.length>1?"  ▾":""),
+                12,0xff63718a,false);
+            chosen.setMinimumHeight(dp(40));
+            if(names.length>1){
+                chosen.setContentDescription("Odaberite korisnički račun");
+                chosen.setOnClickListener(v->
+                    new AlertDialog.Builder(this).setTitle("Korisnički račun")
+                        .setItems(names,(dialog,which)->{
+                            loginUsername=names[which];
+                            chosen.setText("Korisnik: "+loginUsername+"  ▾");
+                            enteredLocalPin.setLength(0);
+                            loginPinScreen();
+                        }).show());
+            }
+            if(names.length>1){
+                place(body,chosen);gap(body,18);
+            }else{
+                // Single-profile login stays visually aligned with the owner's
+                // PIN reference; profile switching remains in Settings.
+                gap(body,31);
+            }
+            place(body,label("PIN",14,0xff65748d,true));gap(body,9);
+            LinearLayout masked=horizontal();
+            masked.setBackground(outlined(WHITE));pad(masked,19,10);
+            TextView dots=label("",24,NAVY,true);
+            dots.setGravity(Gravity.CENTER_VERTICAL);
+            masked.addView(dots,new LinearLayout.LayoutParams(0,dp(44),1));
+            TextView lock=label("♙",22,0xff7e8fa7,true);
+            masked.addView(lock);
+            masked.setContentDescription("Sigurnosni PIN, skriveni unos");
+            place(body,masked);gap(body,28);
+            int[][] keys={{1,2,3},{4,5,6},{7,8,9},{-1,0,-2}};
+            for(int[] row:keys){
+                LinearLayout line=horizontal();
+                for(int number:row){
+                    TextView key=label(number==-1?"⌫":number==-2?"":String.valueOf(number),
+                        27,NAVY,true);
+                    key.setGravity(Gravity.CENTER);
+                    key.setBackground(shape(0xffedf1f9,14));
+                    key.setFocusable(number!=-2);
+                    key.setClickable(number!=-2);
+                    key.setContentDescription(number==-1?"Obriši PIN znamenku":
+                        number==-2?"":("Znamenka "+number));
+                    if(number==-1)key.setOnClickListener(v->{
+                        if(enteredLocalPin.length()>0)
+                            enteredLocalPin.deleteCharAt(enteredLocalPin.length()-1);
+                        updatePinDots(dots);
+                    });
+                    else if(number>=0)key.setOnClickListener(v->{
+                        if(enteredLocalPin.length()<6)
+                            enteredLocalPin.append((char)('0'+number));
+                        updatePinDots(dots);
+                    });
+                    LinearLayout.LayoutParams keyParams=new LinearLayout.LayoutParams(0,dp(53),1);
+                    keyParams.leftMargin=dp(3);keyParams.rightMargin=dp(3);
+                    line.addView(key,keyParams);
+                    if(number==-2)key.setVisibility(View.INVISIBLE);
+                }
+                place(body,line);gap(body,7);
+            }
+            gap(body,26);
+            TextView submit=action("›   Prijavi se",BLUE,true,()->{
+                char[] digits=enteredLocalPin.toString().toCharArray();
+                try{
+                    String id=LocalAccounts.verify(this,loginUsername,digits);
+                    enteredLocalPin.setLength(0);
+                    openLocalSession(id);
+                }catch(Exception error){
+                    enteredLocalPin.setLength(0);
+                    updatePinDots(dots);
+                    toast(error.getMessage()==null?
+                        "Neuspješna provjera sigurnosnog PIN-a":error.getMessage());
+                }finally{Arrays.fill(digits,'\0');}
+            });
+            authPrimaryStyle(submit);
+            submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
+            place(body,submit);gap(body,37);
+            localPrivacyFooter();
+            if(names.length>1){
+                TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
+                next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
+                next.setOnClickListener(v->registrationScreen());
+                place(body,next);
+            }
+        }catch(Exception e){accountStorageError(e);}
+    }
+
+    private void updatePinDots(TextView dots){
+        StringBuilder masked=new StringBuilder();
+        for(int i=0;i<enteredLocalPin.length();i++)masked.append("● ");
+        dots.setText(masked.toString());
+    }
+
+    /** Prevent opening any business table before local authorization. */
+    private void openLocalSession(String verifiedId){
+        try{
+            if(db!=null){db.close();db=null;}
+            LocalAccounts.unlock(this,verifiedId);
+            db=new Store(this,verifiedId);
+            try(android.database.Cursor check=
+                db.getReadableDatabase().rawQuery("PRAGMA quick_check(1)",null)){
+                if(!check.moveToFirst()||!"ok".equalsIgnoreCase(check.getString(0)))
+                    throw new IllegalStateException("Neuspjela provjera baze");
+            }
+            // One-time upgrade from the previous single-device data model.
+            // Never migrate those documents into a second user's database.
+            if(verifiedId.equals(prefs.getString("legacy_owner","")) &&
+                !prefs.getBoolean("legacy_imported",false) &&
+                getDatabasePath("fakturiva.db").isFile() &&
+                db.count("clients")==0 && db.count("documents")==0){
+                Store legacy=new Store(this);
+                JSONObject snapshot;
+                try{snapshot=legacy.backup();}finally{legacy.close();}
+                db.restore(snapshot); // validated and crash-safe, never silent merge
+                RecoveryVault.migrateLegacyDraft(this);
+                if(!prefs.edit().putBoolean("legacy_imported",true).commit())
+                    throw new IllegalStateException("Migracija nije potvrđena");
+            }
+            prefs.edit().putString("local_last_user",LocalAccounts.activeName())
+                .putBoolean("welcomed",true).apply();
+            if(prefs.getBoolean("device_lock",false))
+                securityScreen(true,false);
+            else{
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                navigate("home");offerWorkingDraftRecovery();
+            }
+        }catch(Exception e){
+            if(db!=null){db.close();db=null;}
+            LocalAccounts.lock();
+            accountStorageError(e);
         }
     }
+
+    private void accountStorageError(Exception error){
+        android.util.Log.e("FakturivaAuth","Local account storage unavailable",error);
+        setup("account_error",false);
+        root.setBackgroundColor(WHITE);
+        pad(body,25,60);
+        place(body,label("Računi nisu dostupni",23,NAVY,true));
+        gap(body,12);
+        place(body,label("Nije moguće sigurno otvoriti lokalne podatke. "+
+            "Podaci neće biti automatski izbrisani ni zamijenjeni. "+
+            "Provjerite uređaj i postojeće sigurnosne kopije.",14,MUTED,false));
+        gap(body,25);
+        button(body,"Ponovno pokušaj",this::openExistingLocalAccess);
+    }
+
+    private void localAccountSettings(){
+        if(LocalAccounts.activeId()==null){loginPinScreen();return;}
+        setup("local_accounts",true);
+        toolbar("Korisnički računi","Lokalna pohrana · bez vanjskih servisa",true);
+        LinearLayout info=card();
+        place(info,label("Prijavljen: "+LocalAccounts.activeName(),16,ink(),true));
+        gap(info,9);
+        place(info,label("Svaki profil ima zasebnu bazu računa, ponuda i klijenata "+
+            "te odvojene šifrirane sigurnosne kopije.",12,sub(),false));
+        place(body,info);gap(body,15);
+        button(body,"Odjava s uređaja",()->new AlertDialog.Builder(this)
+            .setTitle("Odjava").setMessage("Odjaviti lokalni korisnički račun?")
+            .setNegativeButton("Odustani",null)
+            .setPositiveButton("Odjavi se",(dialog,which)->signOutLocal()).show());
+        gap(body,12);
+        secondary(body,"Dodaj lokalni korisnički račun",()->registrationScreen());
+        gap(body,22);
+        secondary(body,"Trajno izbriši ovaj lokalni račun",()->{
+            if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
+            EditText secret=field("PIN za potvrdu brisanja","");
+            secret.setInputType(InputType.TYPE_CLASS_NUMBER|
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            new AlertDialog.Builder(this).setTitle("Brisanje lokalnog računa")
+                .setMessage("Ovo trajno briše lokalnu bazu i lokalne sigurnosne "+
+                    "kopije trenutačnog profila. Prethodno izvezite kopiju. "+
+                    "Ne briše udaljeni račun na vašem hostingu.")
+                .setView(secret).setNegativeButton("Odustani",null)
+                .setPositiveButton("Trajno izbriši",(d,w)->{
+                    char[] code=secret.getText().toString().toCharArray();
+                    String id=LocalAccounts.activeId();
+                    try{
+                        if(!id.equals(LocalAccounts.verify(this,
+                            LocalAccounts.activeName(),code)))
+                            throw new SecurityException("Neispravan profil");
+                        if(db!=null){db.close();db=null;}
+                        LocalAccounts.delete(this,LocalAccounts.activeName(),code);
+                        if(id.equals(prefs.getString("legacy_owner",""))){
+                            // Keep legacy migration from repopulating a new account.
+                            getApplicationContext().deleteDatabase("fakturiva.db");
+                            RecoveryVault.deleteLegacyCopies(this);
+                            prefs.edit().remove("legacy_owner").putBoolean(
+                                "legacy_imported",true).apply();
+                        }
+                        loginPinScreen();
+                    }catch(Exception e){
+                        if(LocalAccounts.activeId()!=null && db==null)
+                            db=new Store(this,id);
+                        toast(e.getMessage()==null?"Brisanje nije uspjelo":e.getMessage());
+                    }finally{Arrays.fill(code,'\0');}
+                }).show();
+        });
+    }
+
+    private void signOutLocal(){
+        if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
+        enteredLocalPin.setLength(0);
+        if(db!=null){db.close();db=null;}
+        LocalAccounts.lock();
+        loginPinScreen();
+    }
+
+    /**
+     * An optional HTTPS host is NEVER configured by default. The user's local
+     * PIN is never submitted. Strong server credentials are entered per action
+     * and never saved in the app or included in Android backup.
+     */
+    private void selfHostedSettings(){
+        if(LocalAccounts.activeId()==null||db==null){loginPinScreen();return;}
+        setup("self_host",true);
+        toolbar("Vlastiti hosting","Ručna šifrirana sinkronizacija",true);
+        LinearLayout notice=card();
+        place(notice,label("Potpuno neobavezno",16,ink(),true));gap(notice,8);
+        place(notice,label("Svi računi i ponude rade lokalno i bez interneta. "+
+            "Za sinkronizaciju sa svojim hostingom postavite vlastitu HTTPS adresu "+
+            "i zasebnu lozinku od najmanje 12 znakova. PIN ostaje na uređaju.",12,sub(),false));
+        place(body,notice);gap(body,15);
+        String id=LocalAccounts.activeId();
+        EditText url=field("https://moja-domena.hr/",
+            prefs.getString("host_url_"+id,""));
+        fieldLabel(body,"Adresa vlastitog hostinga (HTTPS)",url);
+        EditText user=field("ime@tvrtka.hr",
+            prefs.getString("host_user_"+id,LocalAccounts.activeName()));
+        fieldLabel(body,"Poslužiteljsko korisničko ime",user);
+        EditText pass=field("Lozinka hostinga (nije PIN)","");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        if(Build.VERSION.SDK_INT>=26)
+            pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        fieldLabel(body,"Poslužiteljska lozinka",pass);
+        gap(body,17);
+        secondary(body,"Registriraj račun na hostingu",()->
+            remoteAction(SelfHostedSyncClient.Action.REGISTER,url,user,pass));
+        gap(body,10);
+        button(body,"Pošalji šifriranu sigurnosnu kopiju",()->
+            new AlertDialog.Builder(this).setTitle("Prijenos na vlastiti hosting")
+                .setMessage("Poslat će se cijela šifrirana kopija ovog lokalnog "+
+                    "profila na odabrani HTTPS hosting. Ako ondje postoji ranija "+
+                    "kopija, bit će zamijenjena. Ne prenosite podatke bez ovlaštenja.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Pošalji",(dialog,which)->
+                    remoteAction(SelfHostedSyncClient.Action.UPLOAD,url,user,pass))
+                .show());
+        gap(body,10);
+        secondary(body,"Preuzmi i vrati kopiju s hostinga",()->
+            new AlertDialog.Builder(this).setTitle("Zamjena lokalnih podataka")
+                .setMessage("Ovo zamjenjuje sve račune, ponude i klijente SAMO "+
+                    "trenutačnog lokalnog profila. Fakturiva će prije vraćanja "+
+                    "napraviti lokalnu šifriranu sigurnosnu kopiju. "+
+                    "Provjerite ispravnost odabranog računa i hostinga.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Preuzmi",(dialog,which)->
+                    remoteAction(SelfHostedSyncClient.Action.DOWNLOAD,url,user,pass))
+                .show());
+        gap(body,18);
+        secondary(body,"Trajno izbriši račun na hostingu",()->
+            new AlertDialog.Builder(this).setTitle("Brisanje na vlastitom hostingu")
+                .setMessage("Ovo trajno briše poslužiteljski račun i spremljenu "+
+                    "kopiju. Lokalni podaci i dalje ostaju na ovom uređaju.")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Trajno izbriši",(dialog,which)->
+                    remoteAction(SelfHostedSyncClient.Action.DELETE,url,user,pass))
+                .show());
+        gap(body,10);
+        secondary(body,"Web obrazac za brisanje računa",()->{
+            try{
+                String api=SelfHostedSyncClient.apiUrl(url.getText().toString());
+                String page=api.substring(0,api.length()-"api.php".length())+
+                    "delete-account.php";
+                startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(page)));
+            }catch(Exception error){toast(error.getMessage());}
+        });
+        gap(body,16);
+        place(body,label("Hoster mora podržavati PHP 8.1+, OpenSSL, HTTPS i "+
+            "zapisivanje u storage/data. Nije potreban SQL niti vanjski servis. "+
+            "Veći dokumenti mogu zahtijevati povećanje PHP limita prijenosa.",12,sub(),false));
+        gap(body,20);
+    }
+
+    private void remoteAction(SelfHostedSyncClient.Action action,EditText url,
+        EditText username,EditText pass){
+        if(selfHostedBusy){toast("Prijenos je već u tijeku");return;}
+        if(db==null||LocalAccounts.activeId()==null){
+            toast("Prvo se prijavite u lokalni račun");return;
+        }
+        String host=url.getText().toString().trim();
+        String user=username.getText().toString().trim();
+        char[] code=pass.getText().toString().toCharArray();
+        try{
+            String api=SelfHostedSyncClient.apiUrl(host);
+            if(code.length<12||code.length>256)
+                throw new IllegalArgumentException("Lozinka hostinga mora imati 12–256 znakova");
+            String id=LocalAccounts.activeId();
+            prefs.edit().putString("host_url_"+id,api)
+                .putString("host_user_"+id,user).apply();
+            selfHostedBusy=true;
+            SelfHostedSyncClient.execute(this,action,api,user,code,db,(error,result)->{
+                selfHostedBusy=false;
+                if(error!=null)toast(error);
+                else{
+                    toast(result);
+                    if(action==SelfHostedSyncClient.Action.DOWNLOAD)
+                        navigate("home");
+                    else selfHostedSettings();
+                }
+            });
+            pass.setText("");
+            toast("Pokrenut je samo odabrani zahtjev prema vašem hostingu");
+        }catch(Exception error){toast(error.getMessage()==null?
+            "Neispravne postavke hostinga":error.getMessage());}
+        finally{Arrays.fill(code,'\0');}
+    }
+
+    /** Required in-app privacy information; the public Play policy URL must
+     * be independently published before production distribution. */
+    private void privacyInfoScreen(){
+        setup("privacy",true);
+        toolbar("Privatnost","Fakturiva · Brendigo",true);
+        LinearLayout content=card();
+        place(content,label("Lokalni profil i pohrana",18,ink(),true));
+        gap(content,11);
+        place(content,label("Korisničko ime, lokalni PIN i poslovni podaci "+
+            "spremaju se na ovom Android uređaju. PIN nije spremljen kao "+
+            "čitljiv tekst. Svaki lokalni korisnik ima zasebnu bazu "+
+            "i lokalne šifrirane kopije.",13,sub(),false));
+        gap(content,14);
+        place(content,label("Vlastiti hosting nije obavezan",16,ink(),true));
+        gap(content,8);
+        place(content,label("Tek ako sami odaberete vlastiti HTTPS hosting "+
+            "i pokrenete slanje, šifrirana kopija računa i ponuda prenosi "+
+            "se na vašu domenu. Za pristup se koristi zasebna poslužiteljska "+
+            "lozinka, nikada lokalni PIN.",13,sub(),false));
+        gap(content,14);
+        place(content,label("Brisanje i čuvanje",16,ink(),true));
+        gap(content,8);
+        place(content,label("Lokalni i poslužiteljski računi brišu se odvojeno. "+
+            "Za brisanje trebate PIN odnosno lozinku poslužitelja. "+
+            "Poslovne dokumente pohranite u skladu sa zakonskim rokovima "+
+            "čuvanja, prije brisanja izvezite potrebne kopije.",13,sub(),false));
+        place(body,content);gap(body,16);
+        button(body,"Upravljaj lokalnim računom",this::localAccountSettings);
+        gap(body,10);
+        secondary(body,"Upravljaj vlastitim hostingom",this::selfHostedSettings);
+        gap(body,16);
+        place(body,label("Kontakt za pitanja o aplikaciji: "+
+            BrandAttribution.SUPPORT_EMAIL,12,sub(),false));
+        gap(body,20);
+    }
+
     /**
      * Screen 03 is real offline protection, never fake cloud authentication.
      * The operating system verifies credentials: we store no PIN or biometrics.
@@ -2223,6 +2696,17 @@ public final class MainActivity extends Activity {
         fieldLabel(form,"Amount ("+d.currencyCode+")",amount);
         EditText paidOn=field("Datum uplate",later(0));
         dateInput(paidOn);fieldLabel(form,"Datum uplate",paidOn);
+        TextView methodTitle=label("Način stvarne naplate",13,ink(),true);
+        place(form,methodTitle);gap(form,8);
+        Spinner channel=new Spinner(this);
+        String[] channelNames={"Gotovina","Uplata na račun / bankovni prijenos",
+            "Platna kartica","Ček"};
+        String[] channelCodes={"CASH","BANK","CARD","CHEQUE"};
+        channel.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,channelNames));
+        channel.setMinimumHeight(dp(49));
+        place(form,channel);gap(form,10);
+        caption(form,"Način naplate bitan je za hrvatsku Knjigu prometa. Kartice i uplate na račun vode se kao bezgotovinski primici.");
         AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle("Evidentiraj uplatu").setView(form)
             .setNegativeButton("Odustani",null)
@@ -2235,7 +2719,8 @@ public final class MainActivity extends Activity {
                         throw new IllegalArgumentException("Uplata mora biti veća od 0 i ne veća od preostalog iznosa");
                     if(!IsoDates.valid(paidOn.getText().toString()))
                         throw new IllegalArgumentException("Datum uplate nije valjan");
-                    db.pay(id,paid,paidOn.getText().toString());
+                    db.pay(id,paid,paidOn.getText().toString(),
+                        channelCodes[channel.getSelectedItemPosition()]);
                     dialog.dismiss();
                     showDocument(id);
                 }catch(Exception e){error(e);amount.requestFocus();}
@@ -2930,6 +3415,228 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
 
+    /**
+     * Croatian income tax tools only. Generated summaries are based on actually
+     * recorded receipts, NOT invoice issuance; no cloud service is required.
+     */
+    private void croatianTaxScreen(){
+        if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
+        setup("hr_tax",true);
+        pad(body,17,16);
+        toolbar("Knjiga prometa i PO-SD","Hrvatska · stvarne naplate",true);
+        LinearLayout info=card();
+        place(info,label("Automatsko zbrajanje primitaka",17,ink(),true));
+        gap(info,8);
+        place(info,label("KPR se puni datumima stvarnih uplata. Za paušalni obrt "+
+            "gotovina/čekovi i bezgotovinski primitci vode se odvojeno. "+
+            "PO-SD se priprema za cijelu poreznu godinu samo kod "+
+            "paušalnog oporezivanja.",12,sub(),false));
+        place(body,info);gap(body,15);
+
+        LinearLayout details=card();
+        place(details,label("I. Podaci o poreznom obvezniku i djelatnosti",16,ink(),true));
+        gap(details,11);
+        String[] types={"Odaberite porezni status","Paušalni obrt / paušalni dohodak",
+            "Obrt koji utvrđuje dohodak (KPR gotovina)","Drugi oblici (npr. d.o.o. – bez PO-SD)"};
+        Spinner model=new Spinner(this);
+        model.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,types));
+        String currentModel=db.setting("hr_tax_model");
+        model.setSelection(CroatianTaxReports.PAUSAL.equals(currentModel)?1:
+            CroatianTaxReports.DOHODAK.equals(currentModel)?2:
+            CroatianTaxReports.OTHER.equals(currentModel)?3:0);
+        place(details,model);gap(details,12);
+        EditText owner=field("Ime i prezime nositelja",db.setting("hr_tax_owner"));
+        fieldLabel(details,"Nositelj djelatnosti",owner);
+        EditText residence=field("Adresa prebivališta",db.setting("hr_tax_residence"));
+        fieldLabel(details,"Prebivalište / boravište",residence);
+        EditText activity=field("Naziv i vrsta djelatnosti",db.setting("hr_tax_activity"));
+        fieldLabel(details,"Vrsta djelatnosti",activity);
+        EditText nkd=field("NKD šifra",db.setting("hr_tax_nkd"));
+        fieldLabel(details,"Šifra djelatnosti (NKD)",nkd);
+        EditText place=field("Adresa obavljanja djelatnosti",db.setting("hr_tax_place"));
+        fieldLabel(details,"Adresa poslovne jedinice",place);
+        place(details,label("OIB i naziv obrta preuzimaju se iz profila izdavatelja. "+
+            "Dopunite ih ako nedostaju.",11,sub(),false));
+        gap(details,9);
+        Spinner special=new Spinner(this);
+        String[] specialLabels={"Bez područnog poreznog umanjenja",
+            "Vukovar / propisano potpomognuto područje / otok I. skupine"};
+        special.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,specialLabels));
+        special.setSelection("yes".equals(db.setting("hr_tax_special"))?1:0);
+        place(details,special);
+        place(body,details);gap(body,16);
+
+        int currentYear=Calendar.getInstance().get(Calendar.YEAR);
+        String periodYear=String.valueOf(Math.min(currentYear,2026));
+        LinearLayout period=card();
+        place(period,label("II. Razdoblje izvještaja",16,ink(),true));
+        gap(period,10);
+        EditText from=field("GGGG-MM-DD",db.setting("hr_tax_from").isEmpty()?
+            periodYear+"-01-01":db.setting("hr_tax_from"));
+        dateInput(from);fieldLabel(period,"KPR od",from);
+        EditText to=field("GGGG-MM-DD",db.setting("hr_tax_to").isEmpty()?
+            later(0):db.setting("hr_tax_to"));
+        dateInput(to);fieldLabel(period,"KPR do",to);
+        EditText year=field("2026",db.setting("hr_tax_year").isEmpty()?
+            periodYear:db.setting("hr_tax_year"));
+        year.setInputType(InputType.TYPE_CLASS_NUMBER);
+        fieldLabel(period,"PO-SD porezna godina (samo 2025./2026.)",year);
+        String effectiveYear=year.getText().toString();
+        EditText activeFrom=field("GGGG-01-01",
+            db.setting("hr_tax_active_from").isEmpty()?
+                effectiveYear+"-01-01":db.setting("hr_tax_active_from"));
+        dateInput(activeFrom);
+        fieldLabel(period,"Djelatnost od (u poreznoj godini)",activeFrom);
+        EditText activeTo=field("GGGG-12-31",
+            db.setting("hr_tax_active_to").isEmpty()?
+                effectiveYear+"-12-31":db.setting("hr_tax_active_to"));
+        dateInput(activeTo);
+        fieldLabel(period,"Djelatnost do (u poreznoj godini)",activeTo);
+        EditText paidTax=field("0,00",db.setting("hr_tax_paid_"+effectiveYear));
+        paidTax.setInputType(InputType.TYPE_CLASS_NUMBER|
+            InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        fieldLabel(period,"Već uplaćeni paušalni porez (EUR, ručni unos)",paidTax);
+        java.util.TreeSet<String> uniqueUnits=new java.util.TreeSet<>();
+        for(Store.Payment item:db.payments())
+            uniqueUnits.add(item.businessUnit==null||item.businessUnit.isEmpty()?
+                "PP1":item.businessUnit);
+        if(uniqueUnits.isEmpty())uniqueUnits.add("PP1");
+        ArrayList<String> unitChoices=new ArrayList<>();unitChoices.add("SVE");
+        unitChoices.addAll(uniqueUnits);
+        Spinner unit=new Spinner(this);
+        unit.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,unitChoices));
+        if(uniqueUnits.size()==1)unit.setSelection(1);
+        place(period,label("Poslovna jedinica za KPR (za više jedinica odaberite jednu)",
+            12,ink(),true));gap(period,5);
+        place(period,unit);gap(period,10);
+        place(period,label("Uplaćeni porez provjerite u poreznoj knjigovodstvenoj "+
+            "kartici. Mjeseci rada izračunavaju se iz odabranog "+
+            "kontinuiranog razdoblja. Više prekida ili zajednička djelatnost "+
+            "zahtijevaju ručnu stručnu provjeru.",11,sub(),false));
+        place(body,period);gap(body,14);
+
+        Runnable save=()->{
+            int selected=model.getSelectedItemPosition();
+            if(selected==0)throw new IllegalArgumentException(
+                "Odaberite stvarni porezni status.");
+            String chosen=selected==1?CroatianTaxReports.PAUSAL:
+                selected==2?CroatianTaxReports.DOHODAK:CroatianTaxReports.OTHER;
+            db.setting("hr_tax_model",chosen);
+            db.setting("hr_tax_owner",owner.getText().toString());
+            db.setting("hr_tax_residence",residence.getText().toString());
+            db.setting("hr_tax_activity",activity.getText().toString());
+            db.setting("hr_tax_nkd",nkd.getText().toString());
+            db.setting("hr_tax_place",place.getText().toString());
+            db.setting("hr_tax_special",special.getSelectedItemPosition()==1?"yes":"no");
+            db.setting("hr_tax_from",from.getText().toString());
+            db.setting("hr_tax_to",to.getText().toString());
+            db.setting("hr_tax_year",year.getText().toString());
+            db.setting("hr_tax_active_from",activeFrom.getText().toString());
+            db.setting("hr_tax_active_to",activeTo.getText().toString());
+            if(!paidTax.getText().toString().trim().isEmpty())
+                db.setting("hr_tax_paid_"+year.getText().toString(),
+                    paidTax.getText().toString());
+        };
+        button(body,"Spremi porezne podatke",()->{
+            try{save.run();toast("Porezni podaci spremljeni samo u vaš lokalni profil.");}
+            catch(Exception e){error(e);}
+        });gap(body,10);
+        secondary(body,"Razvrstaj starije uplate bez načina naplate",
+            this::classifyOldTaxReceipts);
+        gap(body,15);
+        button(body,"Preuzmi Knjigu prometa (PDF)",()->{
+            try{
+                save.run();
+                String selectedUnit=unitChoices.get(unit.getSelectedItemPosition());
+                if(uniqueUnits.size()>1&&"SVE".equals(selectedUnit))
+                    throw new IllegalArgumentException("KPR se vodi po poslovnoj jedinici. "+
+                        "Odaberite jedinicu; PO-SD i dalje zbraja sve primitke.");
+                CroatianTaxReports.Book book=CroatianTaxReports.book(db,
+                    from.getText().toString(),to.getText().toString(),selectedUnit);
+                pendingHrProfile=LocalAccounts.activeId();
+                pendingHrBook=book;pendingHrBusiness=CroatianTaxReports.business(db);
+                pendingHrPosd=null;
+                createFile(HR_KPR_PDF,"application/pdf",
+                    "Fakturiva-KPR-"+book.start+"-"+book.end+".pdf");
+            }catch(Exception e){clearPendingHrReport();error(e);}
+        });
+        gap(body,10);
+        button(body,"Preuzmi PO-SD (PDF)",()->{
+            try{
+                save.run();
+                pendingHrPosd=CroatianTaxReports.posd(db,
+                    Integer.parseInt(year.getText().toString()),
+                    activeFrom.getText().toString(),activeTo.getText().toString(),
+                    paidTax.getText().toString());
+                pendingHrProfile=LocalAccounts.activeId();
+                pendingHrBusiness=null;pendingHrBook=null;
+                createFile(HR_POSD_PDF,"application/pdf",
+                    "Fakturiva-PO-SD-"+pendingHrPosd.year+".pdf");
+            }catch(Exception e){clearPendingHrReport();error(e);}
+        });
+        gap(body,10);
+        secondary(body,"PO-SD XML (radni podatci – ne za ePoreznu)",()->{
+            try{
+                save.run();
+                pendingHrPosd=CroatianTaxReports.posd(db,
+                    Integer.parseInt(year.getText().toString()),
+                    activeFrom.getText().toString(),activeTo.getText().toString(),
+                    paidTax.getText().toString());
+                pendingHrProfile=LocalAccounts.activeId();
+                pendingHrBusiness=null;pendingHrBook=null;
+                new AlertDialog.Builder(this).setTitle("XML nije službeni format")
+                    .setMessage("Ovaj XML sadrži ispunjene radne podatke PO-SD. "+
+                        "Službena ePorezna XSD shema za godinu mora se dodatno "+
+                        "potvrditi i validirati prije uvoza u ePoreznu. "+
+                        "Nemojte slati ovaj XML kao službeni obrazac.")
+                    .setNegativeButton("Odustani",(d,w)->clearPendingHrReport())
+                    .setPositiveButton("Spremi radni XML",(d,w)->createFile(
+                        HR_POSD_XML,"application/xml",
+                        "Fakturiva-PO-SD-RADNI-"+pendingHrPosd.year+".xml"))
+                    .show();
+            }catch(Exception e){clearPendingHrReport();error(e);}
+        });
+        gap(body,15);
+        place(body,label("NAPOMENA: Financijski podatci trebaju biti usklađeni s "+
+            "bankom i blagajnom. Uplate bez klasifikacije blokiraju izvoz, "+
+            "a neizdani i nenaplaćeni računi nisu primitci. PO-SD za "+
+            "d.o.o. i za zajedničke djelatnosti ne računa se automatski.",
+            11,sub(),false));gap(body,20);
+    }
+
+    private void classifyOldTaxReceipts(){
+        if(db==null||LocalAccounts.activeId()==null)return;
+        Store.Payment pending=null;
+        for(Store.Payment payment:db.payments()){
+            if("UNKNOWN".equals(payment.channel)){
+                pending=payment;break;
+            }
+        }
+        if(pending==null){
+            new AlertDialog.Builder(this).setTitle("Načini naplate")
+                .setMessage("Nema uplata s nepoznatim načinom plaćanja.")
+                .setPositiveButton("U redu",null).show();
+            return;
+        }
+        final Store.Payment target=pending;
+        String[] labels={"Gotovina","Uplata na račun","Platna kartica","Ček"};
+        String[] codes={"CASH","BANK","CARD","CHEQUE"};
+        new AlertDialog.Builder(this).setTitle("Razvrstaj uplatu #"+target.id)
+            .setMessage("Račun "+target.invoiceNumber+" · "+target.paidOn+
+                " · "+CroatianTaxReports.euros(target.amountCents)+
+                "\nOdaberite stvarni način naplate prema izvodu ili blagajni.")
+            .setItems(labels,(dialog,index)->{
+                try{
+                    db.classifyPayment(target.id,codes[index]);
+                    classifyOldTaxReceipts();
+                }catch(Exception e){error(e);}
+            })
+            .setNegativeButton("Kasnije",null).show();
+    }
+
     /** Screen 15: reports are scoped to the selected accounting month. */
     private void reports(){
         setup("reports",true);
@@ -3056,6 +3763,8 @@ public final class MainActivity extends Activity {
         clientField(payout,"Nenaplaćeno iz izdanih računa",money(totals[4]));
         place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
+        gap(body,10);
+        secondary(body,"Knjiga prometa / PO-SD (Hrvatska)",this::croatianTaxScreen);
         gap(body,20);
         // Totals reflect the currently selected reporting month.
     }
@@ -3106,6 +3815,10 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
+    }
+    private void clearPendingHrReport(){
+        pendingHrBook=null;pendingHrPosd=null;pendingHrBusiness=null;
+        pendingHrProfile=null;
     }
     private void payments(){
         setup("payments",true);
@@ -3314,6 +4027,15 @@ public final class MainActivity extends Activity {
             "Profil izdavatelja za nove PDF dokumente",this::company);
         settingRow(options,"?","Pomoć i upute",
             "Računi, ponude i načini rada",this::guide);
+        settingRow(options,"☁","Vlastiti hosting (neobavezno)",
+            "Šifrirana ručna kopija · HTTPS · bez SQL baze",
+            this::selfHostedSettings);
+        settingRow(options,"♧","Privatnost i brisanje podataka",
+            "Lokalni i udaljeni računi · prava korisnika",
+            this::privacyInfoScreen);
+        settingRow(options,"♙","Korisnički računi",
+            LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
+            this::localAccountSettings);
         settingRow(options,"◈","Sigurnost",
             prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"PIN i privatnost",
             ()->securityScreen(false,true));
@@ -3331,6 +4053,8 @@ public final class MainActivity extends Activity {
         LinearLayout tools=card();pad(tools,0,2);
         settingRow(tools,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
         settingRow(tools,"▥","Izvještaji","Analitika računa i naplate",this::reports);
+        settingRow(tools,"▤","KPR i PO-SD (Hrvatska)",
+            "Knjiga prometa i godišnji porezni obračun",this::croatianTaxScreen);
         place(body,tools);
         gap(body,17);
         caption(body,"Fakturiva · Brendigo");
@@ -3554,6 +4278,8 @@ public final class MainActivity extends Activity {
         });
         gap(body,12);
         caption(body,"This app creates ordinary invoices and quotes. Printing does not process card payments or provide fiscalization.");
+        gap(body,12);
+        secondary(body,"Privatnost i brisanje računa",this::privacyInfoScreen);
     }
     private void requestBluetoothPrint(long documentId,int dots){
         if(Build.VERSION.SDK_INT>=31 &&
@@ -3961,6 +4687,8 @@ public final class MainActivity extends Activity {
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
             if(code==104)pendingPaymentsCsvMonth=null;
             if(code==106)pendingReportCsvMonth=null;
+            if(code==HR_KPR_PDF||code==HR_POSD_PDF||code==HR_POSD_XML)
+                clearPendingHrReport();
             return;
         }
         Uri uri=data.getData();
@@ -3969,7 +4697,31 @@ public final class MainActivity extends Activity {
             return;
         }
         try{
-            if(code==PDF_EXPORT){
+            if(code==HR_KPR_PDF || code==HR_POSD_PDF || code==HR_POSD_XML){
+                if(pendingHrProfile==null ||
+                   !pendingHrProfile.equals(LocalAccounts.activeId()) || db==null ||
+                   !pendingHrProfile.equals(db.profileId()))
+                    throw new SecurityException("Korisnički račun za porezni izvoz nije aktivan.");
+                try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
+                    if(out==null)throw new IllegalStateException("Ne mogu otvoriti datoteku.");
+                    if(code==HR_KPR_PDF){
+                        if(pendingHrBook==null||pendingHrBusiness==null)
+                            throw new IllegalStateException("Ponovite pripremu KPR-a");
+                        CroatianTaxPdf.writeKpr(pendingHrBook,pendingHrBusiness,out);
+                    }else if(code==HR_POSD_PDF){
+                        if(pendingHrPosd==null)
+                            throw new IllegalStateException("Ponovite pripremu PO-SD");
+                        CroatianTaxPdf.writePosd(pendingHrPosd,out);
+                    }else{
+                        if(pendingHrPosd==null)
+                            throw new IllegalStateException("Ponovite pripremu PO-SD");
+                        out.write(CroatianTaxReports.workingXml(pendingHrPosd));
+                    }
+                }finally{clearPendingHrReport();}
+                toast(code==HR_POSD_XML?
+                    "XML radni podaci spremljeni; NISU za izravni uvoz u ePoreznu.":
+                    "PDF poreznog izvještaja uspješno spremljen.");
+            }else if(code==PDF_EXPORT){
                 if(pendingPdfId<=0)
                     throw new IllegalStateException("Dokument za izvoz nije poznat. Ponovite izvoz.");
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
@@ -4025,7 +4777,11 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
-        if("security_unlock".equals(screen))finish();
+        if("local_login".equals(screen)||"local_register".equals(screen)){
+            enteredLocalPin.setLength(0);
+            if("local_register".equals(screen))welcome();else finish();
+        }
+        else if("security_unlock".equals(screen))finish();
         else if("security_setup".equals(screen)){
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
             if(securityFromSettings)settings();else welcome();

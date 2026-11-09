@@ -1,0 +1,54 @@
+name: Self-hosted Fakturiva JSON API security smoke
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'quality/web-hosting/**'
+      - '.github/workflows/self-host-json.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'quality/web-hosting/**'
+      - '.github/workflows/self-host-json.yml'
+  workflow_dispatch:
+jobs:
+  php-json-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PHP runtime and crypto extensions
+        run: |
+          php -v
+          php -r 'if(!extension_loaded("openssl") || !extension_loaded("json")) exit(2);'
+      - name: Lint all PHP source files
+        run: |
+          find web -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Test tenant isolation, optimistic revisions and deletion
+        run: php quality/web-hosting/smoke.php
+      - name: Verify web PIN registration and Android credential separation
+        run: php quality/web-hosting/web-auth-smoke.php
+      - name: Verify HTTPS-only API handling, auth and account deletion over HTTP loopback
+        run: bash quality/web-hosting/http-smoke.sh
+      - name: Verify public web registration, PIN login, CSRF and account deletion over HTTP fixture
+        run: bash quality/web-hosting/web-form-http.sh
+      - name: Verify no keys or test credentials were checked in
+        run: |
+          if git ls-files web/storage | grep -E '/secret\.php$|/accounts/.+\.json$|/index/.+\.json$|/limits/.+\.json$'; then
+            echo "::error::Runtime secret or tenant data is tracked in Git"
+            exit 1
+          fi
+
+      - name: Package tracked web source only for responsive visual QA
+        if: always()
+        run: git archive --format=zip --output=/tmp/fakturiva-web-qa.zip HEAD web/
+      - name: Upload web source bundle for screenshot comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fakturiva-web-source-qa
+          path: /tmp/fakturiva-web-qa.zip
+          if-no-files-found: warn
