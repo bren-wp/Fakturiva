@@ -34,18 +34,19 @@ Android aplikacija • Web pristup poslovnom pregledu • Windows klijent
 
 ## Jedan Fakturiva račun za web i Android
 
-**Registracija i prijava koriste e-adresu i lozinku na [fakturiva.eu](https://fakturiva.eu/).** Android za pristup lokalnoj kopiji dodatno postavlja osobni PIN. Za postojeće starije račune dostupna je i prethodna PIN prijava.
+**Registracija i prijava koriste e-adresu i lozinku na [fakturiva.eu](https://fakturiva.eu/).** Android za pristup lokalnoj kopiji dodatno postavlja osobni PIN. Za postojeće starije račune dostupna je i prethodna PIN prijava. Novi korisnici na webu i Androidu unose i potvrđuju lozinku prije stvaranja računa.
 
-1. Registrirajte se e-adresom i snažnom lozinkom na webu ili u Android aplikaciji.
-2. Prijavite se istim poslužiteljskim računom na drugom uređaju.
-3. Nakon provjere vjerodajnica vratite posljednju potvrđenu šifriranu sigurnosnu kopiju.
-4. Na webu pregledajte račun, revizije sigurnosnih kopija, financije i podržane porezne preglede.
+1. Registrirajte se e-adresom, snažnom lozinkom i potvrdom lozinke na webu ili u Android aplikaciji.
+2. Na Androidu zatim postavite **lokalni PIN (4–6 znamenki)** za šifriranu radnu kopiju. PIN se ne šalje na web.
+3. Prijavite se istom e-adresom i lozinkom na drugom uređaju i vratite posljednju serverom potvrđenu šifriranu kopiju.
+4. U aplikaciji otvorite **Postavke → Korisnički računi → Preuzmi novije podatke s weba** za sigurnu obnovu podataka promijenjenih na drugom uređaju. Lokalna kopija prvo se zaštićuje, a nepotvrđene offline promjene ne prepisuju se.
+5. Na webu pregledajte korisnički račun, financijske podatke, dokumente i podržane porezne izvještaje iz posljednje potvrđene kopije.
 
-**Važno:** web poslovni pregled trenutačno čita potvrđene šifrirane preslike, ali nije puni dvosmjerni web editor svih poslovnih zapisa. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
+**Važno:** Android pohranjuje i preuzima **cijele šifrirane kopije** računa, ponuda, klijenata, artikala, uplata i postavki. To omogućuje obnovu potvrđenih podataka na drugim uređajima, ali još nije istodobno uređivanje iste baze na dva uređaja. Web poslovni pregled trenutačno čita potvrđene preslike i **nije puni dvosmjerni web editor**. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
 
 ## Stvarni zasloni aplikacije
 
-Svih **20 fotografija su stvarne snimke pokrenute Android aplikacije na QA emulatoru**, nisu dizajnerski mockupovi ni AI generirane ilustracije. Kod svakog uspješnog izdanja CI ih snima ponovno iz instaliranog APK-a i ažurira galeriju. Referentne dizajnerske slike koriste se isključivo za usporedbu, nikad kao dokaz implementacije.
+Svih **20 slika su stvarne snimke pokrenute Android aplikacije na QA emulatoru**, nisu dizajnerski mockupovi ni AI generirane ilustracije. GitHub Actions pri izdavanju ponovno pokreće APK, snima svih 20 ekrana i po uspješno provedenoj provjeri osvježava galeriju. Referentne dizajnerske slike koriste se isključivo za usporedbu, nikad kao dokaz implementacije. **Pixel-perfect odstupanje mora se izmjeriti zasebno; nije potvrđeno 0 %.**
 
 <div align="center">
 <table>
