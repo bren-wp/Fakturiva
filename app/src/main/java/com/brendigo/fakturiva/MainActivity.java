@@ -5256,10 +5256,11 @@ public final class MainActivity extends Activity {
 
         LinearLayout hero=vertical();
         hero.setGravity(Gravity.CENTER);
-        pad(hero,18,16);
+        pad(hero,18,18);
         hero.setBackground(shape(dark?0xff253451:0xffedf0ff,20));
-        TextView symbol=label("⇄",35,BLUE,true);
-        symbol.setGravity(Gravity.CENTER);
+        ImageView symbol=icon(R.drawable.ic_eracun_exchange,BLUE);
+        symbol.setPadding(dp(16),dp(16),dp(16),dp(16));
+        symbol.setContentDescription("eRačuni i fiskalizacija");
         symbol.setBackground(shape(panel(),17));
         hero.addView(symbol,lp(65,65));gap(hero,10);
         TextView heading=label("eRačuni i fiskalizacija",20,ink(),true);
@@ -5311,7 +5312,7 @@ public final class MainActivity extends Activity {
             String heading,String subtitle,boolean checked,Runnable onClick){
         LinearLayout row=horizontal();
         row.setGravity(Gravity.CENTER_VERTICAL);
-        pad(row,2,12);
+        pad(row,2,13);
         TextView step=label(indicator,13,
             checked?0xff078a65:sub(),true);
         step.setGravity(Gravity.CENTER);
