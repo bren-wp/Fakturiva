@@ -929,6 +929,7 @@ public final class MainActivity extends Activity {
             }
             prefs.edit().putString("local_last_user",LocalAccounts.activeName())
                 .putBoolean("welcomed",true).apply();
+            CloudMirror.runPending(this,verifiedId);
             if(prefs.getBoolean("device_lock",false))
                 securityScreen(true,false);
             else{
@@ -959,13 +960,21 @@ public final class MainActivity extends Activity {
     private void localAccountSettings(){
         if(LocalAccounts.activeId()==null){loginPinScreen();return;}
         setup("local_accounts",true);
-        toolbar("Korisnički računi","Lokalna pohrana · bez vanjskih servisa",true);
+        toolbar("Korisnički računi","Vaši profili i sigurnosne kopije",true);
         LinearLayout info=card();
         place(info,label("Prijavljen: "+LocalAccounts.activeName(),16,ink(),true));
         gap(info,9);
         place(info,label("Svaki profil ima zasebnu bazu računa, ponuda i klijenata "+
             "te odvojene šifrirane sigurnosne kopije.",12,sub(),false));
+        gap(info,11);
+        place(info,label(CloudMirror.status(this,LocalAccounts.activeId()),
+            12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
         place(body,info);gap(body,15);
+        secondary(body,"Provjeri server i pošalji promjene",()->{
+            CloudMirror.runPending(this,LocalAccounts.activeId());
+            toast("Provjera sinkronizacije pokrenuta.");
+        });
+        gap(body,12);
         button(body,"Odjava s uređaja",()->new AlertDialog.Builder(this)
             .setTitle("Odjava").setMessage("Odjaviti lokalni korisnički račun?")
             .setNegativeButton("Odustani",null)
@@ -1025,12 +1034,16 @@ public final class MainActivity extends Activity {
     private void selfHostedSettings(){
         if(LocalAccounts.activeId()==null||db==null){loginPinScreen();return;}
         setup("self_host",true);
-        toolbar("Vlastiti hosting","Ručna šifrirana sinkronizacija",true);
+        toolbar("Korisnički račun i sigurnosne kopije","Pohrana na vlastitom serveru",true);
         LinearLayout notice=card();
-        place(notice,label("Potpuno neobavezno",16,ink(),true));gap(notice,8);
-        place(notice,label("Svi računi i ponude rade lokalno i bez interneta. "+
-            "Za sinkronizaciju sa svojim hostingom postavite vlastitu HTTPS adresu "+
-            "i zasebnu lozinku od najmanje 12 znakova. PIN ostaje na uređaju.",12,sub(),false));
+        place(notice,label("Pohrana i oporavak podataka",16,ink(),true));gap(notice,8);
+        place(notice,label("Podatci na serveru glavna su sigurnosna kopija, a "+
+            "uređaj čuva radnu kopiju za rad bez interneta. "+
+            "Za potpuno siguran oporavak nakon ponovne instalacije unesite "+
+            "HTTPS adresu, korisničko ime i zasebnu lozinku hostinga.",12,sub(),false));
+        gap(notice,11);
+        place(notice,label(CloudMirror.status(this,LocalAccounts.activeId()),
+            12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
         place(body,notice);gap(body,15);
         String id=LocalAccounts.activeId();
         EditText url=field("https://moja-domena.hr/",
@@ -1046,10 +1059,10 @@ public final class MainActivity extends Activity {
             pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
         fieldLabel(body,"Poslužiteljska lozinka",pass);
         gap(body,17);
-        secondary(body,"Registriraj račun na hostingu",()->
+        secondary(body,"Registriraj račun i spremi prvu kopiju",()->
             remoteAction(SelfHostedSyncClient.Action.REGISTER,url,user,pass));
         gap(body,10);
-        button(body,"Pošalji šifriranu sigurnosnu kopiju",()->
+        button(body,"Spremi i poveži automatsku sinkronizaciju",()->
             new AlertDialog.Builder(this).setTitle("Prijenos na vlastiti hosting")
                 .setMessage("Poslat će se cijela šifrirana kopija ovog lokalnog "+
                     "profila na odabrani HTTPS hosting. Ako ondje postoji ranija "+
@@ -1059,7 +1072,7 @@ public final class MainActivity extends Activity {
                     remoteAction(SelfHostedSyncClient.Action.UPLOAD,url,user,pass))
                 .show());
         gap(body,10);
-        secondary(body,"Preuzmi i vrati kopiju s hostinga",()->
+        secondary(body,"Obnovi račune nakon promjene ili reinstalacije",()->
             new AlertDialog.Builder(this).setTitle("Zamjena lokalnih podataka")
                 .setMessage("Ovo zamjenjuje sve račune, ponude i klijente SAMO "+
                     "trenutačnog lokalnog profila. Fakturiva će prije vraćanja "+
@@ -1088,9 +1101,12 @@ public final class MainActivity extends Activity {
             }catch(Exception error){toast(error.getMessage());}
         });
         gap(body,16);
-        place(body,label("Hoster mora podržavati PHP 8.1+, OpenSSL, HTTPS i "+
-            "zapisivanje u storage/data. Nije potreban SQL niti vanjski servis. "+
-            "Veći dokumenti mogu zahtijevati povećanje PHP limita prijenosa.",12,sub(),false));
+        place(body,label("Za obnovu nakon deinstalacije potreban je "+
+            "postojeći poslužiteljski račun i njegova lozinka. "+
+            "Kopija nije potvrđena dok se ne pojavi datum zadnje uspješne "+
+            "sinkronizacije. Hosting zahtijeva PHP 8.1+, HTTPS i "+
+            "redovite vanjske sigurnosne kopije šifriranih podataka i "+
+            "serverova ključa.",12,sub(),false));
         gap(body,20);
     }
 
@@ -4027,8 +4043,8 @@ public final class MainActivity extends Activity {
             "Profil izdavatelja za nove PDF dokumente",this::company);
         settingRow(options,"?","Pomoć i upute",
             "Računi, ponude i načini rada",this::guide);
-        settingRow(options,"☁","Vlastiti hosting (neobavezno)",
-            "Šifrirana ručna kopija · HTTPS · bez SQL baze",
+        settingRow(options,"☁","Pohrana na serveru i oporavak",
+            "Šifrirane kopije · automatska sinkronizacija · HTTPS",
             this::selfHostedSettings);
         settingRow(options,"♧","Privatnost i brisanje podataka",
             "Lokalni i udaljeni računi · prava korisnika",
