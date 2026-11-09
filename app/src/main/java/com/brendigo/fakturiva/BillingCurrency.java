@@ -53,6 +53,11 @@ public final class BillingCurrency {
         NumberFormat number=NumberFormat.getNumberInstance(locale==null?Locale.ENGLISH:locale);
         number.setMinimumFractionDigits(2);
         number.setMaximumFractionDigits(2);
-        return number.format(BigDecimal.valueOf(units,2))+" "+code;
+        // Croatian reference screens use the recognized euro sign, not the
+        // ISO code. Keep codes for other currencies and locales so financial
+        // documents remain unambiguous across international installations.
+        String suffix=("EUR".equals(code) && locale!=null &&
+            "hr".equals(locale.getLanguage()))?"€":code;
+        return number.format(BigDecimal.valueOf(units,2))+" "+suffix;
     }
 }

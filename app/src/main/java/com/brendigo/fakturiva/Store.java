@@ -18,7 +18,7 @@ public final class Store extends SQLiteOpenHelper {
     private static final String DB_NAME = "fakturiva.db";
     public static final int VERSION = 8;
     public static final String INVOICE = "INVOICE", QUOTE = "QUOTE";
-    public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", PAID = "PAID", VOID = "VOID";
+    public static final String DRAFT = "DRAFT", ISSUED = "ISSUED", SENT = "SENT", ACCEPTED = "ACCEPTED", PAID = "PAID", VOID = "VOID";
     private final Context appContext;
     private final String profileId;
     private volatile String lastBackupWarning="";
@@ -562,6 +562,30 @@ public final class Store extends SQLiteOpenHelper {
             db.setTransactionSuccessful();saved=true;
         } finally{db.endTransaction();if(saved)snapshotAfterWrite();}
     }
+    /**
+     * A quote is accepted only after the owner explicitly records acceptance.
+     * Confirmation/dispatch (SENT) must not be presented as client acceptance.
+     * Every successful transition triggers the same durable recovery/sync path
+     * as all other business document changes.
+     */
+    public void acceptQuote(long quoteId) {
+        SQLiteDatabase db=getWritableDatabase();
+        db.beginTransaction();
+        boolean saved=false;
+        try {
+            ContentValues values=new ContentValues();
+            values.put("status",ACCEPTED);
+            if(db.update("documents",values,"id=? AND type=? AND status=?",
+                new String[]{String.valueOf(quoteId),QUOTE,SENT})!=1)
+                throw new IllegalStateException(
+                    "Samo poslana ponuda može se označiti kao prihvaćena.");
+            db.setTransactionSuccessful();
+            saved=true;
+        } finally {
+            db.endTransaction();
+            if(saved)snapshotAfterWrite();
+        }
+    }
     public long quoteToInvoice(long quoteId) {
         Document d=document(quoteId);
         if(!QUOTE.equals(d.type) || DRAFT.equals(d.status) || VOID.equals(d.status))
@@ -693,7 +717,7 @@ public final class Store extends SQLiteOpenHelper {
     /** Reject logically corrupt backups before the SQLite transaction can commit. */
     private void verifyRestoredAmounts(SQLiteDatabase db){
         final String sql="SELECT d.id FROM documents d WHERE "+
-            "d.type NOT IN ('INVOICE','QUOTE') OR d.status NOT IN ('DRAFT','ISSUED','SENT','PAID','VOID') OR "+
+            "d.type NOT IN ('INVOICE','QUOTE') OR d.status NOT IN ('DRAFT','ISSUED','SENT','ACCEPTED','PAID','VOID') OR "+
             "d.net_cents<0 OR d.tax_cents<0 OR d.total_cents<0 OR "+
             "d.total_cents!=d.net_cents+d.tax_cents OR "+
             "NOT EXISTS(SELECT 1 FROM lines l WHERE l.document_id=d.id) OR "+

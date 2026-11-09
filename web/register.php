@@ -25,10 +25,10 @@ $error=takeFlash();
 <form class="auth-form" method="post" action="auth.php" autocomplete="off" data-auth-form>
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <input type="hidden" name="action" value="register">
-<label class="input-label" for="username">Korisničko ime</label>
+<label class="input-label" for="username">E-adresa</label>
 <div class="field-wrap">
 <input id="username" name="username" required minlength="3" maxlength="80"
- type="text" autocapitalize="none" autocomplete="username" spellcheck="false"
+ type="email" inputmode="email" autocapitalize="none" autocomplete="email" spellcheck="false"
  placeholder="ime@tvrtka.hr">
 <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
 <circle cx="12" cy="7.5" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/>

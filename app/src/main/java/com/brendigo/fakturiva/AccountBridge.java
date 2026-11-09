@@ -56,6 +56,46 @@ public final class AccountBridge {
         return result.toString();
     }
 
+    /**
+     * Confirm a web password for a profile already present on this device.
+     * A successful server login does NOT bypass the device's local PIN;
+     * unlocking the offline database remains the responsibility of LocalAccounts.
+     * Offline users can still select the independent PIN-only login action.
+     */
+    public static void verifyCredentials(Activity activity, String name,
+                                         char[] password, Callback callback) {
+        final String username = name == null ? "" : name.trim();
+        final char[] secret = password == null ? new char[0] : password.clone();
+        new Thread(() -> {
+            String error = null, token = null, url = null;
+            try {
+                if (!username.matches("[A-Za-z0-9][A-Za-z0-9._+@-]{2,79}") ||
+                    secret.length < 12 || secret.length > 256)
+                    throw new IllegalArgumentException("Neispravna web prijava.");
+                url = SelfHostedSyncClient.apiUrl(HOST);
+                JSONObject auth = SelfHostedSyncClient.command("login", username,
+                    new String(secret));
+                token = SelfHostedSyncClient.request(url, auth, null)
+                    .getString("token");
+            } catch(Exception failure) {
+                error = failure.getMessage() == null ?
+                    "Web prijava nije uspjela." : failure.getMessage();
+            } finally {
+                if (url != null && token != null) {
+                    try { SelfHostedSyncClient.request(url,
+                        new JSONObject().put("action","logout"),token); }
+                    catch(Exception ignored) { /* token expires independently */ }
+                }
+                Arrays.fill(secret, '\0');
+            }
+            final String result = error;
+            UI.post(() -> {
+                if (!activity.isFinishing() && !activity.isDestroyed())
+                    callback.complete(result, null);
+            });
+        }, "FakturivaVerifyWebPassword").start();
+    }
+
     /** Starts registration on the server before creating the offline cache. */
     public static void register(Activity activity, String username, char[] passphrase,
                                 char[] pin, Callback callback) {

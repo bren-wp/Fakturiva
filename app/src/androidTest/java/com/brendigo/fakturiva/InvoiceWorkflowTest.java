@@ -114,6 +114,51 @@ public final class InvoiceWorkflowTest extends FakturivaTestCase {
         }finally{if(db!=null)db.close();context.clean();}
     }
     @Test
+    public void testQuoteAcceptanceIsExplicitAndSurvivesBackup() throws Exception {
+        IsolatedContext context=new IsolatedContext(getContext());
+        Store db=null,copy=null;
+        IsolatedContext other=null;
+        try {
+            db=new Store(context);
+            db.setting("name","Izvorni izdavatelj");
+            long client=db.saveClient("Prihvatitelj ponude","","Zagreb","");
+            Store.Item item=new Store.Item();
+            item.name="Usluga";item.qtyMilli=1000;
+            item.unitCents=25000;item.taxRate=25;
+            long quote=db.createDraft(Store.QUOTE,client,
+                "2026-11-01","2026-11-30","2026-11-01",
+                "Ponuda",Arrays.asList(item));
+            try {
+                db.acceptQuote(quote);
+                fail("A draft must not be accepted");
+            } catch(IllegalStateException expected) {}
+            db.confirm(quote);
+            assertEquals(Store.SENT,db.document(quote).status);
+            assertTrue(MainActivity.matches(db.document(quote),"Poslane"));
+            db.acceptQuote(quote);
+            assertEquals(Store.ACCEPTED,db.document(quote).status);
+            assertTrue(MainActivity.matches(db.document(quote),"Prihvaćene"));
+            assertFalse(MainActivity.matches(db.document(quote),"Poslane"));
+            try {
+                db.acceptQuote(quote);
+                fail("Repeated acceptance must fail closed");
+            } catch(IllegalStateException expected) {}
+            JSONObject snapshot=db.backup();
+            other=new IsolatedContext(getContext());
+            copy=new Store(other);
+            copy.restore(snapshot);
+            assertEquals(Store.ACCEPTED,copy.document(quote).status);
+            assertEquals("Prihvaćena",DocumentStatus.label(copy.document(quote),
+                "2026-11-01","2026-11-08"));
+        } finally {
+            if(copy!=null)copy.close();
+            if(db!=null)db.close();
+            if(other!=null)other.clean();
+            context.clean();
+        }
+    }
+
+    @Test
     public void testInvalidBackupRollsBackWithoutLosingInvoices()throws Exception{
         IsolatedContext context=new IsolatedContext(getContext());Store db=null;
         try{

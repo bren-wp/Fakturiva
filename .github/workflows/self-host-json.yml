@@ -41,6 +41,8 @@ jobs:
         run: bash quality/web-hosting/http-smoke.sh
       - name: Verify public web registration, PIN login, CSRF and account deletion over HTTP fixture
         run: bash quality/web-hosting/web-form-http.sh
+      - name: Verify external private storage and master-key isolation
+        run: php quality/web-hosting/storage-root-smoke.php
       - name: Verify no keys or test credentials were checked in
         run: |
           if git ls-files web/storage | grep -E '/secret\.php$|/accounts/.+\.json$|/index/.+\.json$|/limits/.+\.json$'; then

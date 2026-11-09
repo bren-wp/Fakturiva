@@ -52,6 +52,7 @@ public final class MainActivity extends Activity {
     private static final int BG=0xfff6f8fc, WHITE=Color.WHITE, NAVY=0xff14263f,
         TEXT=0xff253449, MUTED=0xff8592a5, BLUE=0xff5566f8,
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
+    private static final int SPLASH_DURATION_MS=4500;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
     private static final int PICK_BRANDING_LOGO=121;
     private String pendingBrandProfile;
@@ -183,8 +184,12 @@ public final class MainActivity extends Activity {
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
     private String selectedLanguage(){
         if(qaReferenceCroatian)return "hr";
+        // Follow the device locale until the user explicitly chooses an
+        // application language. Croatian reference devices thus see Croatian
+        // strings, while English and other selected languages remain intact.
+        String preferred=Locale.getDefault().getLanguage().equals("hr")?"hr":"en";
         return UiStrings.normalized(
-            prefs==null?"en":prefs.getString("ui_language","en"));
+            prefs==null?preferred:prefs.getString("ui_language",preferred));
     }
     private Locale selectedLocale(){
         return "hr".equals(selectedLanguage())?Locale.forLanguageTag("hr-HR"):Locale.ENGLISH;
@@ -621,8 +626,9 @@ public final class MainActivity extends Activity {
         down.bottomMargin=dp(57);frame.addView(bottom,down);
         if(animate){
             frame.setContentDescription("Fakturiva — učitavanje aplikacije");
-            frame.setOnClickListener(v->finishSplash());
-            frame.postDelayed(this::finishSplash,1150);
+            // Keep the brand splash visible 4.5 seconds on genuine launches.
+            // Debug screenshot harness calls splash(false) without a delay.
+            frame.postDelayed(this::finishSplash,SPLASH_DURATION_MS);
         }
     }
     /** Launch navigation respects first-run state and never invents a cloud login. */
@@ -738,28 +744,29 @@ public final class MainActivity extends Activity {
         localBrand();gap(body,28);
         place(body,label("Dobro došli natrag",29,NAVY,true));gap(body,10);
         place(body,label("Prijavite se i nastavite s poslovanjem.",
-            14,MUTED,false));gap(body,87);
-        place(body,label("E-adresa",14,NAVY,true));gap(body,10);
+            14,MUTED,false));gap(body,72);
+        place(body,label("E-adresa",12,NAVY,true));gap(body,2);
         EditText username=field("ime@tvrtka.hr",
             prefs.getString("remember_web_user",""));
         username.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        place(body,username);gap(body,20);
-        place(body,label("Lozinka",14,NAVY,true));gap(body,10);
-        EditText pass=field("","");
+        place(body,username);gap(body,15);
+        place(body,label("Lozinka",12,NAVY,true));gap(body,6);
+        EditText pass=field("••••••••••","");
         pass.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_PASSWORD);
         pass.setSaveEnabled(false);
         if(Build.VERSION.SDK_INT>=26)
             pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
-        place(body,pass);gap(body,18);
+        place(body,pass);gap(body,10);
         LinearLayout rememberRow=horizontal();
         rememberRow.setGravity(Gravity.CENTER_VERTICAL);
         android.widget.CheckBox remember=new android.widget.CheckBox(this);
         remember.setText("Zapamti me");
         remember.setTextColor(MUTED);remember.setTextSize(12);
         remember.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE));
-        remember.setChecked(!prefs.getString("remember_web_user","").isEmpty());
+        remember.setChecked(runScreenshotModeOnly() ||
+            !prefs.getString("remember_web_user","").isEmpty());
         rememberRow.addView(remember,new LinearLayout.LayoutParams(-2,dp(44)));
         TextView help=label("Zaboravili ste lozinku?",12,BLUE,true);
         help.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
@@ -769,7 +776,7 @@ public final class MainActivity extends Activity {
             catch(Exception e){toast("Stranica pomoći nije dostupna");}
         });
         rememberRow.addView(help,new LinearLayout.LayoutParams(0,dp(44),1));
-        place(body,rememberRow);gap(body,15);
+        place(body,rememberRow);gap(body,6);
         TextView submit=action("›   Prijavi se",BLUE,true,()->{
             if(selfHostedBusy)return;
             String name=username.getText().toString().trim();
@@ -783,8 +790,23 @@ public final class MainActivity extends Activity {
             try{
                 for(String saved:LocalAccounts.names(this)){
                     if(saved.equalsIgnoreCase(name)){
-                        toast("Račun je već na ovom uređaju. Prijavite se PIN-om.");
-                        loginPinScreen();return;
+                        // The reference email/password form must verify web
+                        // credentials even if an offline profile already exists.
+                        // Local PIN remains a second, device-only unlock step.
+                        char[] secret=pass.getText().toString().toCharArray();
+                        selfHostedBusy=true;
+                        AccountBridge.verifyCredentials(this,name,secret,
+                            (error,id)->{
+                                selfHostedBusy=false;
+                                pass.setText("");
+                                if(error!=null)toast(error);
+                                else{
+                                    toast("Web račun potvrđen. Unesite lokalni PIN.");
+                                    loginPinScreen();
+                                }
+                            });
+                        Arrays.fill(secret,'\0');
+                        return;
                     }
                 }
             }catch(Exception e){accountStorageError(e);return;}
@@ -825,7 +847,7 @@ public final class MainActivity extends Activity {
                     }
                 }).show();
         });
-        authPrimaryStyle(submit);place(body,submit);gap(body,63);
+        authPrimaryStyle(submit);place(body,submit);gap(body,103);
         TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
         create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
         create.setOnClickListener(v->registrationScreen());place(body,create);
@@ -852,7 +874,7 @@ public final class MainActivity extends Activity {
         place(body,label("Kreirajte novi račun i započnite s poslovanjem.",
             14,MUTED,false));
         gap(body,32);
-        place(body,label("Korisničko ime",14,0xff53627b,true));gap(body,10);
+        place(body,label("E-adresa",14,0xff53627b,true));gap(body,10);
         EditText username=field("ime@tvrtka.hr","");
         username.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
@@ -888,6 +910,10 @@ public final class MainActivity extends Activity {
             char[] digits=pin.getText().toString().toCharArray();
             char[] secret=password.getText().toString().toCharArray();
             try{
+                if(!android.util.Patterns.EMAIL_ADDRESS.matcher(
+                        username.getText().toString().trim()).matches()){
+                    toast("Unesite ispravnu e-adresu.");return;
+                }
                 boolean first=!LocalAccounts.hasAccounts(this);
                 selfHostedBusy=true;
                 AccountBridge.register(this,username.getText().toString(),
@@ -1779,6 +1805,7 @@ public final class MainActivity extends Activity {
             documentSearchQuery);
         search.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         search.setSingleLine(true);
+        search.setTextSize(11);
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         LinearLayout.LayoutParams inputLp=new LinearLayout.LayoutParams(0,dp(42),1);
         inputLp.leftMargin=dp(8);searchBar.addView(search,inputLp);
@@ -1796,7 +1823,7 @@ public final class MainActivity extends Activity {
         });
         String[] states=invoice?
             new String[]{"Svi","Plaćeni","Neplaćeni","Skice"}:
-            new String[]{"Svi","Potvrđene","Skice"};
+            new String[]{"Svi","Poslane","Prihvaćene","Skice"};
         Runnable chooseFilter=()->new AlertDialog.Builder(this)
             .setTitle("Filtriraj "+(invoice?"račune":"ponude"))
             .setSingleChoiceItems(states,java.util.Arrays.asList(states).indexOf(filter),
@@ -1844,7 +1871,8 @@ public final class MainActivity extends Activity {
         if(invoice){
             long unpaid=0;
             for(Store.Document document:inCurrency)
-                if(Store.ISSUED.equals(document.status))
+                if(!Store.DRAFT.equals(document.status) &&
+                   !Store.VOID.equals(document.status))
                     unpaid=Math.addExact(unpaid,document.outstanding());
             TextView remaining=label("Neplaćeno  "+money(unpaid),11,ink(),true);
             remaining.setSingleLine(true);
@@ -1881,7 +1909,8 @@ public final class MainActivity extends Activity {
     static long[] activeQuoteTotals(List<Store.Document> documents,String today){
         long count=0,value=0;
         for(Store.Document quote:documents){
-            if(Store.QUOTE.equals(quote.type) && Store.SENT.equals(quote.status)
+            if(Store.QUOTE.equals(quote.type) &&
+                (Store.SENT.equals(quote.status)||Store.ACCEPTED.equals(quote.status))
                 && quote.dueDate!=null && quote.dueDate.compareTo(today)>=0){
                 count=Math.addExact(count,1);
                 value=Math.addExact(value,quote.totalCents);
@@ -1992,13 +2021,15 @@ public final class MainActivity extends Activity {
     }
 
     private int badgeForeground(String status){
-        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xff078a65;
+        if("Plaćen".equals(status)||"Potvrđena".equals(status)||"Prihvaćena".equals(status))return 0xff078a65;
+        if("Poslana".equals(status))return 0xff5269e7;
         if("Dospijeva".equals(status))return 0xffaf6c08;
         if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffd44759;
         return dark?0xffd0d9ee:0xff61718b;
     }
     private int badgeBackground(String status){
-        if("Plaćen".equals(status)||"Potvrđena".equals(status))return 0xffdcf8ec;
+        if("Plaćen".equals(status)||"Potvrđena".equals(status)||"Prihvaćena".equals(status))return 0xffdcf8ec;
+        if("Poslana".equals(status))return 0xffe8edff;
         if("Dospijeva".equals(status))return 0xfffff1d8;
         if("Neplaćen".equals(status)||"Dospio".equals(status))return 0xffffe8eb;
         return dark?0xff273953:0xffe9eef7;
@@ -2013,7 +2044,9 @@ public final class MainActivity extends Activity {
         if("Neplaćeni".equals(f))
             return Store.INVOICE.equals(d.type) && !Store.DRAFT.equals(d.status)
                 && !Store.VOID.equals(d.status) && d.outstanding()>0;
-        if("Potvrđene".equals(f)||"Poslane".equals(f))return Store.SENT.equals(d.status);
+        if("Poslane".equals(f))return Store.QUOTE.equals(d.type) && Store.SENT.equals(d.status);
+        if("Prihvaćene".equals(f))return Store.QUOTE.equals(d.type) && Store.ACCEPTED.equals(d.status);
+        if("Potvrđene".equals(f))return Store.SENT.equals(d.status);
         return true;
     }
     private void documentRow(Store.Document document){
@@ -2028,7 +2061,8 @@ public final class MainActivity extends Activity {
     }
     private String status(String s){switch(s){
         case Store.DRAFT:return "Nacrt";case Store.ISSUED:return "Potvrđeno";
-        case Store.SENT:return "Potvrđena";case Store.PAID:return "Plaćeno";
+        case Store.SENT:return "Poslana";case Store.ACCEPTED:return "Prihvaćena";
+        case Store.PAID:return "Plaćeno";
         case Store.VOID:return "Stornirano";default:return s;
     }}
     private EditText field(String hint,String value){
@@ -2500,7 +2534,7 @@ public final class MainActivity extends Activity {
             place(form,product);
         }
         fieldLabel(form,"Količina",qty);
-        fieldLabel(form,"Unit price before tax",price);
+        fieldLabel(form,"Jedinična cijena bez PDV-a",price);
         fieldLabel(form,"Tax rate (%)",tax);
         AlertDialog.Builder editor=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi stavku":"Nova stavka")
@@ -2685,10 +2719,22 @@ public final class MainActivity extends Activity {
                 })));
             gap(body,9);
             secondary(body,"Uredi nacrt",()->resumeSavedDraft(id));
-        }else if(invoice && Store.ISSUED.equals(d.status) && d.outstanding()>0){
+        }else if(invoice && !Store.DRAFT.equals(d.status) &&
+                !Store.VOID.equals(d.status) && d.outstanding()>0){
             place(body,action("Evidentiraj uplatu",0xff17b99a,true,
                 ()->payDialog(id)));
         }else if(!invoice && Store.SENT.equals(d.status)){
+            place(body,action("Označi ponudu kao prihvaćenu",0xff17b99a,true,()->
+                new AlertDialog.Builder(this)
+                    .setTitle("Potvrda prihvata ponude")
+                    .setMessage("Potvrdite samo ako je klijent stvarno prihvatio ovu ponudu.")
+                    .setNegativeButton("Odustani",null)
+                    .setPositiveButton("Potvrdi prihvat",(dialog,which)->{
+                        try{db.acceptQuote(id);showDocument(id);}
+                        catch(Exception e){error(e);}
+                    }).show()));
+        }
+        if(!invoice && (Store.SENT.equals(d.status)||Store.ACCEPTED.equals(d.status))){
             place(body,action("Pretvori u nacrt računa",0xff17b99a,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
@@ -3410,6 +3456,7 @@ public final class MainActivity extends Activity {
         searchBar.setBackground(outlined(panel()));pad(searchBar,12,3);
         searchBar.addView(icon(R.drawable.ic_search,sub()),lp(24,24));
         EditText search=field("Pretraži artikle i usluge...","");
+        search.setTextSize(11);
         search.setBackgroundColor(Color.TRANSPARENT);
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(0,dp(45),1);
@@ -3440,7 +3487,7 @@ public final class MainActivity extends Activity {
         meta.addView(label("Ukupno stavki  ",11,sub(),false));
         meta.addView(label(String.valueOf(products.size()),12,ink(),true));
         View space=new View(this);meta.addView(space,new LinearLayout.LayoutParams(0,dp(1),1));
-        meta.addView(label("U katalogu  ",11,sub(),false));
+        meta.addView(label("Aktivne  ",11,sub(),false));
         meta.addView(label(String.valueOf(products.size()),12,ink(),true));
         place(body,meta);gap(body,2);
 
@@ -3453,10 +3500,12 @@ public final class MainActivity extends Activity {
             }
             LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dp(12),dp(18),dp(12),dp(18));
-            TextView symbol=label("⬡",26,i%3==0?BLUE:(i%3==1?TEAL:0xffeaa044),true);
-            symbol.setGravity(Gravity.CENTER);
+            ImageView symbol=icon(R.drawable.ic_cube,
+                i%3==0?BLUE:(i%3==1?TEAL:0xffeaa044));
+            symbol.setPadding(dp(10),dp(10),dp(10),dp(10));
             symbol.setBackground(shape(dark?0xff273852:
                 (i%3==0?0xffeaf0ff:i%3==1?0xffdef8f4:0xfffff1e2),12));
+            symbol.setContentDescription("Artikl ili usluga");
             row.addView(symbol,lp(41,41));
             LinearLayout description=vertical();
             LinearLayout.LayoutParams descriptionLp=new LinearLayout.LayoutParams(0,-2,1);
@@ -3485,34 +3534,25 @@ public final class MainActivity extends Activity {
         empty.setGravity(Gravity.CENTER);
         gap(body,12);place(body,empty);
         final Runnable refresh=()->{
-            int visible=0;boolean previousVisible=false;
+            // Single O(n) pass: visibility and separators depend only on the
+            // preceding visible item, not quadratic look-ahead scans.
+            int visible=0;
+            View pendingDivider=null;
             for(int i=0;i<grouped.getChildCount();i++){
-                View row=grouped.getChildAt(i);
-                if(row.getTag() instanceof Store.Item){
-                    boolean matches=catalogMatches((Store.Item)row.getTag(),
+                View child=grouped.getChildAt(i);
+                if(child.getTag() instanceof Store.Item){
+                    boolean matches=catalogMatches((Store.Item)child.getTag(),
                         search.getText().toString(),selected[0]);
-                    row.setVisibility(matches?View.VISIBLE:View.GONE);
-                    if(matches)visible++;
-                    previousVisible=matches || previousVisible;
-                }else{
-                    row.setVisibility(View.GONE);
-                }
-            }
-            boolean hasPrevious=false;
-            for(int i=0;i<grouped.getChildCount();i++){
-                View view=grouped.getChildAt(i);
-                if(view.getTag() instanceof Store.Item){
-                    if(view.getVisibility()==View.VISIBLE)hasPrevious=true;
-                    continue;
-                }
-                boolean nextVisible=false;
-                for(int j=i+1;j<grouped.getChildCount();j++){
-                    if(grouped.getChildAt(j).getTag() instanceof Store.Item){
-                        nextVisible=grouped.getChildAt(j).getVisibility()==View.VISIBLE;
-                        break;
+                    child.setVisibility(matches?View.VISIBLE:View.GONE);
+                    if(matches){
+                        if(visible>0 && pendingDivider!=null)
+                            pendingDivider.setVisibility(View.VISIBLE);
+                        visible++;
                     }
+                }else{
+                    child.setVisibility(View.GONE);
+                    pendingDivider=child;
                 }
-                view.setVisibility(hasPrevious&&nextVisible?View.VISIBLE:View.GONE);
             }
             grouped.setVisibility(visible>0?View.VISIBLE:View.GONE);
             empty.setVisibility(visible==0?View.VISIBLE:View.GONE);
@@ -3563,12 +3603,11 @@ public final class MainActivity extends Activity {
         return kind&&text.contains(term);
     }
 
-    private void addProduct(){editProduct(null);}
     private void editProduct(Store.Item current){
         boolean editing=current!=null;
         LinearLayout form=vertical();pad(form,18,5);
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
-        EditText price=field("Unit price ("+(editing?
+        EditText price=field("Jedinična cijena ("+(editing?
             BillingCurrency.canonical(current.currencyCode):selectedCurrency())+")",editing?
             String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -3577,7 +3616,7 @@ public final class MainActivity extends Activity {
         kind.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,kinds));
         if(editing)kind.setSelection("SERVICE".equals(current.kind)?1:
             "PRODUCT".equals(current.kind)?2:3);
-        EditText vat=field("Tax rate (%)",editing?
+        EditText vat=field("Stopa PDV-a (%)",editing?
             Money.rateLabel(current.taxRate).replace("%",""):"0");
         vat.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         EditText unit=field("Mjerna jedinica (kom, sat, mj...)",
@@ -3586,7 +3625,7 @@ public final class MainActivity extends Activity {
         gap(form,9);place(form,label("Vrsta",12,ink(),true));place(form,kind);
         fieldLabel(form,"Unit price before tax",price);
         fieldLabel(form,"Mjerna jedinica",unit);
-        fieldLabel(form,"Tax rate (%)",vat);
+        fieldLabel(form,"Stopa PDV-a (%)",vat);
         AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle(editing?"Uredi artikl ili uslugu":"Novi artikl ili usluga")
             .setView(form).setNegativeButton("Odustani",null)
@@ -4060,10 +4099,23 @@ public final class MainActivity extends Activity {
         place(body,top);gap(body,21);
         List<Store.Payment> history=db.payments();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
-        int monthlyCount=0;long monthlyAmount=0;
-        for(Store.Payment p:history)if(p.paidOn.startsWith(month)&&
-            BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency())){
-            monthlyCount++;monthlyAmount=Math.addExact(monthlyAmount,p.amountCents);
+        // Count invoices whose last real receipt completed payment in this
+        // month, not payment rows (one invoice may have several installments).
+        java.util.HashMap<Long,String> lastReceipt=new java.util.HashMap<>();
+        for(Store.Payment p:history){
+            if(!BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency()))
+                continue;
+            String previous=lastReceipt.get(p.documentId);
+            if(previous==null||previous.compareTo(p.paidOn)<0)
+                lastReceipt.put(p.documentId,p.paidOn);
+        }
+        int monthlyCount=0;
+        for(Store.Document invoice:db.documents(Store.INVOICE)){
+            if(!Store.PAID.equals(invoice.status)||
+               !BillingCurrency.canonical(invoice.currencyCode).equals(selectedCurrency()))
+                continue;
+            String latest=lastReceipt.get(invoice.id);
+            if(latest!=null && latest.startsWith(month))monthlyCount++;
         }
         LinearLayout hero=vertical();pad(hero,19,22);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -4071,8 +4123,8 @@ public final class MainActivity extends Activity {
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
         hero.addView(label(money(db.receivedCents(selectedCurrency())),29,WHITE,true));gap(hero,13);
-        hero.addView(label("✓  "+monthlyCount+" evidentiranih uplata ovaj mjesec · "+
-            money(monthlyAmount),11,0xff73dfd0,false));
+        hero.addView(label("✓  "+monthlyCount+" plaćenih računa ovaj mjesec",
+            11,0xff73dfd0,false));
         place(body,hero);gap(body,15);
 
         LinearLayout filters=horizontal();
@@ -4105,7 +4157,9 @@ public final class MainActivity extends Activity {
         if(paymentFilter==2){
             int n=0;
             for(Store.Document d:db.documents(Store.INVOICE)){
-                if(!Store.ISSUED.equals(d.status)||d.outstanding()<=0)continue;
+                if(Store.DRAFT.equals(d.status)||Store.VOID.equals(d.status)||
+                   d.outstanding()<=0 ||
+                   !BillingCurrency.canonical(d.currencyCode).equals(selectedCurrency()))continue;
                 if(n++>0)paymentDivider(card);
                 LinearLayout row=horizontal();pad(row,14,15);
                 LinearLayout detail=vertical();
@@ -4123,6 +4177,7 @@ public final class MainActivity extends Activity {
             int n=0;
             for(Store.Payment p:history){
                 if(paymentFilter==1&&!p.paidOn.startsWith(month))continue;
+                if(!BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency()))continue;
                 if(n++>0)paymentDivider(card);
                 LinearLayout row=horizontal();pad(row,12,17);
                 TextView check=label("✓",19,TEAL,true);check.setGravity(Gravity.CENTER);
@@ -4136,10 +4191,10 @@ public final class MainActivity extends Activity {
                     11,sub(),false);
                 documentInfo.setMaxLines(2);
                 description.addView(documentInfo);
-                TextView amount=label("+"+BillingCurrency.format(p.amountCents,p.currencyCode,Locale.ENGLISH),12,TEAL,true);
+                TextView amount=label("+"+BillingCurrency.format(p.amountCents,p.currencyCode,selectedLocale()),12,TEAL,true);
                 amount.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
                 amount.setMaxLines(3);
-                amount.setContentDescription("Evidentirana uplata: "+BillingCurrency.format(p.amountCents,p.currencyCode,Locale.ENGLISH));
+                amount.setContentDescription("Evidentirana uplata: "+BillingCurrency.format(p.amountCents,p.currencyCode,selectedLocale()));
                 // Avoid competing horizontal widths on 280/320dp screens or
                 // when the user selects large accessibility font scaling.
                 float widthDp=getResources().getDisplayMetrics().widthPixels/
@@ -4163,6 +4218,12 @@ public final class MainActivity extends Activity {
                 12,sub(),false));}
         }
         place(body,card);gap(body,15);
+        TextView paymentNote=label(
+            "ⓘ  Naplate se evidentiraju prema stvarnom statusu računa.",
+            11,sub(),false);
+        paymentNote.setContentDescription(
+            "Naplate se evidentiraju prema stvarnom statusu računa.");
+        place(body,paymentNote);
         gap(body,20);
     }
     private void paymentDivider(LinearLayout card){
@@ -5294,6 +5355,9 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
+        // Splash intentionally lasts 4.5s; hardware/system Back must not
+        // navigate to a business screen while db is still null.
+        if("splash".equals(screen)){finish();return;}
         if("server_login".equals(screen)){welcome();}
         else if("local_login".equals(screen)||"local_register".equals(screen)){
             enteredLocalPin.setLength(0);

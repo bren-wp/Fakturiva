@@ -23,6 +23,8 @@ public final class DocumentStatus {
         if(Store.VOID.equals(document.status))return "Storniran";
         if(Store.DRAFT.equals(document.status))return "Skica";
         if(Store.QUOTE.equals(document.type)){
+            if(Store.ACCEPTED.equals(document.status))return "Prihvaćena";
+            if(Store.SENT.equals(document.status))return "Poslana";
             return "Potvrđena";
         }
         if(Store.PAID.equals(document.status)||document.outstanding()==0)
