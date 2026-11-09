@@ -104,6 +104,12 @@ public final class CloudMirror {
                 java.util.Locale.forLanguageTag("hr-HR"))
                 .format(new java.util.Date(at))+").";
     }
+    public static void suspend(Context ctx,String id){
+        if(enabled(ctx,id))state(ctx,id).edit().putBoolean("paused",true).commit();
+    }
+    public static void resume(Context ctx,String id){
+        if(enabled(ctx,id))state(ctx,id).edit().putBoolean("paused",false).commit();
+    }
     public static void disconnect(Context ctx,String id){
         // Does not delete server data; users can restore it by logging in.
         state(ctx,id).edit().clear().commit();
@@ -146,6 +152,7 @@ public final class CloudMirror {
                         .putString("sealed_password",encrypted)
                         .putInt("revision",remote.getInt("revision"))
                         .putBoolean("dirty",false).putBoolean("conflict",false)
+                        .putBoolean("paused",false)
                         .putLong("synced_at",System.currentTimeMillis());
                     if(!editor.commit())throw new IllegalStateException(
                         "Postavke poslužiteljske sigurnosne kopije nisu spremljene");
@@ -168,10 +175,10 @@ public final class CloudMirror {
             .putString("pending_change",java.util.UUID.randomUUID().toString())
             .commit())
             android.util.Log.e("FakturivaCloud","Could not persist unsynced flag");
-        runPending(ctx,id);
+        if(!pref.getBoolean("paused",false))runPending(ctx,id);
     }
     public static void runPending(Context ctx,String id){
-        if(!enabled(ctx,id))return;
+        if(!enabled(ctx,id)||state(ctx,id).getBoolean("paused",false))return;
         final Context app=ctx.getApplicationContext();
         WORK.execute(()->{
             if(!enabled(app,id))return;
