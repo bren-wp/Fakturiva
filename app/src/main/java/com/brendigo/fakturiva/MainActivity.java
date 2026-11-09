@@ -4669,7 +4669,7 @@ public final class MainActivity extends Activity {
         gap(legalChoice,10);
         place(legalChoice,label("Prikazat će se polja relevantna za odabranu "+
             "državu i pravni oblik. Posebne porezne obveze i podaci "+
-            "fiskalizacije provjeravaju se zasebno.",12,sub(),false));
+            "poreznog izdavanja provjeravaju se zasebno.",12,sub(),false));
         place(body,legalChoice);gap(body,14);
         LinearLayout form=card();
         place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
