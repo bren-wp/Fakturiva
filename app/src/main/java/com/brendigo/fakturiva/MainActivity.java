@@ -4571,7 +4571,7 @@ public final class MainActivity extends Activity {
         gap(body,13);
         place(body,label("Napomena: PDF račun nije sam po sebi strukturirani "+
             "e-račun niti porezno potvrđen dokument. Za hrvatske obveznike "+
-            "vrijede dodatne zakonske obveze razmjene i fiskalizacije.",
+            "vrijede dodatne obveze zakonske razmjene i porezne potvrde.",
             11,sub(),false));
         gap(body,20);
     }
