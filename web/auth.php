@@ -31,6 +31,10 @@ try{
         // Legacy username-based accounts remain able to sign in.
         if(filter_var($username,FILTER_VALIDATE_EMAIL)===false)
             throw new FakturivaSelfHost\HttpFailure(422,'Unesite ispravnu e-adresu.');
+        $confirm=(string)($_POST['confirm_passphrase']??'');
+        if($confirm==='' || !hash_equals($passphrase,$confirm))
+            throw new FakturivaSelfHost\HttpFailure(422,
+                'Lozinke se ne podudaraju.');
         $result=FakturivaSelfHost\webRegister($username,$pin,$ip,$passphrase);
         adoptWebLogin($result);
         flash('Račun je uspješno registriran.');
