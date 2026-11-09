@@ -5355,6 +5355,9 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
+        // Splash intentionally lasts 4.5s; hardware/system Back must not
+        // navigate to a business screen while db is still null.
+        if("splash".equals(screen)){finish();return;}
         if("server_login".equals(screen)){welcome();}
         else if("local_login".equals(screen)||"local_register".equals(screen)){
             enteredLocalPin.setLength(0);
