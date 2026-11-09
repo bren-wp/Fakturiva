@@ -3465,6 +3465,14 @@ public final class MainActivity extends Activity {
      * Croatian income tax tools only. Generated summaries are based on actually
      * recorded receipts, NOT invoice issuance; no cloud service is required.
      */
+    private boolean canUseCroatianTaxReports(){
+        if(db==null)return false;
+        if(!"HR".equals(BusinessProfileRules.country(db.setting("country"))))
+            return false;
+        String form=BusinessProfileRules.form(db.setting("legal_form"));
+        return form.equals("HR_PAUSAL")||form.equals("HR_OBRT")||
+            form.equals("OTHER");
+    }
     private void croatianTaxScreen(){
         if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
         setup("hr_tax",true);
@@ -3810,7 +3818,8 @@ public final class MainActivity extends Activity {
         place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
         gap(body,10);
-        secondary(body,"Knjiga prometa / PO-SD (Hrvatska)",this::croatianTaxScreen);
+        if(canUseCroatianTaxReports())
+            secondary(body,"Knjiga prometa / PO-SD (Hrvatska)",this::croatianTaxScreen);
         gap(body,20);
         // Totals reflect the currently selected reporting month.
     }
@@ -4103,8 +4112,9 @@ public final class MainActivity extends Activity {
         LinearLayout tools=card();pad(tools,0,2);
         settingRow(tools,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
         settingRow(tools,"▥","Izvještaji","Analitika računa i naplate",this::reports);
-        settingRow(tools,"▤","KPR i PO-SD (Hrvatska)",
-            "Knjiga prometa i godišnji porezni obračun",this::croatianTaxScreen);
+        if(canUseCroatianTaxReports())
+            settingRow(tools,"▤","KPR i PO-SD (Hrvatska)",
+                "Knjiga prometa i godišnji porezni obračun",this::croatianTaxScreen);
         place(body,tools);
         gap(body,17);
         caption(body,"Fakturiva · Brendigo");
@@ -4757,8 +4767,8 @@ public final class MainActivity extends Activity {
         gap(nkdGroup,8);
         place(nkdGroup,nkdCode);
         gap(nkdGroup,8);
-        place(nkdGroup,label("Šifra se provjerava prema službenoj "+
-            "klasifikaciji. Za buduće e-račune mogu biti potrebne i KPD "+
+        place(nkdGroup,label("Provjerava se oblik NKD šifre, a točan kod potvrdite "+
+            "u službenom šifrarniku. Za strukturirane račune mogu biti potrebne i KPD "+
             "šifre proizvoda i usluga.",11,sub(),false));
         place(body,nkdGroup);gap(body,14);
         EditText register=field("Oznaka naplatnog uređaja",db.setting("cash_register"));
