@@ -36,7 +36,8 @@ try {
     $password=(string)($payload['passphrase']??'');
     $address=(string)($_SERVER['REMOTE_ADDR']??'');
     $response=match($action) {
-        'register'=>FakturivaSelfHost\signUp($username,$password,$address),
+        'register'=>FakturivaSelfHost\signUp($username,$password,$address,
+            isset($payload['web_pin'])?(string)$payload['web_pin']:null),
         'login'=>FakturivaSelfHost\signIn($username,$password,$address),
         'load'=>FakturivaSelfHost\loadBackup(authToken()),
         'save'=>FakturivaSelfHost\saveBackup(

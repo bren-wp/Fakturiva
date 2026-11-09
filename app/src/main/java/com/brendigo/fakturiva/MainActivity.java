@@ -1062,8 +1062,8 @@ public final class MainActivity extends Activity {
             12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
         place(body,notice);gap(body,15);
         String id=LocalAccounts.activeId();
-        EditText url=field("https://moja-domena.hr/",
-            prefs.getString("host_url_"+id,""));
+        EditText url=field("https://fakturiva.com/",
+            prefs.getString("host_url_"+id,"https://fakturiva.com/"));
         fieldLabel(body,"Adresa vlastitog hostinga (HTTPS)",url);
         EditText user=field("ime@tvrtka.hr",
             prefs.getString("host_user_"+id,LocalAccounts.activeName()));

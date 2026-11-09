@@ -126,7 +126,7 @@ U aplikaciji su dostupni i ponude, artikli i usluge, klijenti, izvještaji, napl
 
 [**Sva izdanja Fakturive**](https://github.com/bren-wp/Fakturiva/releases)
 
-Posljednje objavljeno izdanje: [**v0.17.0-preview.1**](https://github.com/bren-wp/Fakturiva/releases/tag/v0.17.0-preview.1). Izmjene na novijim otvorenim granama još nisu dio tog preuzimanja.
+Preuzimanja za Android, Windows i web nalaze se na [GitHub Releases](https://github.com/bren-wp/Fakturiva/releases). Izdanje s oznakom **preview** nije produkcijski potpisano niti je potvrđena usklađenost sa svim poreznim obvezama.
 
 | Paket | Namjena |
 | :--- | :--- |
@@ -177,7 +177,7 @@ Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađen
 
 [**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md) · [**Proizvođači pisača i hrvatski POS servisi**](docs/PRINTER_VENDOR_AND_POS_MATRIX.md) · [**SUNMI SDK i drugi proizvođači**](docs/POS_INTEGRATION_MATRIX.md)
 
-Ove značajke **još nisu dio posljednjeg objavljenog izdanja** v0.17.0-preview.1. Trenutačna aplikacija nije certificirana za automatsko ispunjavanje zakonskih obveza bilo koje države; korisnik provjerava obvezne podatke i računovodstvene zahtjeve u svojoj jurisdikciji.
+Mogućnosti se dovršavaju odvojeno za Android, web i Windows. [Plan produkcijske pripreme](docs/PRODUCTION_ROADMAP_FAKTURIVA_2026.md) opisuje preostale sigurnosne, pravne i vizualne provjere.
 
 ---
 

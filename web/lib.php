@@ -193,9 +193,10 @@ function rateLimit(string $address,bool $failed): void {
         writeRecord($path,$item);
     }
 }
-function signUp(string $username,string $password,string $address): array {
+function signUp(string $username,string $password,string $address,?string $webPin=null): array {
     requirePassphrase($password);
-    return transaction(function() use($username,$password,$address): array {
+    if($webPin!==null)checkWebPin($webPin);
+    return transaction(function() use($username,$password,$address,$webPin): array {
         // Account creation also consumes the IP budget to prevent unbounded
         // JSON-file creation on shared hosting from scripted registrations.
         rateLimit($address,true);
@@ -219,6 +220,12 @@ function signUp(string $username,string $password,string $address): array {
                 defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT),
             'revision'=>0,'backup'=>null,'sessions'=>[],
             'created_at'=>gmdate('c')];
+        // API-created accounts may also sign into the web with their PIN.
+        if($webPin!==null){
+            $account['web_pin_hash']=pinHash($webPin);
+            $account['web_attempts']=0;
+            $account['web_block_until']=0;
+        }
         $token=mintToken($account);
         $path=accountPath($id);
         writeRecord($path,$account);
@@ -454,9 +461,10 @@ function issueWebSession(array &$account): string {
     $account['web_token_until']=time()+1800;
     return $token;
 }
-function webRegister(string $username,string $pin,string $address): array {
+function webRegister(string $username,string $pin,string $address,string $passphrase): array {
     checkWebPin($pin);
-    return transaction(function()use($username,$pin,$address):array{
+    requirePassphrase($passphrase);
+    return transaction(function()use($username,$pin,$address,$passphrase):array{
         rateLimit($address,true);
         $index=indexPath($username);
         if(is_file($index)) {
@@ -472,8 +480,9 @@ function webRegister(string $username,string $pin,string $address): array {
             'username'=>trim($username),
             'tier'=>'FREE',
             'suspended'=>false,
-            // Android sync has its own long passphrase.
-            'password_hash'=>null,
+            // Strong independent passphrase is required for recoverable backups.
+            'password_hash'=>password_hash($passphrase,
+                defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT),
             'web_pin_hash'=>pinHash($pin),
             'web_attempts'=>0,
             'web_block_until'=>0,
@@ -565,6 +574,11 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
     transaction(function()use($id,$token,$pin,$newPassphrase):void{
         $account=webAuthorized($id,$token);
         requireSensitiveWebPin($account,$pin);
+        // Changing only the authentication hash would orphan all FAK1
+        // archives encrypted with the old passphrase. Fail closed.
+        if(is_string($account['backup']??null) && $account['backup']!=='')
+            fail(409,'Postoji šifrirana kopija. Promjena lozinke zahtijeva '.
+                'prethodno provjereno ponovno šifriranje svih podataka.');
         $account['password_hash']=password_hash($newPassphrase,
             defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT);
         // Existing Android API sessions are invalid after password change.

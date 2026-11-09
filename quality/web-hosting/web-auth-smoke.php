@@ -12,6 +12,7 @@ use function FakturivaSelfHost\webLinkAndroidAccount;
 use function FakturivaSelfHost\signUp;
 use function FakturivaSelfHost\signIn;
 use function FakturivaSelfHost\loadBackup;
+use function FakturivaSelfHost\saveBackup;
 use function FakturivaSelfHost\deleteAuthorized;
 use FakturivaSelfHost\HttpFailure;
 
@@ -34,8 +35,8 @@ $pinA='123456';$pinB='456789';
 $serverPassA='Different-long-server-passphrase-'.$suffix;
 $serverPassB='Another-long-server-passphrase-'.$suffix;
 
-$a=webRegister($userA,$pinA,$ip);
-$b=webRegister($userB,$pinB,$ip);
+$a=webRegister($userA,$pinA,$ip,$serverPassA);
+$b=webRegister($userB,$pinB,$ip,$serverPassB);
 assertWeb($a['id']!==$b['id'],'Profiles share an ID');
 assertWeb(webAuthorized($a['id'],$a['token'])['username']===$userA,
     'Web A session not bound to account');
@@ -43,12 +44,19 @@ assertWeb(webAuthorized($b['id'],$b['token'])['username']===$userB,
     'Web B session not bound to account');
 mustDeny(fn()=>webAuthorized($b['id'],$a['token']),401,
     'Web A token authorizes Web B');
-mustDeny(fn()=>signIn($userA,$serverPassA,$ip),401,
-    'New web PIN authorizes Android API');
-webChangeAndroidPassphrase($a['id'],$a['token'],$pinA,$serverPassA);
+mustDeny(fn()=>signIn($userA,'Incorrect-long-passphrase',$ip),401,
+    'Incorrect passphrase authorizes Android API');
 $android=signIn($userA,$serverPassA,$ip);
 assertWeb(loadBackup($android['token'])['revision']===0,
-    'Android link cannot access correct web account');
+    'Android API cannot access correct web account');
+// Unprotected credential rotation would irreversibly strand encrypted data.
+$sealed=base64_encode('FAK1'.str_repeat('X',60));
+$ack=saveBackup($android['token'],$sealed,0);
+assertWeb($ack['revision']===1,'Encrypted revision was not stored');
+mustDeny(fn()=>webChangeAndroidPassphrase($a['id'],$a['token'],$pinA,
+    'New-long-secret-'.$suffix),409,'Rotation stranded the encrypted snapshot');
+assertWeb(signIn($userA,$serverPassA,$ip)['username']===$userA,
+    'Blocked rotation still changed the active passphrase');
 assertWeb(webAuthorized($b['id'],$b['token'])['backup']===null,
     'Web B gained Web A backup');
 webLogout($a['id'],$a['token']);
@@ -68,5 +76,11 @@ assertWeb($link['id']===explode('.',$api['token'])[0],
 $linkedLogin=webLogin($apiUser,$pinB,$ip);
 assertWeb($linkedLogin['username']===$apiUser,'Linked Android PIN login failed');
 webDeleteAccount($link['id'],$linkedLogin['token'],$pinB);
+$nativeUser='native_'.$suffix;
+$native=signUp($nativeUser,$serverPassB,$ip,$pinB);
+$nativeWeb=webLogin($nativeUser,$pinB,$ip);
+assertWeb($nativeWeb['id']===explode('.',$native['token'])[0],
+    'Android and web registration created different tenants');
+webDeleteAccount($nativeWeb['id'],$nativeWeb['token'],$pinB);
 webDeleteAccount($b['id'],$b['token'],$pinB);
 echo "Web PIN register/login, tenant isolation, separate Android passphrase, link and deletion: OK\n";

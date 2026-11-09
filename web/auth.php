@@ -26,7 +26,7 @@ try{
         gotoPage('login.php');
     }
     if($mode==='register'){
-        $result=FakturivaSelfHost\webRegister($username,$pin,$ip);
+        $result=FakturivaSelfHost\webRegister($username,$pin,$ip,$passphrase);
         adoptWebLogin($result);
         flash('Račun je uspješno registriran.');
         gotoPage('dashboard.php');
