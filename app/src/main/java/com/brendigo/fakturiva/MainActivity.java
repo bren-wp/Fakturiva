@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
     private FrameLayout adaptiveNavContainer;
     private LinearLayout adaptiveNavBar;
     private int paymentFilter=0;
+    private boolean showAllPaymentHistory=false;
     private String pendingPaymentsCsvMonth=null,pendingReportCsvMonth=null;
     private final Calendar reportMonth=Calendar.getInstance();
     private String screen="home",filter="Svi",editType=Store.INVOICE;
@@ -4135,7 +4136,8 @@ public final class MainActivity extends Activity {
             .setTitle("Prikaz naplate")
             .setSingleChoiceItems(new String[]{"Sve uplate","Ovaj mjesec","Za naplatu"},
                 paymentFilter,(dialog,which)->{
-                    paymentFilter=which;dialog.dismiss();payments();
+                    paymentFilter=which;showAllPaymentHistory=false;
+                    dialog.dismiss();payments();
                 }).setNegativeButton("Zatvori",null).show());
         place(body,top);gap(body,21);
         List<Store.Payment> history=db.payments();
@@ -4181,16 +4183,23 @@ public final class MainActivity extends Activity {
             if(paymentFilter==n)tab.setBackground(shape(panel(),12));
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(39),1);
             filters.addView(tab,p);
-            tab.setOnClickListener(v->{paymentFilter=selected;payments();});
+            tab.setOnClickListener(v->{paymentFilter=selected;
+                showAllPaymentHistory=false;payments();});
         }
         place(body,filters);gap(body,8);
         LinearLayout listHeading=horizontal();
         listHeading.addView(label(paymentFilter==2?"Neplaćeni računi":"Nedavne uplate",
             17,ink(),true),new LinearLayout.LayoutParams(0,-2,1));
-        TextView viewAll=label("›",21,BLUE,true);
-        viewAll.setContentDescription("Prikaži sve uplate");
+        TextView viewAll=label(showAllPaymentHistory?"Sažmi":"›",
+            showAllPaymentHistory?11:21,BLUE,true);
+        viewAll.setContentDescription(showAllPaymentHistory?
+            "Sažmi nedavne uplate":"Prikaži sve uplate");
         listHeading.addView(viewAll);
-        viewAll.setOnClickListener(v->{paymentFilter=0;payments();});
+        viewAll.setOnClickListener(v->{
+            paymentFilter=0;
+            showAllPaymentHistory=!showAllPaymentHistory;
+            payments();
+        });
         // Source has a compact 10dp gap from section heading to its first
         // list card; the heading's own accessible row supplies that spacing.
         place(body,listHeading);
@@ -4220,6 +4229,7 @@ public final class MainActivity extends Activity {
             for(Store.Payment p:history){
                 if(paymentFilter==1&&!p.paidOn.startsWith(month))continue;
                 if(!BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency()))continue;
+                if(paymentFilter==0 && !showAllPaymentHistory && n>=4)break;
                 if(n++>0)paymentDivider(card);
                 LinearLayout row=horizontal();pad(row,12,17);
                 TextView check=label("✓",19,TEAL,true);check.setGravity(Gravity.CENTER);
