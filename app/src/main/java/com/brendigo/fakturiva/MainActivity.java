@@ -113,6 +113,14 @@ public final class MainActivity extends Activity {
             securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
         if(runScreenshotHarness())return;
+        if("demo".equals(BuildConfig.BUILD_TYPE)){
+            try{
+                Class.forName("com.brendigo.fakturiva.DemoSeeder")
+                    .getMethod("seed",Context.class).invoke(null,this);
+            }catch(Exception error){
+                android.util.Log.e("FakturivaDemo","Synthetic demo initialization failed",error);
+            }
+        }
         // Never open private financial data before authenticating a local account.
         // The old single-device database is migrated only after first registration.
         splash(true);
@@ -813,6 +821,10 @@ public final class MainActivity extends Activity {
             place(body,label("Prijava PIN-om",30,NAVY,true));gap(body,9);
             place(body,label("Unesite svoj sigurnosni PIN za pristup računu.",
                 14,MUTED,false));gap(body,44);
+            if("demo".equals(BuildConfig.BUILD_TYPE)){
+                place(body,label("DEMO: demo@fakturiva.test · PIN 123456",
+                    12,TEAL,true));gap(body,12);
+            }
             TextView chosen=label("Korisnik: "+loginUsername+(names.length>1?"  ▾":""),
                 12,0xff63718a,false);
             chosen.setMinimumHeight(dp(40));
@@ -1116,6 +1128,10 @@ public final class MainActivity extends Activity {
 
     private void remoteAction(SelfHostedSyncClient.Action action,EditText url,
         EditText username,EditText pass){
+        if("demo".equals(BuildConfig.BUILD_TYPE)){
+            toast("Demo podatci ne prenose se na stvarni korisnički server.");
+            return;
+        }
         if(selfHostedBusy){toast("Prijenos je već u tijeku");return;}
         if(db==null||LocalAccounts.activeId()==null){
             toast("Prvo se prijavite u lokalni račun");return;
