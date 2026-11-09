@@ -88,6 +88,30 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertLess(bridge.index('ensureNewLocalProfile(app, username);\n                id ='),
                         bridge.index('CloudMirror.connectAcknowledged(app, id'))
 
+    def test_cross_device_manual_restore_is_fail_closed_and_recovery_backed(self):
+        mirror=(ROOT/"app/src/main/java/com/brendigo/fakturiva/CloudMirror.java").read_text(
+            encoding="utf-8")
+        self.assertIn('public static void pullNewer(Context ctx,String id,PullCallback callback)',mirror)
+        self.assertIn('if(p.getBoolean("dirty",false))',mirror)
+        self.assertIn('if(!sha(ciphertext).equals(remote.getString("sha256")))',mirror)
+        self.assertIn('SecureBackup.decrypt(ciphertext,pass)',mirror)
+        self.assertIn('store.restore(snapshot)',mirror)
+        self.assertIn('.putBoolean("dirty",false)',mirror)
+        self.assertIn('.putInt("revision",actual)',mirror)
+        self.assertIn('new AlertDialog.Builder(this)',MAIN)
+        self.assertIn('CloudMirror.pullNewer(this,profile,(error,updated)->{',MAIN)
+        self.assertIn('setCancelable(false).create()',MAIN)
+        self.assertIn('Preuzmi novije podatke s weba',MAIN)
+
+    def test_reference_eracun_vector_and_quote_conversion_are_real_actions(self):
+        icon=(ROOT/"app/src/main/res/drawable/ic_eracun_exchange.xml").read_text(
+            encoding="utf-8")
+        self.assertIn('android:strokeWidth="2.0"',icon)
+        self.assertIn('R.drawable.ic_eracun_exchange',MAIN)
+        self.assertIn('place(body,action("Pretvori u račun"',MAIN)
+        self.assertIn('long invoiceId=db.quoteToInvoice(id)',MAIN)
+        self.assertIn('db.acceptQuote(id)',MAIN)
+
     def test_adaptive_launcher_uses_full_bleed_gradient_and_brand_glyph(self):
         self.assertIn('android:scaleX="1.35"',FOREGROUND)
         self.assertIn('android:translateX="9.9"',FOREGROUND)
