@@ -37,6 +37,24 @@ curl -fsS -b "$jar" -c "$jar" "$base/dashboard.php" > "$temp/dashboard.html"
 grep -Fq "Moj korisnički račun" "$temp/dashboard.html"
 grep -Fq "$username" "$temp/dashboard.html"
 grep -Fq 'Lozinka za Android sinkronizaciju' "$temp/dashboard.html"
+
+# Browser-created identity must be the very same tenant used by Android's
+# HTTPS JSON API; no separate account or PIN should be required.
+api_login_payload="$(F_EMAIL="$username" F_PASS="$passphrase" python3 -c \
+  'import json,os;print(json.dumps({"action":"login","username":os.environ["F_EMAIL"],"passphrase":os.environ["F_PASS"]}))')"
+api_login="$(curl -fsS -H 'Content-Type: application/json' \
+  --data "$api_login_payload" "$base/api.php")"
+api_token="$(printf '%s' "$api_login" | python3 -c \
+  'import sys,json;d=json.load(sys.stdin);assert d["ok"];print(d["data"]["token"])')"
+api_snapshot="$(curl -fsS -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $api_token" \
+  --data '{"action":"load"}' "$base/api.php")"
+printf '%s' "$api_snapshot" | python3 -c \
+  'import sys,json;d=json.load(sys.stdin);assert d["ok"];assert d["data"]["revision"]==0'
+curl -fsS -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $api_token" \
+  --data '{"action":"logout"}' "$base/api.php" >/dev/null
+
 status="$(curl -sS -o /dev/null -w '%{http_code}' -b "$other" -c "$other" "$base/dashboard.php")"
 test "$status" = 303
 csrf="$(extract_csrf "$temp/dashboard.html")"
