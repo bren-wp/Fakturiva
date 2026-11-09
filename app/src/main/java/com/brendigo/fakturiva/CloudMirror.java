@@ -130,8 +130,10 @@ public final class CloudMirror {
                     if(current.isEmpty())throw new IllegalStateException(
                         "Na serveru nema kopije. Najprije spremite postojeće podatke.");
                     byte[] sealed=Base64.decode(current,Base64.DEFAULT);
-                    try{SecureBackup.decrypt(sealed,copy);}
+                    byte[] decrypted;
+                    try{decrypted=SecureBackup.decrypt(sealed,copy);}
                     finally{Arrays.fill(sealed,(byte)0);}
+                    Arrays.fill(decrypted,(byte)0);
                     // Successful decryption confirms the passphrase belongs
                     // to the backup; there is no client-side SHA guessing.
                     String encrypted=seal(copy);
@@ -159,7 +161,9 @@ public final class CloudMirror {
         if(!enabled(ctx,id))return;
         SharedPreferences pref=state(ctx,id);
         // durable pending flag written BEFORE scheduling any network work
-        if(!pref.edit().putBoolean("dirty",true).commit())
+        if(!pref.edit().putBoolean("dirty",true)
+            .putString("pending_change",java.util.UUID.randomUUID().toString())
+            .commit())
             android.util.Log.e("FakturivaCloud","Could not persist unsynced flag");
         runPending(ctx,id);
     }
@@ -208,10 +212,15 @@ public final class CloudMirror {
                         // A mutation committed DURING transmission should keep
                         // dirty=true; do not mark its data as uploaded.
                         String before=p.getString("pending_change","");
-                        p.edit().putInt("revision",rev)
+                        boolean moreChanges=!before.equals(
+                            p.getString("pending_change",""));
+                        if(!p.edit().putInt("revision",rev)
                             .putLong("synced_at",System.currentTimeMillis())
-                            .putBoolean("dirty",!before.equals(p.getString("pending_change","")))
-                            .remove("last_error").commit();
+                            .putBoolean("dirty",moreChanges)
+                            .remove("last_error").commit())
+                            throw new IllegalStateException(
+                                "Potvrda sinkronizacije nije spremljena");
+                        if(moreChanges)runPending(app,id);
                     }finally{
                         try{SelfHostedSyncClient.request(url,
                             new JSONObject().put("action","logout"),token);}
