@@ -61,9 +61,10 @@ public final class ScreenshotHarness {
         seed(db);
         RecoveryVault.clearWorkingDraft(a);
         String page=screen==null?"04":screen;
-        // Owner-supplied PNG references 01/02 are Croatian. Only those
-        // debug-only frames use HR; the app default and preference remain EN.
-        set(a,"qaReferenceCroatian","01".equals(page)||"02".equals(page));
+        // All twenty owner's original PNGs are in Croatian. Force the
+        // screenshot harness language only for this debug emulator capture;
+        // never write a user preference or change production locale.
+        set(a,"qaReferenceCroatian",true);
         switch(page){
             case "01":call(a,"splash",new Class<?>[]{boolean.class},false);break;
             case "02":call(a,"welcome");break;
