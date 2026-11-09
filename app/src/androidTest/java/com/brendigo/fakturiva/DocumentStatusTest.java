@@ -30,7 +30,8 @@ public final class DocumentStatusTest extends FakturivaTestCase {
     @Test
     public void testDraftQuoteAndVoidedStatus(){
         assertEquals("Skica",label(document(Store.INVOICE,Store.DRAFT,0,0,"2026-11-02")));
-        assertEquals("Potvrđena",label(document(Store.QUOTE,Store.SENT,5000,0,"2026-12-01")));
+        assertEquals("Poslana",label(document(Store.QUOTE,Store.SENT,5000,0,"2026-12-01")));
+        assertEquals("Prihvaćena",label(document(Store.QUOTE,Store.ACCEPTED,5000,0,"2026-12-01")));
         assertEquals("Storniran",label(document(Store.INVOICE,Store.VOID,10000,0,"2026-10-05")));
     }
 }
