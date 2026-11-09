@@ -65,6 +65,13 @@ public final class CroatianTaxPdf {
                 Math.max(1,maxWidth-p.measureText(ellipsis)),null);
             return value.substring(0,Math.max(0,count))+ellipsis;
         }
+        void headerCell(String[] lines,float x,float top,float width,float height){
+            box(x,top,width,height,true);
+            for(int i=0;i<lines.length;i++){
+                text(crop(lines[i],width-7,8,true),x+4,
+                    top+12+i*10,8,true);
+            }
+        }
         void inside(String value,float x,float top,float width,int fontSize,boolean bold){
             text(crop(value,width-8,fontSize,bold),x+4,top+15,fontSize,bold);
         }
@@ -133,12 +140,15 @@ public final class CroatianTaxPdf {
                 d.cell("2. ADRESA: "+company.place,x,y,w,25,9,false,false);y+=25;
                 d.text("PRIMICI PREMA DATUMU STVARNE NAPLATE",x,y+16,9,true);y+=22;
                 final float[] col={34,74,73,148,72,73,73};
-                final String[] heads={"R.BR.","NADNEVAK","BROJ","OPIS ISPRAVE",
-                    "GOTOVINA","BEZGOT.","UKUPNO"};
+                final String[][] heads={
+                    {"R.BR."},{"NADNEVAK"},{"BROJ","TEMELJNICE"},
+                    {"OPIS ISPRAVA O","PRIMICIMA U GOTOVINI"},
+                    {"NAPLAĆENO","U GOTOVINI"},{"NAPLAĆENO","BEZGOTOVINSKI"},
+                    {"UKUPNO","NAPLAĆENO"}
+                };
                 float cx=x;
                 for(int j=0;j<heads.length;j++){
-                    d.cell(heads[j],cx,y,col[j],35,j>3?8:8,true,true);
-                    cx+=col[j];
+                    d.headerCell(heads[j],cx,y,col[j],35);cx+=col[j];
                 }
                 y+=35;
                 for(int i=page*perPage;i<Math.min(book.rows.size(),(page+1)*perPage);i++){
@@ -215,7 +225,7 @@ public final class CroatianTaxPdf {
             d.cell("VI. UKUPNI GODIŠNJI PAUŠALNI DOHODAK",x,y,570,32,9,true,true);
             d.cell(CroatianTaxReports.euros(p.assessedIncome),x+570,y,152,32,9,true,false);
             d.cell(p.months+" mj.",x+722,y,88,32,9,true,false);
-            d.foot("Fakturiva · Radni izračun iz KPR-a, ne potvrda Porezne uprave",1,2);
+            d.foot("Fakturiva · Radni izračun iz KPR-a, ne potvrda Porezne uprave",1,3);
             pdf.finishPage(page);
 
             PdfDocument.Page second=pdf.startPage(
@@ -260,8 +270,42 @@ public final class CroatianTaxPdf {
                 "poreznih iznimaka ili nenaplaćenih/nerazvrstanih uplata pregledajte "+
                 "podatke s ovlaštenim računovođom.",
                 x,y+31,760,8,3);
-            d.foot("Fakturiva · 2025/2026 porezni razredi · provjeriti prije predaje",2,2);
+            d.foot("Fakturiva · 2025/2026 porezni razredi · provjeriti prije predaje",2,3);
             pdf.finishPage(second);
+            PdfDocument.Page third=pdf.startPage(
+                new PdfDocument.PageInfo.Builder(842,596,3).create());
+            d=new Draw(third.getCanvas(),842,596);
+            d.centered("PO-SD · DODATNE NAPOMENE I GODIŠNJI POREZNI RAZREDI",32,12,true);
+            x=16;w=810;y=62;
+            y=d.section("UKUPNI PRIMICI I GODIŠNJI PAUŠALNI POREZ (2025./2026.)",y,x,w);
+            d.cell("UKUPNI PRIMICI (EUR)",x,y,405,28,10,true,true);
+            d.cell("GODIŠNJI PAUŠALNI POREZ (EUR)",x+405,y,405,28,10,true,true);y+=28;
+            String[][] brackets={
+                {"0,00 - 11.300,00","203,40"},
+                {"11.300,01 - 15.300,00","275,40"},
+                {"15.300,01 - 19.900,00","358,20"},
+                {"19.900,01 - 30.600,00","550,80"},
+                {"30.600,01 - 40.000,00","720,00"},
+                {"40.000,01 - 50.000,00","900,00"},
+                {"50.000,01 - 60.000,00","1.080,00"}
+            };
+            for(String[] bracket:brackets){
+                d.cell(bracket[0],x,y,405,29,9,false,false);
+                d.cell(bracket[1],x+405,y,405,29,9,false,false);
+                y+=29;
+            }
+            y+=27;
+            d.wrapped("1. Za kraće porezno razdoblje razred se utvrđuje iz "+
+                "godišnje preračunatih primitaka, a obveza razmjerno broju mjeseci.",
+                x,y,w,10,3);y+=42;
+            d.wrapped("2. U broj mjeseci uračunavaju se puni kalendarski mjeseci "+
+                "i posljednji mjesec bez obzira na dan prestanka djelatnosti.",
+                x,y,w,10,3);y+=42;
+            d.wrapped("3. Za Vukovar, potpomognuta područja I. skupine i "+
+                "otoke I. skupine može se primijeniti propisano umanjenje od 75 %.",
+                x,y,w,10,3);
+            d.foot("Podatci iz fakturiranih i evidentiranih naplata · informativna priprema",3,3);
+            pdf.finishPage(third);
             pdf.writeTo(output);
         }finally{pdf.close();}
     }
