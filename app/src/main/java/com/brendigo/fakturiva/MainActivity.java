@@ -2691,6 +2691,17 @@ public final class MainActivity extends Activity {
         fieldLabel(form,"Amount ("+d.currencyCode+")",amount);
         EditText paidOn=field("Datum uplate",later(0));
         dateInput(paidOn);fieldLabel(form,"Datum uplate",paidOn);
+        TextView methodTitle=label("Način stvarne naplate",13,ink(),true);
+        place(form,methodTitle);gap(form,8);
+        Spinner channel=new Spinner(this);
+        String[] channelNames={"Gotovina","Uplata na račun / bankovni prijenos",
+            "Platna kartica","Ček"};
+        String[] channelCodes={"CASH","BANK","CARD","CHEQUE"};
+        channel.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,channelNames));
+        channel.setMinimumHeight(dp(49));
+        place(form,channel);gap(form,10);
+        caption(form,"Način naplate bitan je za hrvatsku Knjigu prometa. Kartice i uplate na račun vode se kao bezgotovinski primici.");
         AlertDialog dialog=new AlertDialog.Builder(this)
             .setTitle("Evidentiraj uplatu").setView(form)
             .setNegativeButton("Odustani",null)
@@ -2703,7 +2714,8 @@ public final class MainActivity extends Activity {
                         throw new IllegalArgumentException("Uplata mora biti veća od 0 i ne veća od preostalog iznosa");
                     if(!IsoDates.valid(paidOn.getText().toString()))
                         throw new IllegalArgumentException("Datum uplate nije valjan");
-                    db.pay(id,paid,paidOn.getText().toString());
+                    db.pay(id,paid,paidOn.getText().toString(),
+                        channelCodes[channel.getSelectedItemPosition()]);
                     dialog.dismiss();
                     showDocument(id);
                 }catch(Exception e){error(e);amount.requestFocus();}
