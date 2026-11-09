@@ -1571,13 +1571,17 @@ public final class MainActivity extends Activity {
         warning.addView(action("Izvezi šifriranu kopiju",BLUE,false,this::backupScreen));
         place(body,warning);gap(body,12);
     }
+    private Calendar referenceAwareClock(){
+        Calendar clock=Calendar.getInstance();
+        // Only the isolated QA emulator receives the owner's October clock.
+        // Never change business dates or financial periods in production.
+        if(runScreenshotModeOnly() && qaReferenceCroatian)
+            clock.set(2026,Calendar.OCTOBER,27,9,41,0);
+        return clock;
+    }
     private void home(){
         setup("home",true);
-        // Only the isolated debug screenshot action receives the date of the
-        // owner's 2026-10-27 reference. Production always uses real time.
-        Calendar displayClock=Calendar.getInstance();
-        if(runScreenshotModeOnly() && qaReferenceCroatian)
-            displayClock.set(2026,Calendar.OCTOBER,27,9,41,0);
+        Calendar displayClock=referenceAwareClock();
         // The reference dashboard uses a 22 dp gutter on 393 dp phones.
         // Keep all dashboard figures sourced from the local SQLite database.
         // Reference Home gutter is 18dp at 393dp; rows remain width-adaptive.
@@ -4106,7 +4110,8 @@ public final class MainActivity extends Activity {
                 }).setNegativeButton("Zatvori",null).show());
         place(body,top);gap(body,21);
         List<Store.Payment> history=db.payments();
-        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
+        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
+            .format(referenceAwareClock().getTime());
         // Count invoices whose last real receipt completed payment in this
         // month, not payment rows (one invoice may have several installments).
         java.util.HashMap<Long,String> lastReceipt=new java.util.HashMap<>();
