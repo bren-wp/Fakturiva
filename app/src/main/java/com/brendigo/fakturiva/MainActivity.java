@@ -629,7 +629,7 @@ public final class MainActivity extends Activity {
     private void finishSplash(){
         if(!"splash".equals(screen)||isFinishing()||isDestroyed())return;
         try{
-            if(LocalAccounts.hasAccounts(this))loginPinScreen();
+            if(LocalAccounts.hasAccounts(this))loginServerScreen();
             else welcome();
         }catch(Exception e){
             accountStorageError(e);
@@ -712,10 +712,7 @@ public final class MainActivity extends Activity {
     }
     /** Account selection always precedes access to any locally stored invoice. */
     private void openExistingLocalAccess(){
-        try{
-            if(LocalAccounts.hasAccounts(this))loginPinScreen();
-            else registrationScreen();
-        }catch(Exception e){accountStorageError(e);}
+        loginServerScreen();
     }
     private void authPrimaryStyle(TextView button){
         // Preserve a genuine accessible TextView click action while matching
@@ -783,7 +780,7 @@ public final class MainActivity extends Activity {
         TextView login=label("Već imate račun?  Prijavite se",14,BLUE,true);
         login.setGravity(Gravity.CENTER);
         login.setMinimumHeight(dp(48));
-        login.setOnClickListener(v->openExistingLocalAccess());
+        login.setOnClickListener(v->loginServerScreen());
         place(body,login);
         gap(body,64);
         localPrivacyFooter();
@@ -903,6 +900,8 @@ public final class MainActivity extends Activity {
             submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
             place(body,submit);gap(body,37);
             localPrivacyFooter();
+            gap(body,10);
+            secondary(body,"Prijava web računom",this::loginServerScreen);
             if(names.length>1){
                 TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
                 next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
@@ -5159,7 +5158,8 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
-        if("local_login".equals(screen)||"local_register".equals(screen)){
+        if("server_login".equals(screen)){welcome();}
+        else if("local_login".equals(screen)||"local_register".equals(screen)){
             enteredLocalPin.setLength(0);
             if("local_register".equals(screen))welcome();else finish();
         }
