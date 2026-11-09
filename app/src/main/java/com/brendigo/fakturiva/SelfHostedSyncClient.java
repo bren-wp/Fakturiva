@@ -125,7 +125,21 @@ public final class SelfHostedSyncClient {
                 if(action==Action.REGISTER){
                     JSONObject registered=request(url,command("register",username,password),null);
                     token=registered.getString("token");
-                    outcome="Poslužiteljski račun je registriran. Lokalni podaci nisu poslani.";
+                    sameProfile(expectedProfile,profileStore);
+                    byte[] raw=profileStore.backup().toString()
+                        .getBytes(StandardCharsets.UTF_8);
+                    byte[] encrypted;
+                    try{encrypted=SecureBackup.encrypt(raw,secret);}
+                    finally{Arrays.fill(raw,(byte)0);}
+                    try{
+                        JSONObject save=new JSONObject().put("action","save")
+                            .put("expected_revision",0)
+                            .put("backup_b64",android.util.Base64.encodeToString(
+                                encrypted,android.util.Base64.NO_WRAP));
+                        JSONObject ack=request(url,save,token);
+                        outcome="Račun registriran i sigurnosna kopija potvrđena "+
+                            "na serveru, revizija "+ack.getInt("revision")+".";
+                    }finally{Arrays.fill(encrypted,(byte)0);}
                 }else{
                     JSONObject login=request(url,command("login",username,password),null);
                     token=login.getString("token");
@@ -133,6 +147,16 @@ public final class SelfHostedSyncClient {
                     if(action==Action.UPLOAD){
                         JSONObject existing=request(url,new JSONObject().put("action","load"),token);
                         int revision=existing.getInt("revision");
+                        // A new local install must restore an existing server
+                        // account before any upload. Explicitly associated
+                        // profiles must match the latest acknowledged revision.
+                        int acknowledged=CloudMirror.expectedRevision(activity,
+                            expectedProfile);
+                        if(revision!=0 && acknowledged!=revision)
+                            throw new IllegalStateException(
+                                "Na serveru već postoje podatci. Najprije odaberite "+
+                                "'Preuzmi i vrati' te pregledajte postojeće račune; "+
+                                "pohrana neće prebrisati udaljene podatke.");
                         // A server's revision is never guessed. Conditional write
                         // prevents a concurrent device silently overwriting data.
                         byte[] raw=profileStore.backup().toString()
