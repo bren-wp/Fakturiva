@@ -744,28 +744,29 @@ public final class MainActivity extends Activity {
         localBrand();gap(body,28);
         place(body,label("Dobro došli natrag",29,NAVY,true));gap(body,10);
         place(body,label("Prijavite se i nastavite s poslovanjem.",
-            14,MUTED,false));gap(body,87);
-        place(body,label("E-adresa",14,NAVY,true));gap(body,10);
+            14,MUTED,false));gap(body,72);
+        place(body,label("E-adresa",12,NAVY,true));gap(body,2);
         EditText username=field("ime@tvrtka.hr",
             prefs.getString("remember_web_user",""));
         username.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        place(body,username);gap(body,20);
-        place(body,label("Lozinka",14,NAVY,true));gap(body,10);
-        EditText pass=field("","");
+        place(body,username);gap(body,15);
+        place(body,label("Lozinka",12,NAVY,true));gap(body,6);
+        EditText pass=field("••••••••••","");
         pass.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_PASSWORD);
         pass.setSaveEnabled(false);
         if(Build.VERSION.SDK_INT>=26)
             pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
-        place(body,pass);gap(body,18);
+        place(body,pass);gap(body,10);
         LinearLayout rememberRow=horizontal();
         rememberRow.setGravity(Gravity.CENTER_VERTICAL);
         android.widget.CheckBox remember=new android.widget.CheckBox(this);
         remember.setText("Zapamti me");
         remember.setTextColor(MUTED);remember.setTextSize(12);
         remember.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE));
-        remember.setChecked(!prefs.getString("remember_web_user","").isEmpty());
+        remember.setChecked(runScreenshotModeOnly() ||
+            !prefs.getString("remember_web_user","").isEmpty());
         rememberRow.addView(remember,new LinearLayout.LayoutParams(-2,dp(44)));
         TextView help=label("Zaboravili ste lozinku?",12,BLUE,true);
         help.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
@@ -775,7 +776,7 @@ public final class MainActivity extends Activity {
             catch(Exception e){toast("Stranica pomoći nije dostupna");}
         });
         rememberRow.addView(help,new LinearLayout.LayoutParams(0,dp(44),1));
-        place(body,rememberRow);gap(body,15);
+        place(body,rememberRow);gap(body,6);
         TextView submit=action("›   Prijavi se",BLUE,true,()->{
             if(selfHostedBusy)return;
             String name=username.getText().toString().trim();
@@ -846,7 +847,7 @@ public final class MainActivity extends Activity {
                     }
                 }).show();
         });
-        authPrimaryStyle(submit);place(body,submit);gap(body,63);
+        authPrimaryStyle(submit);place(body,submit);gap(body,103);
         TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
         create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
         create.setOnClickListener(v->registrationScreen());place(body,create);
@@ -1804,6 +1805,7 @@ public final class MainActivity extends Activity {
             documentSearchQuery);
         search.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         search.setSingleLine(true);
+        search.setTextSize(11);
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         LinearLayout.LayoutParams inputLp=new LinearLayout.LayoutParams(0,dp(42),1);
         inputLp.leftMargin=dp(8);searchBar.addView(search,inputLp);
@@ -3454,6 +3456,7 @@ public final class MainActivity extends Activity {
         searchBar.setBackground(outlined(panel()));pad(searchBar,12,3);
         searchBar.addView(icon(R.drawable.ic_search,sub()),lp(24,24));
         EditText search=field("Pretraži artikle i usluge...","");
+        search.setTextSize(11);
         search.setBackgroundColor(Color.TRANSPARENT);
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(0,dp(45),1);
@@ -4215,6 +4218,12 @@ public final class MainActivity extends Activity {
                 12,sub(),false));}
         }
         place(body,card);gap(body,15);
+        TextView paymentNote=label(
+            "ⓘ  Naplate se evidentiraju prema stvarnom statusu računa.",
+            11,sub(),false);
+        paymentNote.setContentDescription(
+            "Naplate se evidentiraju prema stvarnom statusu računa.");
+        place(body,paymentNote);
         gap(body,20);
     }
     private void paymentDivider(LinearLayout card){
