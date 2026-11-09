@@ -1,4 +1,82 @@
-# Fakturiva — vlastiti PHP/JSON hosting
+# Fakturiva web — fakturiva.com i centralni korisnički računi
+
+**Namjena:** sadržaj mape `web/` može se kopirati u root
+`https://fakturiva.com/` uz PHP 8.1+, HTTPS i zaštićen
+`storage/data` s pravima zapisivanja. Autentifikacija i poslovne
+kopije izdvojene su po korisniku. Osnovna pohrana koristi šifrirani
+JSON, bez SQL baze.
+
+**Status:** aktualna Android aplikacija još uvijek podržava lokalnu
+registraciju i dopušta korisniku da hosting poveže naknadno. To je
+razvojni nedostatak u odnosu na cilj da server uvijek bude glavni
+izvor podataka. **Ne smije se obećati oporavak nakon deinstalacije
+dok na serveru nema uspješno potvrđene, dostupne kopije.**
+Server također zahtijeva nezavisne izvanlokacijske sigurnosne
+kopije i redovite provjere povrata.
+
+## Brzi pregled
+
+| URL nakon instalacije u root | Namjena |
+| --- | --- |
+| `/register.php` | Registracija korisničkog računa |
+| `/login.php` | Korisnička web prijava PIN-om |
+| `/dashboard.php` | Pregled računa, stanje servera i prava korisnika |
+| `/finance.php` | Pregled korisnikovih šifriranih poslovnih podataka nakon potvrde zasebnom lozinkom |
+| `/api.php` | HTTPS JSON API i server revizije |
+| `/admin.php` | Odvojeni administratorski panel — bez tvorničkih vjerodajnica |
+| `/uvjeti-koristenja/` | Uvjeti korištenja |
+| `/politika-privatnosti/` | Politika privatnosti |
+| `/delete-account.php` | Brisanje korisničkog računa |
+
+### Administratorski pristup
+
+Na hostingu postavite tajnu environment varijablu
+`FAKTURIVA_ADMIN_PASSWORD_HASH` s
+`password_hash()` izračunom snažne, jedinstvene administratorske
+lozinke. Nema unaprijed poznate administratorske lozinke i
+kod je nikada ne smije sadržavati. Nemojte stavljati tu
+vrijednost u Git, `.env` unutar javnog root direktorija ili
+u javni log. Preporučuje se i dodatno mrežno ograničenje
+`/admin.php` (VPN, allowlist i zasebni MFA na pristupnom sloju).
+
+Tarife su samo administratorske oznake FREE, PRO, BUSINESS; **nema
+integriranog naplatnog procesora niti implementiranog izvršavanja
+plaćene pretplate**. Aplikacija ne prikazuje cijene i pakete.
+
+Admin vidi korisničko ime, status, tarifu, datum računa i
+metapodatke kopije, ali ne dešifrirane račune ili KPR.
+
+### Sigurnosne kopije hostinga
+
+Postavite odvojeni privatni disk/volumen i konfigurirajte
+`FAKTURIVA_OFFSITE_BACKUP_ROOT` na apsolutni put
+**izvan javnog webroota i izvan same aplikacije**.
+Zatim kroz cron/PHP CLI pokrenite:
+
+```bash
+php web/cli/offsite-backup.php
+```
+
+Skripta uz transakcijsko zaključavanje kopira sve šifrirane
+račune, korisničke indekse i pripadajući ključ
+`web/storage/secret.php`, računa SHA-256 za sve kopije i
+objavljuje samo potpuno završenu kopiju. Izvršava se samo
+iz CLI-ja. Pohraniti kopiju na drugi fizički sustav i testirati
+povrat. Raspored kopiranja, rokove brisanja i postupke
+purgeanja obrisanih korisnika potrebno je konfigurirati
+prije produkcije.
+
+### Pravna provjera
+
+Objavljeni nacrti uvjeta i privatnosti trebaju stvarne
+podatke pružatelja, konkretne izvršitelje, datacentre,
+zakonske rokove, ugovore o obradi i odvjetnički pregled
+prije nego se primijene kao dovršeni dokumenti.
+Google Play Data safety mora točno prikazati činjenicu
+poslužiteljske obrade poslovnih i identifikacijskih podataka.
+
+---
+## Izvorni tehnički opis (ranije razvojne faze)
 
 **Izbor, a ne obveza:** Android Fakturiva radi offline. Ovaj modul služi
 samo za ručni izvoz/uvoz šifrirane sigurnosne kopije korisnika koji
@@ -89,7 +167,7 @@ za registraciju i prijavu te PHP API za Android:
 | `/dashboard.php` | Prijavljeni račun, revizija kopije i postavljanje zasebne Android lozinke |
 | `/link.php` | Povezivanje postojećeg Android API računa s web PIN-om |
 | `/delete-account.php` | Brisanje web računa PIN-om ili javno brisanje uz lozinku hostinga |
-| `/privacy.php` | Predložak za prilagodbu pravila privatnosti |
+| `/privacy.php` | Kompatibilna adresa; puni tekst na `/politika-privatnosti/` |
 | `/api.php` | HTTPS JSON API koji već koristi Android Fakturiva |
 
 **PIN za web nije lozinka za sinkronizaciju.** U web registraciji unosi

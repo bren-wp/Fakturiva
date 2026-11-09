@@ -11,8 +11,9 @@ import java.io.FileNotFoundException;
 
 /** Read-only access to one app-owned PDF, via a time-limited URI grant. */
 public final class PdfShareProvider extends ContentProvider {
-    public static final String AUTHORITY="com.brendigo.fakturiva.pdf";
-    public static Uri uri(String filename){return Uri.parse("content://"+AUTHORITY+"/"+filename);}
+    public static Uri uri(android.content.Context context,String filename){
+        return Uri.parse("content://"+context.getPackageName()+".pdf/"+filename);
+    }
     @Override public boolean onCreate(){return true;}
     @Override public String getType(Uri uri){validate(uri);return "application/pdf";}
     @Override public ParcelFileDescriptor openFile(Uri uri,String mode) throws FileNotFoundException{
@@ -22,7 +23,7 @@ public final class PdfShareProvider extends ContentProvider {
         return ParcelFileDescriptor.open(f,ParcelFileDescriptor.MODE_READ_ONLY);
     }
     private void validate(Uri uri) {
-        if(!AUTHORITY.equals(uri.getAuthority())||uri.getPath()==null||!uri.getPath().matches("/share-[a-f0-9-]{36}\\.pdf"))
+        if(!(getContext().getPackageName()+".pdf").equals(uri.getAuthority())||uri.getPath()==null||!uri.getPath().matches("/share-[a-f0-9-]{36}\\.pdf"))
             throw new IllegalArgumentException("Nepoznat dokument");
     }
     @Override public Cursor query(Uri uri,String[] projection,String selection,String[] args,String order){

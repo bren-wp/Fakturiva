@@ -113,6 +113,14 @@ public final class MainActivity extends Activity {
             securityFromSettings=b.getBoolean("securityFromSettings",false);
         }
         if(runScreenshotHarness())return;
+        if("demo".equals(BuildConfig.BUILD_TYPE)){
+            try{
+                Class.forName("com.brendigo.fakturiva.DemoSeeder")
+                    .getMethod("seed",Context.class).invoke(null,this);
+            }catch(Exception error){
+                android.util.Log.e("FakturivaDemo","Synthetic demo initialization failed",error);
+            }
+        }
         // Never open private financial data before authenticating a local account.
         // The old single-device database is migrated only after first registration.
         splash(true);
@@ -331,7 +339,7 @@ public final class MainActivity extends Activity {
                 break;
             case "local_accounts":case "self_host":case "privacy":settings();break;
             case "invoice_appearance":case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
-            case "backup":case "about":settings();break;
+            case "backup":case "about":case "support":settings();break;
             default:home();
         }
     }
@@ -813,6 +821,10 @@ public final class MainActivity extends Activity {
             place(body,label("Prijava PIN-om",30,NAVY,true));gap(body,9);
             place(body,label("Unesite svoj sigurnosni PIN za pristup računu.",
                 14,MUTED,false));gap(body,44);
+            if("demo".equals(BuildConfig.BUILD_TYPE)){
+                place(body,label("DEMO: demo@fakturiva.test · PIN 123456",
+                    12,TEAL,true));gap(body,12);
+            }
             TextView chosen=label("Korisnik: "+loginUsername+(names.length>1?"  ▾":""),
                 12,0xff63718a,false);
             chosen.setMinimumHeight(dp(40));
@@ -1116,6 +1128,10 @@ public final class MainActivity extends Activity {
 
     private void remoteAction(SelfHostedSyncClient.Action action,EditText url,
         EditText username,EditText pass){
+        if("demo".equals(BuildConfig.BUILD_TYPE)){
+            toast("Demo podatci ne prenose se na stvarni korisnički server.");
+            return;
+        }
         if(selfHostedBusy){toast("Prijenos je već u tijeku");return;}
         if(db==null||LocalAccounts.activeId()==null){
             toast("Prvo se prijavite u lokalni račun");return;
@@ -1177,30 +1193,33 @@ public final class MainActivity extends Activity {
         setup("privacy",true);
         toolbar("Privatnost","Fakturiva · Brendigo",true);
         LinearLayout content=card();
-        place(content,label("Lokalni profil i pohrana",18,ink(),true));
+        place(content,label("Korisnički podaci i zaštita",18,ink(),true));
         gap(content,11);
-        place(content,label("Korisničko ime, lokalni PIN i poslovni podaci "+
-            "spremaju se na ovom Android uređaju. PIN nije spremljen kao "+
-            "čitljiv tekst. Svaki lokalni korisnik ima zasebnu bazu "+
-            "i lokalne šifrirane kopije.",13,sub(),false));
+        place(content,label("Fakturiva obrađuje korisničke i poslovne podatke "+
+            "u povezanom korisničkom računu. Za vrijeme rada na Androidu "+
+            "može postojati privremena kopija radi rada bez mreže. "+
+            "Poslužiteljske kopije dodatno su šifrirane, a status prijenosa "+
+            "možete provjeriti u postavkama računa.",13,sub(),false));
         gap(content,14);
-        place(content,label("Vlastiti hosting nije obavezan",16,ink(),true));
+        place(content,label("Pohrana na serveru i oporavak",16,ink(),true));
         gap(content,8);
-        place(content,label("Tek ako sami odaberete vlastiti HTTPS hosting "+
-            "i pokrenete slanje, šifrirana kopija računa i ponuda prenosi "+
-            "se na vašu domenu. Za pristup se koristi zasebna poslužiteljska "+
-            "lozinka, nikada lokalni PIN.",13,sub(),false));
+        place(content,label("Nakon povezivanja s računom Fakturiva "+
+            "prenosi šifrirane sigurnosne kopije na HTTPS server. "+
+            "Prijenos se smatra potvrđenim tek nakon uspješne "+
+            "poslužiteljske potvrde. Za vraćanje nakon deinstalacije "+
+            "potrebni su račun i zasebna lozinka.",13,sub(),false));
         gap(content,14);
         place(content,label("Brisanje i čuvanje",16,ink(),true));
         gap(content,8);
-        place(content,label("Lokalni i poslužiteljski računi brišu se odvojeno. "+
-            "Za brisanje trebate PIN odnosno lozinku poslužitelja. "+
-            "Poslovne dokumente pohranite u skladu sa zakonskim rokovima "+
-            "čuvanja, prije brisanja izvezite potrebne kopije.",13,sub(),false));
+        place(content,label("Brisanje korisničkog računa može se "+
+            "pokrenuti u aplikaciji i na javnoj web stranici. "+
+            "Podaci koji podliježu zakonskom čuvanju obrađuju "+
+            "se u skladu s propisanim rokovima. "+
+            "Prije brisanja izvezite isprave koje morate čuvati.",13,sub(),false));
         place(body,content);gap(body,16);
         button(body,"Upravljaj lokalnim računom",this::localAccountSettings);
         gap(body,10);
-        secondary(body,"Upravljaj vlastitim hostingom",this::selfHostedSettings);
+        secondary(body,"Status računa i sigurnosne kopije",this::selfHostedSettings);
         gap(body,16);
         place(body,label("Kontakt za pitanja o aplikaciji: "+
             BrandAttribution.SUPPORT_EMAIL,12,sub(),false));
@@ -3462,6 +3481,14 @@ public final class MainActivity extends Activity {
      * Croatian income tax tools only. Generated summaries are based on actually
      * recorded receipts, NOT invoice issuance; no cloud service is required.
      */
+    private boolean canUseCroatianTaxReports(){
+        if(db==null)return false;
+        if(!"HR".equals(BusinessProfileRules.country(db.setting("country"))))
+            return false;
+        String form=BusinessProfileRules.form(db.setting("legal_form"));
+        return form.equals("HR_PAUSAL")||form.equals("HR_OBRT")||
+            form.equals("OTHER");
+    }
     private void croatianTaxScreen(){
         if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
         setup("hr_tax",true);
@@ -3807,7 +3834,8 @@ public final class MainActivity extends Activity {
         place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
         gap(body,10);
-        secondary(body,"Knjiga prometa / PO-SD (Hrvatska)",this::croatianTaxScreen);
+        if(canUseCroatianTaxReports())
+            secondary(body,"Knjiga prometa / PO-SD (Hrvatska)",this::croatianTaxScreen);
         gap(body,20);
         // Totals reflect the currently selected reporting month.
     }
@@ -4091,16 +4119,18 @@ public final class MainActivity extends Activity {
             dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
                 dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
             });
-        settingRow(options,"ⓘ","About and support",
-            "Powered by Brendigo · "+BrandAttribution.SUPPORT_EMAIL,
-            this::aboutSupport);
+        settingRow(options,"✉","Podrška",
+            "Pomoć i kontakt",this::supportScreen);
+        settingRow(options,"ⓘ","O aplikaciji",
+            "Fakturiva · Brendigo · pravni dokumenti",this::aboutScreen);
         gap(body,14);
         place(body,label("POSLOVNI ALATI",11,sub(),true));gap(body,8);
         LinearLayout tools=card();pad(tools,0,2);
         settingRow(tools,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
         settingRow(tools,"▥","Izvještaji","Analitika računa i naplate",this::reports);
-        settingRow(tools,"▤","KPR i PO-SD (Hrvatska)",
-            "Knjiga prometa i godišnji porezni obračun",this::croatianTaxScreen);
+        if(canUseCroatianTaxReports())
+            settingRow(tools,"▤","KPR i PO-SD (Hrvatska)",
+                "Knjiga prometa i godišnji porezni obračun",this::croatianTaxScreen);
         place(body,tools);
         gap(body,17);
         caption(body,"Fakturiva · Brendigo");
@@ -4297,36 +4327,73 @@ public final class MainActivity extends Activity {
             }));
         dialog.show();
     }
-    private void aboutSupport(){
-        setup("about",true);
+    private void openFakturivaPage(String path){
+        if(!"uvjeti-koristenja".equals(path) &&
+            !"politika-privatnosti".equals(path) &&
+            !"delete-account.php".equals(path))
+            throw new IllegalArgumentException("Nepoznata stranica");
+        Uri uri=Uri.parse("https://fakturiva.com/"+path);
+        try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}
+        catch(android.content.ActivityNotFoundException e){
+            toast("Nema instaliranog preglednika za otvaranje stranice.");
+        }
+    }
+    private void supportScreen(){
+        setup("support",true);
         pad(body,17,18);
-        toolbar("About and support","Fakturiva · Brendigo",true);
+        toolbar("Podrška","Pomoć korisnicima Fakturive",true);
         LinearLayout info=card();
-        place(info,label("Fakturiva",22,ink(),true));
-        gap(info,6);
-        place(info,label("Version "+getPackageVersion(),12,sub(),false));
-        gap(info,14);
-        place(info,label(BrandAttribution.FOOTER,13,ink(),true));
-        gap(info,8);
-        caption(info,"Every generated PDF invoice and thermal receipt has a small Powered by Brendigo attribution at the bottom.");
+        place(info,label("Kako vam možemo pomoći?",20,ink(),true));
         gap(info,10);
-        caption(info,"To request removal of this attribution, contact our support team at info@plati.com.hr.");
-        place(body,info);gap(body,14);
-        button(body,"Contact support · "+BrandAttribution.SUPPORT_EMAIL,()->{
-            Intent email=new Intent(Intent.ACTION_SENDTO,
+        place(info,label("Za prijavu poteškoća s računom, dokumentima, "+
+            "ispisom ili pristupom javite se korisničkoj podršci.",
+            13,sub(),false));
+        place(body,info);gap(body,15);
+        button(body,"Pošalji poruku podršci",()->{
+            Intent intent=new Intent(Intent.ACTION_SENDTO,
                 Uri.parse("mailto:"+BrandAttribution.SUPPORT_EMAIL));
-            email.putExtra(Intent.EXTRA_SUBJECT,
-                "Fakturiva — Powered by Brendigo attribution");
-            try{startActivity(email);}
-            catch(android.content.ActivityNotFoundException missing){
-                toast("No email app is installed. Please write to info@plati.com.hr.");
+            intent.putExtra(Intent.EXTRA_SUBJECT,"Fakturiva — podrška");
+            try{startActivity(intent);}
+            catch(android.content.ActivityNotFoundException e){
+                toast("Pošaljite e-poruku na "+BrandAttribution.SUPPORT_EMAIL);
             }
         });
         gap(body,12);
-        caption(body,"This app creates ordinary invoices and quotes. Printing does not process card payments or provide fiscalization.");
+        secondary(body,"Pomoć i upute",this::guide);
         gap(body,12);
-        secondary(body,"Privatnost i brisanje računa",this::privacyInfoScreen);
+        secondary(body,"Uvjeti korištenja",
+            ()->openFakturivaPage("uvjeti-koristenja"));
+        gap(body,10);
+        secondary(body,"Politika privatnosti",
+            ()->openFakturivaPage("politika-privatnosti"));
+        gap(body,10);
+        secondary(body,"Zatraži brisanje računa",
+            ()->openFakturivaPage("delete-account.php"));
+        gap(body,20);
     }
+    private void aboutScreen(){
+        setup("about",true);
+        pad(body,17,18);
+        toolbar("O aplikaciji","Fakturiva · Brendigo",true);
+        LinearLayout info=card();
+        place(info,label("Fakturiva",22,ink(),true));gap(info,7);
+        place(info,label("Verzija "+getPackageVersion(),12,sub(),false));gap(info,12);
+        place(info,label(BrandAttribution.FOOTER,13,ink(),true));
+        gap(info,12);
+        place(info,label("Izrada računa i ponuda, praćenje naplate "+
+            "i pregled poslovnih podataka u jednoj aplikaciji.",
+            13,sub(),false));
+        place(body,info);gap(body,15);
+        secondary(body,"Podrška",this::supportScreen);
+        gap(body,10);
+        secondary(body,"Uvjeti korištenja",
+            ()->openFakturivaPage("uvjeti-koristenja"));
+        gap(body,10);
+        secondary(body,"Politika privatnosti",
+            ()->openFakturivaPage("politika-privatnosti"));
+        gap(body,20);
+    }
+    private void aboutSupport(){aboutScreen();}
     private void requestBluetoothPrint(long documentId,int dots){
         if(Build.VERSION.SDK_INT>=31 &&
             checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=
@@ -4611,6 +4678,25 @@ public final class MainActivity extends Activity {
         // Align the first business form with the reference. Preserve the
         // immutable-issuer disclosure below the editable sections.
         place(body,hero);gap(body,18);
+        LinearLayout legalChoice=card();
+        place(legalChoice,label("Država i oblik poslovanja",17,ink(),true));
+        gap(legalChoice,10);
+        Spinner countrySelector=new Spinner(this);
+        countrySelector.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,BusinessProfileRules.COUNTRIES));
+        String previousCountry=BusinessProfileRules.country(db.setting("country"));
+        for(int i=0;i<BusinessProfileRules.COUNTRY_CODES.length;i++)
+            if(BusinessProfileRules.COUNTRY_CODES[i].equals(previousCountry))
+                countrySelector.setSelection(i);
+        place(legalChoice,countrySelector);gap(legalChoice,12);
+        Spinner formSelector=new Spinner(this);
+        place(legalChoice,label("Pravni oblik",12,ink(),true));gap(legalChoice,6);
+        place(legalChoice,formSelector);
+        gap(legalChoice,10);
+        place(legalChoice,label("Prikazat će se polja relevantna za odabranu "+
+            "državu i pravni oblik. Posebne porezne obveze i podaci "+
+            "poreznog izdavanja provjeravaju se zasebno.",12,sub(),false));
+        place(body,legalChoice);gap(body,14);
         LinearLayout form=card();
         place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note",
@@ -4625,6 +4711,7 @@ public final class MainActivity extends Activity {
             "Contact person","Bank account number (non-IBAN)","Bank routing number / ABA",
             "Sort code / branch code","Bank address","Purchase order / invoice reference"};
         EditText[] fields=new EditText[keys.length];
+        LinearLayout[] fieldBlocks=new LinearLayout[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
         int[][] sections={{0,19,20,1,3,24,6,7,8,28},
             {10,11,12,16,17,26,29,30,31,32},
@@ -4637,6 +4724,8 @@ public final class MainActivity extends Activity {
                 gap(card,12);
             }
             for(int index:sections[group]){
+                LinearLayout fieldBlock=vertical();
+                fieldBlocks[index]=fieldBlock;
                 fields[index]=field(labels[index],db.setting(keys[index]));
                 if(index==7){
                     fields[index].setInputType(InputType.TYPE_CLASS_TEXT|
@@ -4656,7 +4745,7 @@ public final class MainActivity extends Activity {
                 // order. Sensitive value toggles share the label's line.
                 fields[index].setPadding(dp(14),dp(9),dp(14),dp(9));
                 fields[index].setMinimumHeight(dp(47));
-                gap(card,index==sections[group][0]?5:10);
+                gap(fieldBlock,index==sections[group][0]?5:10);
                 LinearLayout fieldHeading=horizontal();
                 fieldHeading.setGravity(Gravity.CENTER_VERTICAL);
                 TextView fieldName=label(labels[index],12,ink(),true);
@@ -4679,14 +4768,89 @@ public final class MainActivity extends Activity {
                     });
                     fieldHeading.addView(reveal);
                 }
-                place(card,fieldHeading);
-                gap(card,5);
-                place(card,fields[index]);
+                place(fieldBlock,fieldHeading);
+                gap(fieldBlock,5);
+                place(fieldBlock,fields[index]);
+                place(card,fieldBlock);
             }
             if(group==0)place(body,form);
             else place(body,card);
             gap(body,14);
         }
+        EditText nkdCode=field("NKD 2025 — npr. 62.10.0",db.setting("nkd_code"));
+        LinearLayout nkdGroup=card();
+        place(nkdGroup,label("NKD 2025 — djelatnost",15,ink(),true));
+        gap(nkdGroup,8);
+        place(nkdGroup,nkdCode);
+        gap(nkdGroup,8);
+        place(nkdGroup,label("Provjerava se oblik NKD šifre, a točan kod potvrdite "+
+            "u službenom šifrarniku. Za strukturirane račune mogu biti potrebne i KPD "+
+            "šifre proizvoda i usluga.",11,sub(),false));
+        place(body,nkdGroup);gap(body,14);
+        EditText register=field("Oznaka naplatnog uređaja",db.setting("cash_register"));
+        LinearLayout cashierGroup=card();
+        place(cashierGroup,label("Oznaka blagajne ili naplatnog uređaja",
+            15,ink(),true));
+        gap(cashierGroup,8);place(cashierGroup,register);
+        place(body,cashierGroup);gap(body,14);
+        final ArrayList<Integer> visibleForms=new ArrayList<>();
+        final String initialForm=BusinessProfileRules.form(db.setting("legal_form"));
+        final boolean[] initialized={false};
+        Runnable refreshFields=()->{
+            String chosenCountry=BusinessProfileRules.COUNTRY_CODES[
+                countrySelector.getSelectedItemPosition()];
+            if(formSelector.getSelectedItemPosition()<0||
+               formSelector.getSelectedItemPosition()>=visibleForms.size())return;
+            String chosenForm=BusinessProfileRules.FORM_CODES[
+                visibleForms.get(formSelector.getSelectedItemPosition())];
+            for(int i=0;i<keys.length;i++){
+                boolean shown=BusinessProfileRules.visible(chosenCountry,chosenForm,keys[i]);
+                fieldBlocks[i].setVisibility(shown?View.VISIBLE:View.GONE);
+                if(shown && BusinessProfileRules.required(chosenCountry,chosenForm,
+                    keys[i],false))fields[i].setHint(labels[i]+" *");
+            }
+            nkdGroup.setVisibility("HR".equals(chosenCountry)?View.VISIBLE:View.GONE);
+            cashierGroup.setVisibility("HR".equals(chosenCountry)?View.VISIBLE:View.GONE);
+            fields[6].setText(chosenCountry);
+            fields[19].setText(chosenForm);
+        };
+        Runnable resetForms=()->{
+            String chosen=BusinessProfileRules.COUNTRY_CODES[
+                countrySelector.getSelectedItemPosition()];
+            visibleForms.clear();
+            ArrayList<String> names=new ArrayList<>();
+            for(int i=0;i<BusinessProfileRules.FORM_CODES.length;i++){
+                String home=BusinessProfileRules.compatibleCountry(
+                    BusinessProfileRules.FORM_CODES[i]);
+                if(home.equals(chosen)||"OTHER".equals(home)){
+                    visibleForms.add(i);names.add(BusinessProfileRules.FORMS[i]);
+                }
+            }
+            formSelector.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item,names));
+            int index=0;
+            if(!initialized[0]){
+                for(int i=0;i<visibleForms.size();i++)
+                    if(BusinessProfileRules.FORM_CODES[visibleForms.get(i)]
+                        .equals(initialForm))index=i;
+                initialized[0]=true;
+            }
+            formSelector.setSelection(index);
+            refreshFields.run();
+        };
+        formSelector.setOnItemSelectedListener(
+            new android.widget.AdapterView.OnItemSelectedListener(){
+                @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                    View view,int position,long id){refreshFields.run();}
+                @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            });
+        countrySelector.setOnItemSelectedListener(
+            new android.widget.AdapterView.OnItemSelectedListener(){
+                @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                    View view,int position,long id){resetForms.run();}
+                @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            });
+        resetForms.run();
         Runnable saveCompany=()->{
             try{
                 String name=fields[0].getText().toString().trim();
@@ -4694,11 +4858,22 @@ public final class MainActivity extends Activity {
                 String iban=fields[10].getText().toString().trim();
                 if(name.isEmpty())throw new IllegalArgumentException("Enter a legal business name");
                 if(oib.length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
-                if(!iban.isEmpty()&&!Iban.valid(iban))throw new IllegalArgumentException("IBAN nije valjan");
+                if(!iban.isEmpty()&&!Iban.valid(iban))
+                    throw new IllegalArgumentException("IBAN nije valjan");
                 String[] vals=new String[keys.length];
-                for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString().trim();
+                for(int i=0;i<keys.length;i++)
+                    vals[i]=fields[i].getText().toString().trim();
+                java.util.HashMap<String,String> values=new java.util.HashMap<>();
+                for(int i=0;i<keys.length;i++)values.put(keys[i],vals[i]);
+                values.put("nkd_code",nkdCode.getText().toString().trim());
+                BusinessProfileRules.validate(values.get("country"),
+                    values.get("legal_form"),values,false);
                 db.companySettings(keys,vals);
-                toast("Company details saved");settings();
+                if("HR".equals(values.get("country"))){
+                    db.setting("nkd_code",values.get("nkd_code"));
+                    db.setting("cash_register",register.getText().toString().trim());
+                }
+                toast("Podatci izdavatelja su spremljeni.");settings();
             }catch(Exception e){error(e);}
         };
         gap(body,8);
@@ -4824,7 +4999,7 @@ public final class MainActivity extends Activity {
             String filename="share-"+java.util.UUID.randomUUID().toString()+".pdf";
             File f=new File(getCacheDir(),filename);
             try(FileOutputStream output=new FileOutputStream(f)){PdfMaker.write(db,db.document(id),output);}
-            Uri shared=PdfShareProvider.uri(filename);
+            Uri shared=PdfShareProvider.uri(this,filename);
             Intent share=new Intent(Intent.ACTION_SEND);share.setType("application/pdf");
             share.putExtra(Intent.EXTRA_STREAM,shared);
             share.setClipData(ClipData.newUri(getContentResolver(),"Fakturiva PDF",shared));

@@ -13,7 +13,7 @@
         android:fullBackupContent="false"
         android:usesCleartextTraffic="false"
         android:supportsRtl="true"
-        android:label="Fakturiva"
+        android:label="${appName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/FakturivaTheme">
@@ -31,7 +31,7 @@
         <receiver android:name=".UsbReceiptPrinter$PermissionReceiver"
             android:exported="false"/>
         <provider android:name=".PdfShareProvider"
-            android:authorities="com.brendigo.fakturiva.pdf"
+            android:authorities="${applicationId}.pdf"
             android:exported="false"
             android:grantUriPermissions="true"/>
     </application>

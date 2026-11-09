@@ -49,7 +49,7 @@ public final class PrinterFeaturesTest extends FakturivaTestCase {
         assertTrue(rows.contains("Payment terms: Net 30"));
         assertTrue(rows.contains("Routing/ABA: 021000021"));
         assertEquals(BrandAttribution.FOOTER,rows.get(rows.size()-1));
-        assertEquals("info@plati.com.hr",BrandAttribution.SUPPORT_EMAIL);
+        assertEquals("info@fakturiva.com",BrandAttribution.SUPPORT_EMAIL);
     }
     @Test public void testRasterStreamsForBothPaperWidths() throws Exception{
         for(int dots:new int[]{384,512,576}){

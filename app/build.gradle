@@ -2,14 +2,16 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.brendigo.fakturiva'
     compileSdk 36
+    buildFeatures { buildConfig true }
     useLibrary "android.test.base"
     useLibrary "android.test.runner"
     defaultConfig {
+        manifestPlaceholders = [appName: 'Fakturiva']
         applicationId 'com.brendigo.fakturiva'
         minSdk 24
         targetSdk 36
-        versionCode 19
-        versionName '0.17.0-preview.1'
+        versionCode 20
+        versionName '0.18.0-preview.1'
         // Android 16 no longer loads the legacy instrumentation runner.
         // AndroidX test runner is packaged only into the androidTest APK.
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
@@ -22,6 +24,13 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
+        }
+        // Separate installable QA-only application, never a shared cloud login.
+        demo {
+            initWith debug
+            applicationIdSuffix '.demo'
+            versionNameSuffix '-demo'
+            manifestPlaceholders = [appName: 'Fakturiva DEMO']
         }
     }
     lint { abortOnError true; checkReleaseBuilds true }

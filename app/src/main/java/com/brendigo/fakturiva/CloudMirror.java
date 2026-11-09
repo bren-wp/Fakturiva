@@ -31,6 +31,9 @@ import javax.crypto.spec.GCMParameterSpec;
 public final class CloudMirror {
     private static final String KEY_ALIAS="fakturiva-cloud-credentials-v1";
     private static final ExecutorService WORK=Executors.newSingleThreadExecutor();
+    // Coordinates pending-marker updates with successful server ACK commits.
+    // Network and SQLite work are never performed under this lock.
+    private static final Object STATE_LOCK=new Object();
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private CloudMirror(){}
 
@@ -151,7 +154,10 @@ public final class CloudMirror {
                         .putString("username",username.trim())
                         .putString("sealed_password",encrypted)
                         .putInt("revision",remote.getInt("revision"))
-                        .putBoolean("dirty",false).putBoolean("conflict",false)
+                        // No synchronization may claim the local SQLite snapshot
+                        // is uploaded until its exact bytes are acknowledged.
+                        .putBoolean("dirty",true).putBoolean("conflict",false)
+                        .putString("pending_change",java.util.UUID.randomUUID().toString())
                         .putBoolean("paused",false)
                         .putLong("synced_at",System.currentTimeMillis());
                     if(!editor.commit())throw new IllegalStateException(
@@ -171,10 +177,12 @@ public final class CloudMirror {
         if(!enabled(ctx,id))return;
         SharedPreferences pref=state(ctx,id);
         // durable pending flag written BEFORE scheduling any network work
-        if(!pref.edit().putBoolean("dirty",true)
-            .putString("pending_change",java.util.UUID.randomUUID().toString())
-            .commit())
-            android.util.Log.e("FakturivaCloud","Could not persist unsynced flag");
+        synchronized(STATE_LOCK){
+            if(!pref.edit().putBoolean("dirty",true)
+                .putString("pending_change",java.util.UUID.randomUUID().toString())
+                .commit())
+                android.util.Log.e("FakturivaCloud","Could not persist unsynced flag");
+        }
         if(!pref.getBoolean("paused",false))runPending(ctx,id);
     }
     public static void runPending(Context ctx,String id){
@@ -185,6 +193,12 @@ public final class CloudMirror {
             SharedPreferences p=state(app,id);
             if(!p.getBoolean("dirty",false)||p.getBoolean("conflict",false))return;
             if(!id.equals(LocalAccounts.activeId()))return;
+            // Capture the revision marker BEFORE reading SQLite and before any
+            // network request. Every newer mutation changes it.
+            final String capturedChange;
+            synchronized(STATE_LOCK){
+                capturedChange=p.getString("pending_change","");
+            }
             char[] pass=null;
             Store store=null;
             try{
@@ -221,15 +235,17 @@ public final class CloudMirror {
                         // Exactly this snapshot was acknowledged.
                         // A mutation committed DURING transmission should keep
                         // dirty=true; do not mark its data as uploaded.
-                        String before=p.getString("pending_change","");
-                        boolean moreChanges=!before.equals(
-                            p.getString("pending_change",""));
-                        if(!p.edit().putInt("revision",rev)
-                            .putLong("synced_at",System.currentTimeMillis())
-                            .putBoolean("dirty",moreChanges)
-                            .remove("last_error").commit())
-                            throw new IllegalStateException(
-                                "Potvrda sinkronizacije nije spremljena");
+                        boolean moreChanges;
+                        synchronized(STATE_LOCK){
+                            moreChanges=!capturedChange.equals(
+                                p.getString("pending_change",""));
+                            if(!p.edit().putInt("revision",rev)
+                                .putLong("synced_at",System.currentTimeMillis())
+                                .putBoolean("dirty",moreChanges)
+                                .remove("last_error").commit())
+                                throw new IllegalStateException(
+                                    "Potvrda sinkronizacije nije spremljena");
+                        }
                         if(moreChanges)runPending(app,id);
                     }finally{
                         try{SelfHostedSyncClient.request(url,
