@@ -214,6 +214,7 @@ function signUp(string $username,string $password,string $address): array {
         }
         $id=bin2hex(random_bytes(16));
         $account=['id'=>$id,'username'=>trim($username),
+            'tier'=>'FREE','suspended'=>false,
             'password_hash'=>password_hash($password,
                 defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT),
             'revision'=>0,'backup'=>null,'sessions'=>[],
@@ -235,6 +236,7 @@ function signIn(string $username,string $password,string $address): array {
             rateLimit($address,true);
             fail(401,'Invalid username or passphrase');
         }
+        if(!empty($account['suspended']))fail(403,'Account access is suspended');
         $token=mintToken($account);
         writeRecord(accountPath($account['id']),$account);
         return ['token'=>$token,'revision'=>(int)$account['revision'],
@@ -246,6 +248,7 @@ function authorized(string $token): array {
         fail(401,'Invalid session');
     $account=readRecord(accountPath($matches[1]));
     if(!$account)fail(401,'Invalid session');
+    if(!empty($account['suspended']))fail(403,'Account suspended');
     $hash=hash('sha256',$token);
     if(!isset($account['sessions'][$hash])||
         (int)$account['sessions'][$hash]<=time())fail(401,'Session expired');
@@ -467,7 +470,9 @@ function webRegister(string $username,string $pin,string $address): array {
         $account=[
             'id'=>$id,
             'username'=>trim($username),
-            // Not yet configured: Android sync requires its own long passphrase.
+            'tier'=>'FREE',
+            'suspended'=>false,
+            // Android sync has its own long passphrase.
             'password_hash'=>null,
             'web_pin_hash'=>pinHash($pin),
             'web_attempts'=>0,
@@ -492,6 +497,7 @@ function webLogin(string $username,string $pin,string $address): array {
             rateLimit($address,true);
             fail(401,'Korisničko ime ili PIN nisu ispravni');
         }
+        if(!empty($account['suspended']))fail(403,'Račun je privremeno onemogućen.');
         if((int)($account['web_block_until']??0)>time())
             fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
         if(!pinMatches($account,$pin)){
@@ -518,7 +524,8 @@ function webAuthorized(string $id,string $token): array {
        !preg_match('/^[a-f0-9]{64}$/D',$token))
         fail(401,'Web sesija nije valjana');
     $account=readRecord(accountPath($id));
-    if($account===null || !is_string($account['web_token_hash']??null) ||
+    if($account===null || !empty($account['suspended']) ||
+       !is_string($account['web_token_hash']??null) ||
        (int)($account['web_token_until']??0)<=time() ||
        !hash_equals($account['web_token_hash'],hash('sha256',$token)))
         fail(401,'Web sesija je istekla');
@@ -543,6 +550,7 @@ function webLinkAndroidAccount(string $username,string $passphrase,
             rateLimit($address,true);
             fail(401,'Neispravno korisničko ime ili lozinka hostinga');
         }
+        if(!empty($account['suspended']))fail(403,'Račun je onemogućen');
         $account['web_pin_hash']=pinHash($newPin);
         $account['web_attempts']=0;
         $account['web_block_until']=0;
@@ -577,5 +585,64 @@ function webDeleteAccount(string $id,string $token,string $pin):void {
         if(!unlink(accountPath($id)))throw new \RuntimeException('Cannot delete account');
         if(!unlink(indexPath($account['username'])))
             throw new \RuntimeException('Cannot delete account index');
+    });
+}
+
+
+/**
+ * Administrator can only inspect account metadata. Users' financial backup
+ * ciphertext is client-encrypted and never exposed through admin actions.
+ * There is no default administrator login or secret in the repository.
+ */
+function adminReadAccounts(): array {
+    return transaction(function():array{
+        $items=[];
+        foreach(glob(storage().'/accounts/*.json')?:[] as $file){
+            if(count($items)>=10000)throw new \RuntimeException('Administration limit exceeded');
+            $account=readRecord($file);
+            if($account===null || !empty($account['deleted']))continue;
+            $items[]=[
+                'id'=>(string)$account['id'],
+                'username'=>(string)$account['username'],
+                'created_at'=>(string)($account['created_at']??''),
+                'tier'=>(string)($account['tier']??'FREE'),
+                'suspended'=>!empty($account['suspended']),
+                'revision'=>(int)($account['revision']??0),
+                'backup_present'=>is_string($account['backup']??null),
+                'backup_bytes'=>strlen((string)($account['backup']??'')),
+                'last_backup_at'=>(string)($account['saved_at']??''),
+            ];
+        }
+        usort($items,static fn($a,$b)=>strcmp($a['username'],$b['username']));
+        return $items;
+    });
+}
+function adminManageAccount(string $id,string $action,string $value=''):void{
+    if(!preg_match('/^[a-f0-9]{32}$/D',$id))fail(422,'Invalid account id');
+    transaction(function()use($id,$action,$value):void{
+        $path=accountPath($id);
+        $account=readRecord($path);
+        if($account===null||!empty($account['deleted']))fail(404,'Unknown account');
+        if($action==='tier'){
+            if(!in_array($value,['FREE','PRO','BUSINESS'],true))
+                fail(422,'Invalid plan');
+            $account['tier']=$value;
+        }elseif($action==='suspend'||$action==='restore'){
+            $account['suspended']=$action==='suspend';
+            $account['sessions']=[];
+            unset($account['web_token_hash'],$account['web_token_until']);
+        }elseif($action==='delete'){
+            $account['sessions']=[];
+            unset($account['web_token_hash'],$account['web_token_until']);
+            $account['deleted']=true;
+            // Mark deleted before unlink. Account restore from an old file
+            // must not silently reinstate a live session.
+            writeRecord($path,$account);
+            if(!unlink($path))throw new \RuntimeException('Account delete failed');
+            if(!unlink(indexPath((string)$account['username'])))
+                throw new \RuntimeException('Username index delete failed');
+            return;
+        }else fail(422,'Invalid admin action');
+        writeRecord($path,$account);
     });
 }
