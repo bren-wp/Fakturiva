@@ -46,7 +46,7 @@ public final class SelfHostedSyncClient {
         return target.toASCIIString();
     }
 
-    private static JSONObject request(String url,JSONObject data,String token) throws Exception {
+    static JSONObject request(String url,JSONObject data,String token) throws Exception {
         URL target=new URL(url);
         HttpsURLConnection connection=(HttpsURLConnection)target.openConnection();
         connection.setInstanceFollowRedirects(false); // Never forward a passphrase.
@@ -90,7 +90,7 @@ public final class SelfHostedSyncClient {
         }finally{connection.disconnect();}
     }
 
-    private static JSONObject command(String action,String username,String password){
+    static JSONObject command(String action,String username,String password){
         try {
             return new JSONObject().put("action",action).put("username",username)
                 .put("passphrase",password);
