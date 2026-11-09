@@ -39,3 +39,14 @@ jobs:
             echo "::error::Runtime secret or tenant data is tracked in Git"
             exit 1
           fi
+
+      - name: Package tracked web source only for responsive visual QA
+        if: always()
+        run: git archive --format=zip --output=/tmp/fakturiva-web-qa.zip HEAD web/
+      - name: Upload web source bundle for screenshot comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fakturiva-web-source-qa
+          path: /tmp/fakturiva-web-qa.zip
+          if-no-files-found: warn
