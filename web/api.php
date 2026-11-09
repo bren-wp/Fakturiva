@@ -42,6 +42,9 @@ try {
         'save'=>FakturivaSelfHost\saveBackup(
             authToken(),(string)($payload['backup_b64']??''),
             requireRevision($payload['expected_revision']??null)),
+        'restore_revision'=>FakturivaSelfHost\restoreEncryptedRevision(
+            authToken(),requireRevision($payload['revision']??null),
+            requireRevision($payload['expected_revision']??null)),
         'logout'=>FakturivaSelfHost\signOut(authToken()),
         'delete'=>deleteAuthenticated($password),
         default=>throw new FakturivaSelfHost\HttpFailure(404,'Unknown action')
