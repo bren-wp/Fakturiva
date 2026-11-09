@@ -1,0 +1,236 @@
+package com.brendigo.fakturiva;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
+import org.json.JSONObject;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+
+/**
+ * Encrypted server mirror for one authenticated local profile.
+ *
+ * The remote revision is authoritative. SQLite is only an offline working copy.
+ * A mutation is "saved" on the server ONLY after a matching authenticated
+ * response and its SHA-256 have been verified. Conflicts are NEVER overwritten.
+ * A fresh installation must reauthenticate with the user's server passphrase
+ * and explicitly restore; an old device-only PIN cannot reconstruct a key.
+ */
+public final class CloudMirror {
+    private static final String KEY_ALIAS="fakturiva-cloud-credentials-v1";
+    private static final ExecutorService WORK=Executors.newSingleThreadExecutor();
+    private static final Handler MAIN=new Handler(Looper.getMainLooper());
+    private CloudMirror(){}
+
+    public interface Callback{void completed(String error);}
+    private static SharedPreferences state(Context ctx,String id){
+        if(!LocalAccounts.validProfileId(id))
+            throw new IllegalArgumentException("Invalid profile");
+        return ctx.getApplicationContext().getSharedPreferences(
+            "cloud_sync_"+id,Context.MODE_PRIVATE);
+    }
+    private static SecretKey key()throws Exception{
+        KeyStore keyStore=KeyStore.getInstance("AndroidKeyStore");keyStore.load(null);
+        KeyStore.Entry entry=keyStore.getEntry(KEY_ALIAS,null);
+        if(entry instanceof KeyStore.SecretKeyEntry)
+            return ((KeyStore.SecretKeyEntry)entry).getSecretKey();
+        KeyGenerator gen=KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,"AndroidKeyStore");
+        gen.init(new KeyGenParameterSpec.Builder(KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT|KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256).setRandomizedEncryptionRequired(true).build());
+        return gen.generateKey();
+    }
+    private static String seal(char[] password)throws Exception{
+        byte[] plain=new String(password).getBytes(StandardCharsets.UTF_8);
+        try{
+            Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE,key()); // Keystore generates IV
+            byte[] nonce=cipher.getIV(),encrypted=cipher.doFinal(plain);
+            if(nonce==null||nonce.length!=12)throw new SecurityException("Invalid IV");
+            byte[] combined=new byte[nonce.length+encrypted.length];
+            System.arraycopy(nonce,0,combined,0,nonce.length);
+            System.arraycopy(encrypted,0,combined,nonce.length,encrypted.length);
+            try{return Base64.encodeToString(combined,Base64.NO_WRAP);}
+            finally{Arrays.fill(combined,(byte)0);Arrays.fill(encrypted,(byte)0);}
+        }finally{Arrays.fill(plain,(byte)0);}
+    }
+    private static char[] unseal(String cipherText)throws Exception{
+        byte[] combined=Base64.decode(cipherText,Base64.NO_WRAP);
+        if(combined.length<29||combined.length>1000)throw new SecurityException(
+            "Stored server credential is invalid");
+        try{
+            byte[] nonce=Arrays.copyOfRange(combined,0,12);
+            Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE,key(),new GCMParameterSpec(128,nonce));
+            byte[] plain=cipher.doFinal(combined,12,combined.length-12);
+            try{return new String(plain,StandardCharsets.UTF_8).toCharArray();}
+            finally{Arrays.fill(plain,(byte)0);}
+        }finally{Arrays.fill(combined,(byte)0);}
+    }
+    public static boolean enabled(Context ctx,String id){
+        return id!=null&&LocalAccounts.validProfileId(id)&&
+            state(ctx,id).getBoolean("enabled",false);
+    }
+    public static String status(Context ctx,String id){
+        if(!enabled(ctx,id))
+            return "Server nije povezan. Za obnovu nakon deinstalacije povežite račun.";
+        SharedPreferences p=state(ctx,id);
+        if(p.getBoolean("conflict",false))
+            return "Sukob verzija: prijenos je zaustavljen do ručne provjere.";
+        if(p.getBoolean("dirty",false))
+            return "Promjene čekaju potvrdu pohrane na serveru.";
+        long at=p.getLong("synced_at",0);
+        if(at==0)return "Prijenos na server još nije potvrđen.";
+        return "Sigurnosna kopija potvrđena na serveru ("+
+            new java.text.SimpleDateFormat("dd.MM.yyyy. HH:mm",
+                java.util.Locale.forLanguageTag("hr-HR"))
+                .format(new java.util.Date(at))+").";
+    }
+    public static void disconnect(Context ctx,String id){
+        // Does not delete server data; users can restore it by logging in.
+        state(ctx,id).edit().clear().commit();
+    }
+    /**
+     * Called only after the user has explicitly uploaded a verified first
+     * snapshot or restored the existing remote data. No silent first-write
+     * overwrites, including when the server already has another device.
+     */
+    public static void enable(Context ctx,String id,String endpoint,
+                              String username,char[] password,Callback callback){
+        final Context app=ctx.getApplicationContext();
+        final char[] copy=password.clone();
+        WORK.execute(()->{
+            String failure=null;
+            try{
+                if(copy.length<12||copy.length>256)
+                    throw new IllegalArgumentException("Lozinka mora imati 12–256 znakova");
+                String url=SelfHostedSyncClient.apiUrl(endpoint);
+                JSONObject login=SelfHostedSyncClient.request(url,
+                    SelfHostedSyncClient.command("login",username,new String(copy)),null);
+                String token=login.getString("token");
+                try{
+                    JSONObject remote=SelfHostedSyncClient.request(url,
+                        new JSONObject().put("action","load"),token);
+                    String current=remote.optString("backup_b64","");
+                    if(current.isEmpty())throw new IllegalStateException(
+                        "Na serveru nema kopije. Najprije spremite postojeće podatke.");
+                    byte[] sealed=Base64.decode(current,Base64.DEFAULT);
+                    try{SecureBackup.decrypt(sealed,copy);}
+                    finally{Arrays.fill(sealed,(byte)0);}
+                    // Successful decryption confirms the passphrase belongs
+                    // to the backup; there is no client-side SHA guessing.
+                    String encrypted=seal(copy);
+                    SharedPreferences.Editor editor=state(app,id).edit();
+                    editor.putBoolean("enabled",true).putString("api",url)
+                        .putString("username",username.trim())
+                        .putString("sealed_password",encrypted)
+                        .putInt("revision",remote.getInt("revision"))
+                        .putBoolean("dirty",false).putBoolean("conflict",false)
+                        .putLong("synced_at",System.currentTimeMillis());
+                    if(!editor.commit())throw new IllegalStateException(
+                        "Postavke poslužiteljske sigurnosne kopije nisu spremljene");
+                }finally{
+                    try{SelfHostedSyncClient.request(url,
+                        new JSONObject().put("action","logout"),token);}
+                    catch(Exception ignored){}
+                }
+            }catch(Exception e){failure=e.getMessage();}
+            finally{Arrays.fill(copy,'\0');}
+            final String result=failure;
+            if(callback!=null)MAIN.post(()->callback.completed(result));
+        });
+    }
+    public static void changed(Context ctx,String id){
+        if(!enabled(ctx,id))return;
+        SharedPreferences pref=state(ctx,id);
+        // durable pending flag written BEFORE scheduling any network work
+        if(!pref.edit().putBoolean("dirty",true).commit())
+            android.util.Log.e("FakturivaCloud","Could not persist unsynced flag");
+        runPending(ctx,id);
+    }
+    public static void runPending(Context ctx,String id){
+        if(!enabled(ctx,id))return;
+        final Context app=ctx.getApplicationContext();
+        WORK.execute(()->{
+            if(!enabled(app,id))return;
+            SharedPreferences p=state(app,id);
+            if(!p.getBoolean("dirty",false)||p.getBoolean("conflict",false))return;
+            if(!id.equals(LocalAccounts.activeId()))return;
+            char[] pass=null;
+            Store store=null;
+            try{
+                String url=SelfHostedSyncClient.apiUrl(p.getString("api",""));
+                String username=p.getString("username","");
+                pass=unseal(p.getString("sealed_password",""));
+                store=new Store(app,id);
+                byte[] plaintext=store.backup().toString().getBytes(StandardCharsets.UTF_8);
+                byte[] cipher;
+                try{cipher=SecureBackup.encrypt(plaintext,pass);}
+                finally{Arrays.fill(plaintext,(byte)0);}
+                try{
+                    String localSha=sha(cipher);
+                    JSONObject login=SelfHostedSyncClient.request(url,
+                        SelfHostedSyncClient.command("login",username,new String(pass)),null);
+                    String token=login.getString("token");
+                    try{
+                        JSONObject remote=SelfHostedSyncClient.request(url,
+                            new JSONObject().put("action","load"),token);
+                        int savedRevision=p.getInt("revision",-1);
+                        int serverRevision=remote.getInt("revision");
+                        if(savedRevision!=serverRevision){
+                            p.edit().putBoolean("conflict",true).commit();
+                            return; // fail closed: NEVER auto-clobber a newer server snapshot
+                        }
+                        JSONObject saved=SelfHostedSyncClient.request(url,
+                            new JSONObject().put("action","save")
+                                .put("expected_revision",savedRevision)
+                                .put("backup_b64",Base64.encodeToString(cipher,
+                                    Base64.NO_WRAP)),token);
+                        if(!localSha.equals(saved.getString("sha256")))
+                            throw new SecurityException("Server checksum mismatch");
+                        int rev=saved.getInt("revision");
+                        // Exactly this snapshot was acknowledged.
+                        // A mutation committed DURING transmission should keep
+                        // dirty=true; do not mark its data as uploaded.
+                        String before=p.getString("pending_change","");
+                        p.edit().putInt("revision",rev)
+                            .putLong("synced_at",System.currentTimeMillis())
+                            .putBoolean("dirty",!before.equals(p.getString("pending_change","")))
+                            .remove("last_error").commit();
+                    }finally{
+                        try{SelfHostedSyncClient.request(url,
+                            new JSONObject().put("action","logout"),token);}
+                        catch(Exception ignored){}
+                    }
+                }finally{Arrays.fill(cipher,(byte)0);}
+            }catch(Exception e){
+                p.edit().putString("last_error",
+                    e.getMessage()==null?"Prijenos nije uspio":e.getMessage()).commit();
+            }finally{
+                if(store!=null)store.close();
+                if(pass!=null)Arrays.fill(pass,'\0');
+            }
+        });
+    }
+    private static String sha(byte[] value)throws Exception{
+        byte[] digest=MessageDigest.getInstance("SHA-256").digest(value);
+        StringBuilder result=new StringBuilder(64);
+        for(byte b:digest)result.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+        return result.toString();
+    }
+}
