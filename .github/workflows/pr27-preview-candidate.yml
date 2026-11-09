@@ -88,7 +88,9 @@ jobs:
     if: contains(github.event.head_commit.message, '[release-preview]')
     needs: [android, windows]
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # Responsive 20-screen matrix uses an Android emulator and regularly
+    # takes longer than the artifact-producing jobs; do not time out early.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -105,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 36); do
+          for attempt in $(seq 1 120); do
             json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=50")"
             pending=0
             while IFS= read -r name; do
@@ -127,7 +129,7 @@ jobs:
             if test "$pending" -eq 0; then exit 0; fi
             sleep 25
           done
-          echo "::error::Not all five required workflows completed successfully."
+          echo "::error::At least one required workflow is still pending after 50 minutes. Re-run this publish job after all five pass."
           exit 1
       - name: Package all source and preview assets
         run: |
