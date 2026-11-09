@@ -4865,18 +4865,38 @@ public final class MainActivity extends Activity {
         }
         Uri uri=data.getData();
         if(code==PICK_BRANDING_LOGO){
-            try{
-                if(db==null||pendingBrandProfile==null||
-                   !pendingBrandProfile.equals(LocalAccounts.activeId())||
-                   !pendingBrandProfile.equals(db.profileId()))
-                    throw new SecurityException("Profil se promijenio, odaberite logo ponovno.");
-                byte[] image=InvoiceLogoIO.prepare(this,uri);
-                try{db.saveBrandingLogo(image);}
-                finally{Arrays.fill(image,(byte)0);}
-                toast("Logo spremljen i uključit će se u nove dokumente.");
-                invoiceAppearance();
-            }catch(Exception e){error(e);}
-            finally{pendingBrandProfile=null;}
+            final String expected=pendingBrandProfile;
+            pendingBrandProfile=null;
+            if(expected==null||db==null||
+               !expected.equals(LocalAccounts.activeId())||
+               !expected.equals(db.profileId())){
+                toast("Profil se promijenio. Odaberite logo ponovno.");
+                return;
+            }
+            // Decoding user-provided images and database persistence may be
+            // expensive; never block the Android UI or draw from a worker.
+            new Thread(()->{
+                byte[] image=null;
+                try{
+                    image=InvoiceLogoIO.prepare(getApplicationContext(),uri);
+                    if(!expected.equals(LocalAccounts.activeId()))
+                        throw new SecurityException("Profil se promijenio.");
+                    Store source=new Store(getApplicationContext(),expected);
+                    try{source.saveBrandingLogo(image);}
+                    finally{source.close();}
+                    runOnUiThread(()->{
+                        if(!isFinishing()&&!isDestroyed()&&
+                           expected.equals(LocalAccounts.activeId())){
+                            toast("Logo spremljen. Primijenit će se na nove račune.");
+                            invoiceAppearance();
+                        }
+                    });
+                }catch(Exception failure){
+                    runOnUiThread(()->{
+                        if(!isFinishing()&&!isDestroyed())error(failure);
+                    });
+                }finally{if(image!=null)Arrays.fill(image,(byte)0);}
+            },"FakturivaLogo").start();
             return;
         }
         if((code==BACKUP_EXPORT||code==BACKUP_IMPORT)&&pendingPassword==null){
