@@ -1,0 +1,55 @@
+name: Fakturiva Windows preview build
+on:
+  push:
+    paths:
+      - 'win/**'
+      - '.github/workflows/windows.yml'
+  pull_request:
+    paths:
+      - 'win/**'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish Windows x64 portable package
+        shell: pwsh
+        run: |
+          dotnet restore win/Fakturiva.Win.csproj
+          dotnet publish win/Fakturiva.Win.csproj -c Release -r win-x64 --self-contained true -o win/publish
+          if (!(Test-Path win/publish/Fakturiva.exe)) { throw 'Missing Fakturiva.exe' }
+          Compress-Archive -Path win/publish/* -DestinationPath win/Fakturiva-portable.zip -Force
+      - name: Build Windows setup executable
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (!(Test-Path $compiler)) { throw 'Inno Setup compiler not found' }
+          Push-Location win
+          try { & $compiler installer.iss; if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' } }
+          finally { Pop-Location }
+          if (!(Test-Path win/build/Fakturiva-setup.exe)) { throw 'Missing setup.exe' }
+      - name: Create checksums
+        shell: pwsh
+        run: |
+          $files = @('win/Fakturiva-portable.zip','win/build/Fakturiva-setup.exe')
+          foreach ($file in $files) {
+            $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash
+            "$hash *$file" | Out-File -Append -Encoding utf8 win/SHA256SUMS.txt
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fakturiva-Windows-UNSIGNED-preview
+          path: |
+            win/Fakturiva-portable.zip
+            win/build/Fakturiva-setup.exe
+            win/SHA256SUMS.txt
+          if-no-files-found: error
