@@ -3497,10 +3497,12 @@ public final class MainActivity extends Activity {
             }
             LinearLayout row=horizontal();row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dp(12),dp(18),dp(12),dp(18));
-            TextView symbol=label("⬡",26,i%3==0?BLUE:(i%3==1?TEAL:0xffeaa044),true);
-            symbol.setGravity(Gravity.CENTER);
+            ImageView symbol=icon(R.drawable.ic_cube,
+                i%3==0?BLUE:(i%3==1?TEAL:0xffeaa044));
+            symbol.setPadding(dp(10),dp(10),dp(10),dp(10));
             symbol.setBackground(shape(dark?0xff273852:
                 (i%3==0?0xffeaf0ff:i%3==1?0xffdef8f4:0xfffff1e2),12));
+            symbol.setContentDescription("Artikl ili usluga");
             row.addView(symbol,lp(41,41));
             LinearLayout description=vertical();
             LinearLayout.LayoutParams descriptionLp=new LinearLayout.LayoutParams(0,-2,1);
