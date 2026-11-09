@@ -13,10 +13,22 @@ u root svoje HTTPS domene ili u poddirektorij, primjerice
 
 ```text
 public_html/
+  index.php
+  register.php
+  identify.php
+  login.php
+  link.php
+  auth.php
+  bootstrap.php
+  dashboard.php
   api.php
   lib.php
   privacy.php
   delete-account.php
+  assets/
+    app.css
+    auth.js
+    mark.svg
   storage/
     .htaccess
     .gitignore
@@ -26,6 +38,7 @@ public_html/
       accounts/         (automatski se kreira)
       index/            (automatski se kreira)
       limits/           (automatski se kreira)
+      sessions/         (automatski se kreira)
     secret.php          (automatski se kreira, nije u Git repozitoriju)
 ```
 
@@ -62,6 +75,44 @@ U podmapi: `https://vasa-domena.hr/fakturiva/`.
 
 Javni ping: `GET https://vasa-domena.hr/api.php?action=health`
 odgovara podacima o verziji; ne otkriva račune.
+
+## Web registracija i prijava (prema dvjema referencama)
+
+Sadržaj mape `web/` sadrži **funkcionalne, responzivne web ekrane**
+za registraciju i prijavu te PHP API za Android:
+
+| Adresa nakon kopiranja u root | Namjena |
+| --- | --- |
+| `/register.php` | Registracija korisničkog računa, PIN od 4–6 znamenki |
+| `/identify.php` | Odabir korisničkog imena na novom pregledniku |
+| `/login.php` | Nativna HTML numerička PIN tipkovnica prema referenci |
+| `/dashboard.php` | Prijavljeni račun, revizija kopije i postavljanje zasebne Android lozinke |
+| `/link.php` | Povezivanje postojećeg Android API računa s web PIN-om |
+| `/delete-account.php` | Brisanje web računa PIN-om ili javno brisanje uz lozinku hostinga |
+| `/privacy.php` | Predložak za prilagodbu pravila privatnosti |
+| `/api.php` | HTTPS JSON API koji već koristi Android Fakturiva |
+
+**PIN za web nije lozinka za sinkronizaciju.** U web registraciji unosi
+se PIN od 4–6 znamenki koji se provjerava na hostingu uz Argon2id/bcrypt,
+nasumični HMAC s poslužiteljskim tajnim ključem, per-account i IP
+ograničenja pogrešnih pokušaja. Kratki PIN nije prikladan kao samostalni
+ključ za šifriranje poslovnih dokumenata. Za Androidove šifrirane
+preslike u web panelu postavite zasebnu poslužiteljsku lozinku
+od najmanje 12 znakova. Ako račun prvo napravite u Android aplikaciji,
+web PIN dodajte putem `link.php`.
+
+Web preglednik koristi samo nužni vlastiti kolačić sesije
+(`Secure`, `HttpOnly`, `SameSite=Strict`), bez trećih analitičkih
+ili oglasnih servisa. Obrasci koriste CSRF zaštitu, provjeru polja,
+poništavanje sesije pri odjavi te ne dopuštaju čitanje datoteka drugog
+korisnika. Zaštita uključuje zaseban direktorij
+`storage/data/sessions` (kreira se automatski).
+
+**Vizualna provjera:** izrađene su stvarne snimke web HTML/CSS prikaza
+na širini 393 dp / 709 px; status bar, font rendering i web preglednik
+nisu identični izvornim iOS/Android prikazima. Ne tvrdi se da je 0%
+odstupanja postignuto. Na većim zaslonima forma je centrirana, na
+manjima su kontrole pomične i upotrebljive.
 
 ## Android — ručna uporaba
 
@@ -113,6 +164,9 @@ zamjena i revizije namjerno sprječavaju nevidljiv gubitak.
 ```sh
 find web -name '*.php' -print0 | xargs -0 -n1 php -l
 php web/tests/smoke.php
+php web/tests/web-auth-smoke.php
+bash web/tests/http-smoke.sh
+bash web/tests/web-form-http.sh
 ```
 
 CI provjerava osnovnu izolaciju dva korisnika, HTTPS API u kodu,
