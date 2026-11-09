@@ -26,8 +26,18 @@ Android sinkronizaciju. Poslovni podaci ostaju odvojeni po korisničkim računim
 <p>Vaš poslužiteljski račun ima zaseban šifrirani JSON zapis.</p>
 <p>Sigurnosna kopija: <strong><?=empty($account['backup'])?'Nema pohranjene kopije':'Pohranjena šifrirana kopija'?></strong></p>
 <p>Revizija podataka: <strong><?= (int)($account['revision']??0)?></strong></p>
+<p>Posljednja potvrđena pohrana:
+<strong><?=h((string)($account['saved_at']??'Još nema potvrđenog prijenosa'))?></strong></p>
+<p>Zadržane verzije:
+<strong><?=count(is_array($account['backup_history']??null)?$account['backup_history']:[]) + (empty($account['backup'])?0:1)?></strong></p>
 <p>Android sinkronizacija: <strong><?=$canSync?'Postavljena zasebna lozinka':'Nije aktivirana'?></strong></p>
 <small>Poslužitelj ne prikazuje sadržaj šifrirane preslike. Izvoz/uvoz pokrećete u Android aplikaciji.</small>
+</section>
+<section class="panel">
+<h2>Računi, naplate i Knjiga prometa</h2>
+<p>Pregledajte poslovne podatke iz svoje posljednje šifrirane sigurnosne kopije.
+Za otključavanje je potrebna zasebna lozinka za poslovne podatke.</p>
+<a class="primary-action" href="finance.php">Otvori poslovni pregled</a>
 </section>
 <section class="panel">
 <h2>Lozinka za Android sinkronizaciju</h2>
