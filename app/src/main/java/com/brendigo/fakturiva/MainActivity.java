@@ -3484,7 +3484,7 @@ public final class MainActivity extends Activity {
         meta.addView(label("Ukupno stavki  ",11,sub(),false));
         meta.addView(label(String.valueOf(products.size()),12,ink(),true));
         View space=new View(this);meta.addView(space,new LinearLayout.LayoutParams(0,dp(1),1));
-        meta.addView(label("U katalogu  ",11,sub(),false));
+        meta.addView(label("Aktivne  ",11,sub(),false));
         meta.addView(label(String.valueOf(products.size()),12,ink(),true));
         place(body,meta);gap(body,2);
 
@@ -4096,10 +4096,23 @@ public final class MainActivity extends Activity {
         place(body,top);gap(body,21);
         List<Store.Payment> history=db.payments();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
-        int monthlyCount=0;long monthlyAmount=0;
-        for(Store.Payment p:history)if(p.paidOn.startsWith(month)&&
-            BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency())){
-            monthlyCount++;monthlyAmount=Math.addExact(monthlyAmount,p.amountCents);
+        // Count invoices whose last real receipt completed payment in this
+        // month, not payment rows (one invoice may have several installments).
+        java.util.HashMap<Long,String> lastReceipt=new java.util.HashMap<>();
+        for(Store.Payment p:history){
+            if(!BillingCurrency.canonical(p.currencyCode).equals(selectedCurrency()))
+                continue;
+            String previous=lastReceipt.get(p.documentId);
+            if(previous==null||previous.compareTo(p.paidOn)<0)
+                lastReceipt.put(p.documentId,p.paidOn);
+        }
+        int monthlyCount=0;
+        for(Store.Document invoice:db.documents(Store.INVOICE)){
+            if(!Store.PAID.equals(invoice.status)||
+               !BillingCurrency.canonical(invoice.currencyCode).equals(selectedCurrency()))
+                continue;
+            String latest=lastReceipt.get(invoice.id);
+            if(latest!=null && latest.startsWith(month))monthlyCount++;
         }
         LinearLayout hero=vertical();pad(hero,19,22);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
@@ -4107,8 +4120,8 @@ public final class MainActivity extends Activity {
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
         hero.addView(label(money(db.receivedCents(selectedCurrency())),29,WHITE,true));gap(hero,13);
-        hero.addView(label("✓  "+monthlyCount+" evidentiranih uplata ovaj mjesec · "+
-            money(monthlyAmount),11,0xff73dfd0,false));
+        hero.addView(label("✓  "+monthlyCount+" plaćenih računa ovaj mjesec",
+            11,0xff73dfd0,false));
         place(body,hero);gap(body,15);
 
         LinearLayout filters=horizontal();
