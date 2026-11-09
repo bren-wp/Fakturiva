@@ -5140,7 +5140,7 @@ public final class MainActivity extends Activity {
         LinearLayout hero=vertical();
         hero.setGravity(Gravity.CENTER);
         pad(hero,18,16);
-        hero.setBackground(shape(dark?0xff253451:0xffe9edff,20));
+        hero.setBackground(shape(dark?0xff253451:0xffedf0ff,20));
         TextView symbol=label("⇄",35,BLUE,true);
         symbol.setGravity(Gravity.CENTER);
         symbol.setBackground(shape(panel(),17));
@@ -5177,7 +5177,7 @@ public final class MainActivity extends Activity {
         place(body,section);gap(body,15);
 
         LinearLayout notice=vertical();pad(notice,17,16);
-        notice.setBackground(shape(dark?0xff263853:0xffeef2ff,18));
+        notice.setBackground(shape(dark?0xff263853:0xfff1f5ff,18));
         place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,8);
         place(notice,label(
             "PDF datoteka nije strukturirani eRačun. Za razmjenu je potrebna "+
