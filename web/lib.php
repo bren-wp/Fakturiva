@@ -33,9 +33,9 @@ function privateRoot(): string {
     if($configured===false||trim($configured)==='')return __DIR__.'/storage';
     $root=rtrim(trim($configured),'/');
     if($root===''||strlen($root)>1024||$root[0]!=='/'||
-       str_contains($root,"\\0")||
+       strpos($root,chr(0))!==false||
        preg_match('~(?:^|/)\\.\\.?(?:/|$)~D',$root))
-        throw new \\RuntimeException('Invalid private storage root');
+        throw new \RuntimeException('Invalid private storage root');
     return $root;
 }
 function storage(): string { return privateRoot().'/data'; }
