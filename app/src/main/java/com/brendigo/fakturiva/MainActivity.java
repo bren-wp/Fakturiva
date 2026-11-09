@@ -331,7 +331,7 @@ public final class MainActivity extends Activity {
                 break;
             case "local_accounts":case "self_host":case "privacy":settings();break;
             case "invoice_appearance":case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
-            case "backup":case "about":settings();break;
+            case "backup":case "about":case "support":settings();break;
             default:home();
         }
     }
@@ -1177,30 +1177,33 @@ public final class MainActivity extends Activity {
         setup("privacy",true);
         toolbar("Privatnost","Fakturiva · Brendigo",true);
         LinearLayout content=card();
-        place(content,label("Lokalni profil i pohrana",18,ink(),true));
+        place(content,label("Korisnički podaci i zaštita",18,ink(),true));
         gap(content,11);
-        place(content,label("Korisničko ime, lokalni PIN i poslovni podaci "+
-            "spremaju se na ovom Android uređaju. PIN nije spremljen kao "+
-            "čitljiv tekst. Svaki lokalni korisnik ima zasebnu bazu "+
-            "i lokalne šifrirane kopije.",13,sub(),false));
+        place(content,label("Fakturiva obrađuje korisničke i poslovne podatke "+
+            "u povezanom korisničkom računu. Za vrijeme rada na Androidu "+
+            "može postojati privremena kopija radi rada bez mreže. "+
+            "Poslužiteljske kopije dodatno su šifrirane, a status prijenosa "+
+            "možete provjeriti u postavkama računa.",13,sub(),false));
         gap(content,14);
-        place(content,label("Vlastiti hosting nije obavezan",16,ink(),true));
+        place(content,label("Pohrana na serveru i oporavak",16,ink(),true));
         gap(content,8);
-        place(content,label("Tek ako sami odaberete vlastiti HTTPS hosting "+
-            "i pokrenete slanje, šifrirana kopija računa i ponuda prenosi "+
-            "se na vašu domenu. Za pristup se koristi zasebna poslužiteljska "+
-            "lozinka, nikada lokalni PIN.",13,sub(),false));
+        place(content,label("Nakon povezivanja s računom Fakturiva "+
+            "prenosi šifrirane sigurnosne kopije na HTTPS server. "+
+            "Prijenos se smatra potvrđenim tek nakon uspješne "+
+            "poslužiteljske potvrde. Za vraćanje nakon deinstalacije "+
+            "potrebni su račun i zasebna lozinka.",13,sub(),false));
         gap(content,14);
         place(content,label("Brisanje i čuvanje",16,ink(),true));
         gap(content,8);
-        place(content,label("Lokalni i poslužiteljski računi brišu se odvojeno. "+
-            "Za brisanje trebate PIN odnosno lozinku poslužitelja. "+
-            "Poslovne dokumente pohranite u skladu sa zakonskim rokovima "+
-            "čuvanja, prije brisanja izvezite potrebne kopije.",13,sub(),false));
+        place(content,label("Brisanje korisničkog računa može se "+
+            "pokrenuti u aplikaciji i na javnoj web stranici. "+
+            "Podaci koji podliježu zakonskom čuvanju obrađuju "+
+            "se u skladu s propisanim rokovima. "+
+            "Prije brisanja izvezite isprave koje morate čuvati.",13,sub(),false));
         place(body,content);gap(body,16);
         button(body,"Upravljaj lokalnim računom",this::localAccountSettings);
         gap(body,10);
-        secondary(body,"Upravljaj vlastitim hostingom",this::selfHostedSettings);
+        secondary(body,"Status računa i sigurnosne kopije",this::selfHostedSettings);
         gap(body,16);
         place(body,label("Kontakt za pitanja o aplikaciji: "+
             BrandAttribution.SUPPORT_EMAIL,12,sub(),false));
@@ -4091,9 +4094,10 @@ public final class MainActivity extends Activity {
             dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
                 dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
             });
-        settingRow(options,"ⓘ","About and support",
-            "Powered by Brendigo · "+BrandAttribution.SUPPORT_EMAIL,
-            this::aboutSupport);
+        settingRow(options,"✉","Podrška",
+            "Pomoć i kontakt",this::supportScreen);
+        settingRow(options,"ⓘ","O aplikaciji",
+            "Fakturiva · Brendigo · pravni dokumenti",this::aboutScreen);
         gap(body,14);
         place(body,label("POSLOVNI ALATI",11,sub(),true));gap(body,8);
         LinearLayout tools=card();pad(tools,0,2);
@@ -4297,36 +4301,73 @@ public final class MainActivity extends Activity {
             }));
         dialog.show();
     }
-    private void aboutSupport(){
-        setup("about",true);
+    private void openFakturivaPage(String path){
+        if(!"uvjeti-koristenja".equals(path) &&
+            !"politika-privatnosti".equals(path) &&
+            !"delete-account.php".equals(path))
+            throw new IllegalArgumentException("Nepoznata stranica");
+        Uri uri=Uri.parse("https://fakturiva.com/"+path);
+        try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}
+        catch(android.content.ActivityNotFoundException e){
+            toast("Nema instaliranog preglednika za otvaranje stranice.");
+        }
+    }
+    private void supportScreen(){
+        setup("support",true);
         pad(body,17,18);
-        toolbar("About and support","Fakturiva · Brendigo",true);
+        toolbar("Podrška","Pomoć korisnicima Fakturive",true);
         LinearLayout info=card();
-        place(info,label("Fakturiva",22,ink(),true));
-        gap(info,6);
-        place(info,label("Version "+getPackageVersion(),12,sub(),false));
-        gap(info,14);
-        place(info,label(BrandAttribution.FOOTER,13,ink(),true));
-        gap(info,8);
-        caption(info,"Every generated PDF invoice and thermal receipt has a small Powered by Brendigo attribution at the bottom.");
+        place(info,label("Kako vam možemo pomoći?",20,ink(),true));
         gap(info,10);
-        caption(info,"To request removal of this attribution, contact our support team at info@plati.com.hr.");
-        place(body,info);gap(body,14);
-        button(body,"Contact support · "+BrandAttribution.SUPPORT_EMAIL,()->{
-            Intent email=new Intent(Intent.ACTION_SENDTO,
+        place(info,label("Za prijavu poteškoća s računom, dokumentima, "+
+            "ispisom ili pristupom javite se korisničkoj podršci.",
+            13,sub(),false));
+        place(body,info);gap(body,15);
+        button(body,"Pošalji poruku podršci",()->{
+            Intent intent=new Intent(Intent.ACTION_SENDTO,
                 Uri.parse("mailto:"+BrandAttribution.SUPPORT_EMAIL));
-            email.putExtra(Intent.EXTRA_SUBJECT,
-                "Fakturiva — Powered by Brendigo attribution");
-            try{startActivity(email);}
-            catch(android.content.ActivityNotFoundException missing){
-                toast("No email app is installed. Please write to info@plati.com.hr.");
+            intent.putExtra(Intent.EXTRA_SUBJECT,"Fakturiva — podrška");
+            try{startActivity(intent);}
+            catch(android.content.ActivityNotFoundException e){
+                toast("Pošaljite e-poruku na "+BrandAttribution.SUPPORT_EMAIL);
             }
         });
         gap(body,12);
-        caption(body,"This app creates ordinary invoices and quotes. Printing does not process card payments or provide fiscalization.");
+        secondary(body,"Pomoć i upute",this::guide);
         gap(body,12);
-        secondary(body,"Privatnost i brisanje računa",this::privacyInfoScreen);
+        secondary(body,"Uvjeti korištenja",
+            ()->openFakturivaPage("uvjeti-koristenja"));
+        gap(body,10);
+        secondary(body,"Politika privatnosti",
+            ()->openFakturivaPage("politika-privatnosti"));
+        gap(body,10);
+        secondary(body,"Zatraži brisanje računa",
+            ()->openFakturivaPage("delete-account.php"));
+        gap(body,20);
     }
+    private void aboutScreen(){
+        setup("about",true);
+        pad(body,17,18);
+        toolbar("O aplikaciji","Fakturiva · Brendigo",true);
+        LinearLayout info=card();
+        place(info,label("Fakturiva",22,ink(),true));gap(info,7);
+        place(info,label("Verzija "+getPackageVersion(),12,sub(),false));gap(info,12);
+        place(info,label(BrandAttribution.FOOTER,13,ink(),true));
+        gap(info,12);
+        place(info,label("Izrada računa i ponuda, praćenje naplate "+
+            "i pregled poslovnih podataka u jednoj aplikaciji.",
+            13,sub(),false));
+        place(body,info);gap(body,15);
+        secondary(body,"Podrška",this::supportScreen);
+        gap(body,10);
+        secondary(body,"Uvjeti korištenja",
+            ()->openFakturivaPage("uvjeti-koristenja"));
+        gap(body,10);
+        secondary(body,"Politika privatnosti",
+            ()->openFakturivaPage("politika-privatnosti"));
+        gap(body,20);
+    }
+    private void aboutSupport(){aboutScreen();}
     private void requestBluetoothPrint(long documentId,int dots){
         if(Build.VERSION.SDK_INT>=31 &&
             checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=
