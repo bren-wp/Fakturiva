@@ -250,26 +250,108 @@ function authorized(string $token): array {
         (int)$account['sessions'][$hash]<=time())fail(401,'Session expired');
     return $account;
 }
+/** Account data remains authoritative on this server, not Android storage.
+ * Revision history keeps bounded previous encrypted snapshots for recovery
+ * from an accidental overwrite. It is deleted together with the account.
+ */
+function encryptedRevisionList(array $account): array {
+    $history=$account['backup_history']??[];
+    if(!is_array($history))throw new \RuntimeException('Invalid backup history');
+    $rows=[];
+    if(is_string($account['backup']??null)){
+        $binary=base64_decode($account['backup'],true);
+        if($binary===false)throw new \RuntimeException('Corrupt latest backup');
+        $rows[]=['revision'=>(int)$account['revision'],
+            'sha256'=>hash('sha256',$binary),
+            'bytes'=>strlen($binary),'saved_at'=>$account['saved_at']??null,
+            'current'=>true];
+    }
+    foreach($history as $entry){
+        if(!is_array($entry)||!isset($entry['revision'],$entry['backup_b64']))continue;
+        $binary=base64_decode((string)$entry['backup_b64'],true);
+        if($binary===false)throw new \RuntimeException('Corrupt backup history');
+        $rows[]=['revision'=>(int)$entry['revision'],
+            'sha256'=>hash('sha256',$binary),'bytes'=>strlen($binary),
+            'saved_at'=>$entry['saved_at']??null,'current'=>false];
+    }
+    return $rows;
+}
 function loadBackup(string $token): array {
     return transaction(function() use($token): array {
         $account=authorized($token);
+        $rows=encryptedRevisionList($account);
         return ['revision'=>(int)$account['revision'],
-            'backup_b64'=>$account['backup']];
+            'backup_b64'=>$account['backup'],
+            'sha256'=>count($rows)?$rows[0]['sha256']:null,
+            'saved_at'=>$account['saved_at']??null,
+            'history'=>array_map(static fn($row)=>[
+                'revision'=>$row['revision'],'sha256'=>$row['sha256'],
+                'bytes'=>$row['bytes'],'saved_at'=>$row['saved_at'],
+                'current'=>$row['current']],$rows)];
     });
+}
+function appendPreviousBackup(array &$account): void {
+    if(!is_string($account['backup']??null))return;
+    $history=$account['backup_history']??[];
+    if(!is_array($history))$history=[];
+    array_unshift($history,[
+        'revision'=>(int)$account['revision'],
+        'saved_at'=>$account['saved_at']??null,
+        'backup_b64'=>$account['backup']
+    ]);
+    // Preserve the latest plus at most two prior snapshots, within the 60MB
+    // account record cap. Never drop the current snapshot.
+    $limit=40000000; $used=strlen((string)$account['backup']);
+    $kept=[];
+    foreach($history as $candidate){
+        if(!is_array($candidate)||!is_string($candidate['backup_b64']??null))continue;
+        $bytes=strlen($candidate['backup_b64']);
+        if(count($kept)>=2||$used+$bytes>$limit)continue;
+        $kept[]=$candidate;$used+=$bytes;
+    }
+    $account['backup_history']=$kept;
 }
 function saveBackup(string $token,string $backup,int $expected): array {
     $binary=base64_decode($backup,true);
     if($binary===false||strlen($binary)<48||
         strlen($binary)>MAX_BACKUP_BYTES||substr($binary,0,4)!=='FAK1')
         fail(422,'Expected a valid encrypted Fakturiva FAK1 backup');
-    return transaction(function() use($token,$backup,$expected): array {
+    $sha=hash('sha256',$binary);
+    return transaction(function() use($token,$backup,$expected,$sha): array {
         $account=authorized($token);
         if((int)$account['revision']!==$expected)
             fail(409,'Remote revision changed. Download and review before replacing it');
+        appendPreviousBackup($account);
         $account['revision']=(int)$account['revision']+1;
         $account['backup']=$backup;
+        $account['saved_at']=gmdate('c');
+        // Try record-size checks before replacing an existing revision.
         writeRecord(accountPath($account['id']),$account);
-        return ['revision'=>$account['revision']];
+        return ['revision'=>$account['revision'],'sha256'=>$sha,
+            'saved_at'=>$account['saved_at']];
+    });
+}
+function restoreEncryptedRevision(string $token,int $revision,int $expected): array {
+    if($revision<1||$expected<0)fail(422,'Invalid revision');
+    return transaction(function()use($token,$revision,$expected):array{
+        $account=authorized($token);
+        if((int)$account['revision']!==$expected)
+            fail(409,'Remote revision changed');
+        $copy=null;
+        foreach($account['backup_history']??[] as $item){
+            if(is_array($item)&&(int)($item['revision']??-1)===$revision){
+                $copy=$item['backup_b64']??null;break;
+            }
+        }
+        if(!is_string($copy))fail(404,'Encrypted revision not retained');
+        appendPreviousBackup($account);
+        $account['backup']=$copy;
+        $account['revision']=$expected+1;
+        $account['saved_at']=gmdate('c');
+        writeRecord(accountPath($account['id']),$account);
+        $raw=base64_decode($copy,true);
+        return ['revision'=>$account['revision'],'sha256'=>hash('sha256',$raw),
+            'saved_at'=>$account['saved_at']];
     });
 }
 function signOut(string $token): array {
