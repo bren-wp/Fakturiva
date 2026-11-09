@@ -33,6 +33,8 @@ jobs:
         run: php quality/web-hosting/history-smoke.php
       - name: Verify account administration and tenant isolation
         run: php quality/web-hosting/admin-smoke.php
+      - name: Verify server-side tax reports and draft-only XML
+        run: php quality/web-hosting/tax-smoke.php
       - name: Verify web PIN registration and Android credential separation
         run: php quality/web-hosting/web-auth-smoke.php
       - name: Verify HTTPS-only API handling, auth and account deletion over HTTP loopback
