@@ -2685,7 +2685,7 @@ public final class MainActivity extends Activity {
         statusBar.addView(options,lp(38,38));
         options.setOnClickListener(v->new AlertDialog.Builder(this)
             .setTitle("Dokument")
-            .setItems(new String[]{"Pregledaj PDF","Spremi PDF","Podijeli PDF","Print / POS printer"},
+            .setItems(new String[]{"Pregledaj PDF","Spremi PDF","Podijeli PDF","Ispis / POS pisač"},
                 (dialog,which)->{
                     if(which==0)showActualPdfPreview(d);
                     else if(which==1)savePdf(id);
@@ -2711,7 +2711,8 @@ public final class MainActivity extends Activity {
         right.leftMargin=dp(6);
         actions.addView(share,right);
         place(body,actions);gap(body,10);
-        secondary(body,"Print invoice or quote",()->showPrinterDialog(id));
+        // Printer options remain available in the document overflow menu.
+        // Do not insert an extra action not present on the source reference.
         gap(body,10);
 
         if(draft){
@@ -2845,15 +2846,14 @@ public final class MainActivity extends Activity {
             line.addView(description,new LinearLayout.LayoutParams(0,-2,1));
             // Keep the reference's clean document row while retaining the
             // exact quantity, unit price and VAT on tap and for accessibility.
-            String breakdown=Money.decimalQuantity(item.qtyMilli)+" × "+
-                docMoney(d,item.unitCents)+" · Tax "+Money.rateLabel(item.taxRate);
+            String breakdown=Money.decimalQuantity(item.qtyMilli)+" "+item.unit+" × "+
+                docMoney(d,item.unitCents)+" · PDV "+Money.rateLabel(item.taxRate);
             line.setContentDescription(item.name+", "+breakdown);
             line.setFocusable(true);
             line.setOnClickListener(v->new AlertDialog.Builder(this)
                 .setTitle(item.name).setMessage(breakdown)
                 .setPositiveButton("Zatvori",null).show());
-            TextView amount=label(docMoney(d,
-                Math.addExact(item.net(),item.tax())),11,NAVY,true);
+            TextView amount=label(docMoney(d,item.net()),11,NAVY,true);
             amount.setGravity(Gravity.RIGHT);
             LinearLayout.LayoutParams sum=new LinearLayout.LayoutParams(-2,-2);
             sum.leftMargin=dp(10);
@@ -2872,7 +2872,7 @@ public final class MainActivity extends Activity {
             for(Store.Item item:d.items)if(item.taxRate!=oneRate){
                 onlyOneRate=false;break;
             }
-            if(onlyOneRate)paperTaxLabel="Tax ("+Money.rateLabel(oneRate)+")";
+            if(onlyOneRate)paperTaxLabel="PDV ("+Money.rateLabel(oneRate)+")";
         }
         paperAmount(paper,paperTaxLabel,docMoney(d,d.taxCents),false);
         gap(paper,12);
@@ -2939,7 +2939,7 @@ public final class MainActivity extends Activity {
         EditText amount=field("Iznos uplate",
             String.format(selectedLocale(),"%.2f",d.outstanding()/100.0));
         amount.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        fieldLabel(form,"Amount ("+d.currencyCode+")",amount);
+        fieldLabel(form,"Iznos ("+d.currencyCode+")",amount);
         EditText paidOn=field("Datum uplate",later(0));
         dateInput(paidOn);fieldLabel(form,"Datum uplate",paidOn);
         TextView methodTitle=label("Način stvarne naplate",13,ink(),true);
