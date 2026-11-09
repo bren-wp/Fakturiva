@@ -2426,15 +2426,17 @@ public final class MainActivity extends Activity {
             header.addView(edit,lp(34,34));
             edit.setOnClickListener(v->editLine(selected));
             place(c,header);gap(c,1);
-            place(c,label(Money.decimalQuantity(item.qtyMilli)+" × "+
-                draftMoney(item.unitCents)+" · Tax "+Money.rateLabel(item.taxRate),11,sub(),false));
+            place(c,label(Money.decimalQuantity(item.qtyMilli)+" "+item.unit+" × "+
+                draftMoney(item.unitCents),11,sub(),false));
             gap(c,4);
-            TextView amount=label(draftMoney(Math.addExact(item.net(),item.tax())),
+            // The reference's line-card amount is the pre-tax line value;
+            // tax is calculated and displayed separately in the summary.
+            TextView amount=label(draftMoney(item.net()),
                 16,ink(),true);
             amount.setGravity(Gravity.RIGHT);
             place(c,amount);
-            c.setContentDescription(item.name+" — "+
-                draftMoney(Math.addExact(item.net(),item.tax()))+
+            c.setContentDescription(item.name+" — osnovica "+draftMoney(item.net())+
+                ", PDV "+Money.rateLabel(item.taxRate)+
                 ". Dodirnite za uređivanje ili uklanjanje.");
             c.setFocusable(true);
             c.setOnClickListener(v->editLine(selected));
@@ -2462,7 +2464,7 @@ public final class MainActivity extends Activity {
         amountRow(summary,"Osnovica",draftMoney(net),false);
         gap(summary,12);
         String taxCaption=commonRate==null||mixedRates?"PDV":
-            "Tax ("+Money.rateLabel(commonRate)+")";
+            "PDV ("+Money.rateLabel(commonRate)+")";
         amountRow(summary,taxCaption,draftMoney(tax),false);
         gap(summary,12);
         View line=new View(this);line.setBackgroundColor(border());
@@ -2499,11 +2501,11 @@ public final class MainActivity extends Activity {
         EditText name=field("Naziv artikla ili usluge",editing?current.name:"");
         EditText qty=field("Količina",editing?
             Money.decimalQuantity(current.qtyMilli):"1");
-        EditText price=field("Unit price ("+draftCurrency()+")",editing?
+        EditText price=field("Jedinična cijena ("+draftCurrency()+")",editing?
             String.format(selectedLocale(),"%.2f",current.unitCents/100.0):"0,00");
         qty.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         price.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        EditText tax=field("Tax rate (%)",editing?
+        EditText tax=field("Stopa PDV-a (%)",editing?
             Money.rateLabel(current.taxRate).replace("%",""):"0");
         tax.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         fieldLabel(form,"Stavka",name);
