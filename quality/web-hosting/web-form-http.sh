@@ -22,14 +22,14 @@ pin=654321
 passphrase="Fakturiva-ci-registration-$RANDOM-example"
 curl -fsS -b "$jar" -c "$jar" "$base/register.php" > "$temp/register.html"
 grep -Fq 'Kreirajte novi račun i započnite s poslovanjem.' "$temp/register.html"
-grep -Fq 'name="pin"' "$temp/register.html"
+! grep -Fq 'name="pin"' "$temp/register.html"
 grep -Fq 'name="passphrase"' "$temp/register.html"
 csrf="$(extract_csrf "$temp/register.html")"
 test "$(printf '%s' "$csrf" | wc -c)" -eq 64
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \
   --data-urlencode "csrf=$csrf" --data-urlencode "action=register" \
-  --data-urlencode "username=$username" --data-urlencode "pin=$pin" \
+  --data-urlencode "username=$username" \
   --data-urlencode "passphrase=$passphrase")"
 test "$status" = 303
 grep -iq 'location: dashboard.php' "$temp/headers"
@@ -59,35 +59,25 @@ grep -Fq "$username" "$temp/password-dashboard.html"
 csrf="$(extract_csrf "$temp/password-dashboard.html")"
 curl -sS -o /dev/null -b "$jar" -c "$jar" -X POST "$base/auth.php" \
   --data-urlencode "csrf=$csrf" --data-urlencode "action=logout"
-curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
-grep -Fq 'Prijava PIN-om' "$temp/login.html"
-grep -Fq 'data-keypad' "$temp/login.html"
-grep -Fq 'data-backspace' "$temp/login.html"
-csrf="$(extract_csrf "$temp/login.html")"
-status="$(curl -sS -o /dev/null -w '%{http_code}' \
-  -b "$jar" -c "$jar" -X POST "$base/auth.php" \
-  --data-urlencode 'csrf=invalid' --data-urlencode 'action=login' \
-  --data-urlencode "username=$username" --data-urlencode "pin=$pin")"
-test "$status" = 303
-status="$(curl -sS -o /dev/null -w '%{http_code}' -b "$jar" -c "$jar" "$base/dashboard.php")"
-test "$status" = 303
-curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
-csrf="$(extract_csrf "$temp/login.html")"
+# New browser accounts have no web PIN. Legacy PIN access is tested
+# separately by web-auth-smoke.php; never silently create a default PIN.
+curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/login-again.html"
+csrf="$(extract_csrf "$temp/login-again.html")"
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \
-  --data-urlencode "csrf=$csrf" --data-urlencode "action=login" \
-  --data-urlencode "username=$username" --data-urlencode "pin=$pin")"
+  --data-urlencode "csrf=$csrf" --data-urlencode "action=login-password" \
+  --data-urlencode "username=$username" --data-urlencode "passphrase=$passphrase")"
 test "$status" = 303
 grep -iq 'location: dashboard.php' "$temp/headers"
 curl -fsS -b "$jar" -c "$jar" "$base/delete-account.php" > "$temp/delete.html"
-grep -Fq 'PIN za brisanje' "$temp/delete.html"
+grep -Fq 'Lozinka računa za potvrdu brisanja' "$temp/delete.html"
 csrf="$(extract_csrf "$temp/delete.html")"
 status="$(curl -sS -o "$temp/delete-result.html" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/delete-account.php" \
-  --data-urlencode "csrf=$csrf" --data-urlencode "pin=$pin" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "pin=$passphrase" \
   --data-urlencode "confirm=DELETE")"
 test "$status" = 200
 grep -Fq 'trajno su uklonjeni' "$temp/delete-result.html"
 status="$(curl -sS -o /dev/null -w '%{http_code}' -b "$jar" -c "$jar" "$base/dashboard.php")"
 test "$status" = 303
-echo "Real PHP web UI registration, PIN login, CSRF, session isolation, logout and deletion: OK"
+echo "Real PHP email/password registration/login, CSRF, session isolation and password-verified deletion: OK"
