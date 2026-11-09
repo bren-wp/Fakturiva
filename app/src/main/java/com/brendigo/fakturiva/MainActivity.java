@@ -734,12 +734,12 @@ public final class MainActivity extends Activity {
         setup("server_login",false);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
-        pad(body,25,55);
+        pad(body,25,66);
         localBrand();gap(body,28);
         place(body,label("Dobro došli natrag",29,NAVY,true));gap(body,10);
         place(body,label("Prijavite se i nastavite s poslovanjem.",
-            14,MUTED,false));gap(body,38);
-        place(body,label("E-adresa ili korisničko ime",14,NAVY,true));gap(body,10);
+            14,MUTED,false));gap(body,87);
+        place(body,label("E-adresa",14,NAVY,true));gap(body,10);
         EditText username=field("ime@tvrtka.hr",
             prefs.getString("remember_web_user",""));
         username.setInputType(InputType.TYPE_CLASS_TEXT|
@@ -752,21 +752,24 @@ public final class MainActivity extends Activity {
         pass.setSaveEnabled(false);
         if(Build.VERSION.SDK_INT>=26)
             pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
-        place(body,pass);gap(body,14);
+        place(body,pass);gap(body,18);
+        LinearLayout rememberRow=horizontal();
+        rememberRow.setGravity(Gravity.CENTER_VERTICAL);
         android.widget.CheckBox remember=new android.widget.CheckBox(this);
         remember.setText("Zapamti me");
-        remember.setTextColor(NAVY);remember.setTextSize(13);
+        remember.setTextColor(MUTED);remember.setTextSize(12);
         remember.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE));
         remember.setChecked(!prefs.getString("remember_web_user","").isEmpty());
-        place(body,remember);gap(body,10);
-        TextView help=label("Zaboravili ste lozinku?",13,BLUE,true);
-        help.setGravity(Gravity.RIGHT);help.setMinimumHeight(dp(43));
+        rememberRow.addView(remember,new LinearLayout.LayoutParams(-2,dp(44)));
+        TextView help=label("Zaboravili ste lozinku?",12,BLUE,true);
+        help.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         help.setOnClickListener(v->{
             try{startActivity(new Intent(Intent.ACTION_VIEW,
                 Uri.parse("https://fakturiva.eu/password-help.php")));}
             catch(Exception e){toast("Stranica pomoći nije dostupna");}
         });
-        place(body,help);gap(body,15);
+        rememberRow.addView(help,new LinearLayout.LayoutParams(0,dp(44),1));
+        place(body,rememberRow);gap(body,15);
         TextView submit=action("›   Prijavi se",BLUE,true,()->{
             if(selfHostedBusy)return;
             String name=username.getText().toString().trim();
@@ -822,7 +825,7 @@ public final class MainActivity extends Activity {
                     }
                 }).show();
         });
-        authPrimaryStyle(submit);place(body,submit);gap(body,22);
+        authPrimaryStyle(submit);place(body,submit);gap(body,63);
         TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
         create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
         create.setOnClickListener(v->registrationScreen());place(body,create);
