@@ -3415,6 +3415,210 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
 
+    /**
+     * Croatian income tax tools only. Generated summaries are based on actually
+     * recorded receipts, NOT invoice issuance; no cloud service is required.
+     */
+    private void croatianTaxScreen(){
+        if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
+        setup("hr_tax",true);
+        pad(body,17,16);
+        toolbar("Knjiga prometa i PO-SD","Hrvatska · stvarne naplate",true);
+        LinearLayout info=card();
+        place(info,label("Automatsko zbrajanje primitaka",17,ink(),true));
+        gap(info,8);
+        place(info,label("KPR se puni datumima stvarnih uplata. Za paušalni obrt "+
+            "gotovina/čekovi i bezgotovinski primitci vode se odvojeno. "+
+            "PO-SD se priprema za cijelu poreznu godinu samo kod "+
+            "paušalnog oporezivanja.",12,sub(),false));
+        place(body,info);gap(body,15);
+
+        LinearLayout details=card();
+        place(details,label("I. Podaci o poreznom obvezniku i djelatnosti",16,ink(),true));
+        gap(details,11);
+        String[] types={"Odaberite porezni status","Paušalni obrt / paušalni dohodak",
+            "Obrt koji utvrđuje dohodak (KPR gotovina)","Drugi oblici (npr. d.o.o. – bez PO-SD)"};
+        Spinner model=new Spinner(this);
+        model.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,types));
+        String currentModel=db.setting("hr_tax_model");
+        model.setSelection(CroatianTaxReports.PAUSAL.equals(currentModel)?1:
+            CroatianTaxReports.DOHODAK.equals(currentModel)?2:
+            CroatianTaxReports.OTHER.equals(currentModel)?3:0);
+        place(details,model);gap(details,12);
+        EditText owner=field("Ime i prezime nositelja",db.setting("hr_tax_owner"));
+        fieldLabel(details,"Nositelj djelatnosti",owner);
+        EditText residence=field("Adresa prebivališta",db.setting("hr_tax_residence"));
+        fieldLabel(details,"Prebivalište / boravište",residence);
+        EditText activity=field("Naziv i vrsta djelatnosti",db.setting("hr_tax_activity"));
+        fieldLabel(details,"Vrsta djelatnosti",activity);
+        EditText nkd=field("NKD šifra",db.setting("hr_tax_nkd"));
+        fieldLabel(details,"Šifra djelatnosti (NKD)",nkd);
+        EditText place=field("Adresa obavljanja djelatnosti",db.setting("hr_tax_place"));
+        fieldLabel(details,"Adresa poslovne jedinice",place);
+        place(details,label("OIB i naziv obrta preuzimaju se iz profila izdavatelja. "+
+            "Dopunite ih ako nedostaju.",11,sub(),false));
+        gap(details,9);
+        Spinner special=new Spinner(this);
+        String[] specialLabels={"Bez područnog poreznog umanjenja",
+            "Vukovar / propisano potpomognuto područje / otok I. skupine"};
+        special.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,specialLabels));
+        special.setSelection("yes".equals(db.setting("hr_tax_special"))?1:0);
+        place(details,special);
+        place(body,details);gap(body,16);
+
+        int currentYear=Calendar.getInstance().get(Calendar.YEAR);
+        String periodYear=String.valueOf(Math.min(currentYear,2026));
+        LinearLayout period=card();
+        place(period,label("II. Razdoblje izvještaja",16,ink(),true));
+        gap(period,10);
+        EditText from=field("GGGG-MM-DD",db.setting("hr_tax_from").isEmpty()?
+            periodYear+"-01-01":db.setting("hr_tax_from"));
+        dateInput(from);fieldLabel(period,"KPR od",from);
+        EditText to=field("GGGG-MM-DD",db.setting("hr_tax_to").isEmpty()?
+            later(0):db.setting("hr_tax_to"));
+        dateInput(to);fieldLabel(period,"KPR do",to);
+        EditText year=field("2026",db.setting("hr_tax_year").isEmpty()?
+            periodYear:db.setting("hr_tax_year"));
+        year.setInputType(InputType.TYPE_CLASS_NUMBER);
+        fieldLabel(period,"PO-SD porezna godina (samo 2025./2026.)",year);
+        String effectiveYear=year.getText().toString();
+        EditText activeFrom=field("GGGG-01-01",
+            db.setting("hr_tax_active_from").isEmpty()?
+                effectiveYear+"-01-01":db.setting("hr_tax_active_from"));
+        dateInput(activeFrom);
+        fieldLabel(period,"Djelatnost od (u poreznoj godini)",activeFrom);
+        EditText activeTo=field("GGGG-12-31",
+            db.setting("hr_tax_active_to").isEmpty()?
+                effectiveYear+"-12-31":db.setting("hr_tax_active_to"));
+        dateInput(activeTo);
+        fieldLabel(period,"Djelatnost do (u poreznoj godini)",activeTo);
+        EditText paidTax=field("0,00",db.setting("hr_tax_paid_"+effectiveYear));
+        paidTax.setInputType(InputType.TYPE_CLASS_NUMBER|
+            InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        fieldLabel(period,"Već uplaćeni paušalni porez (EUR, ručni unos)",paidTax);
+        place(period,label("Uplaćeni porez provjerite u poreznoj knjigovodstvenoj "+
+            "kartici. Mjeseci rada izračunavaju se iz odabranog "+
+            "kontinuiranog razdoblja. Više prekida ili zajednička djelatnost "+
+            "zahtijevaju ručnu stručnu provjeru.",11,sub(),false));
+        place(body,period);gap(body,14);
+
+        Runnable save=()->{
+            int selected=model.getSelectedItemPosition();
+            if(selected==0)throw new IllegalArgumentException(
+                "Odaberite stvarni porezni status.");
+            String chosen=selected==1?CroatianTaxReports.PAUSAL:
+                selected==2?CroatianTaxReports.DOHODAK:CroatianTaxReports.OTHER;
+            db.setting("hr_tax_model",chosen);
+            db.setting("hr_tax_owner",owner.getText().toString());
+            db.setting("hr_tax_residence",residence.getText().toString());
+            db.setting("hr_tax_activity",activity.getText().toString());
+            db.setting("hr_tax_nkd",nkd.getText().toString());
+            db.setting("hr_tax_place",place.getText().toString());
+            db.setting("hr_tax_special",special.getSelectedItemPosition()==1?"yes":"no");
+            db.setting("hr_tax_from",from.getText().toString());
+            db.setting("hr_tax_to",to.getText().toString());
+            db.setting("hr_tax_year",year.getText().toString());
+            db.setting("hr_tax_active_from",activeFrom.getText().toString());
+            db.setting("hr_tax_active_to",activeTo.getText().toString());
+            if(!paidTax.getText().toString().trim().isEmpty())
+                db.setting("hr_tax_paid_"+year.getText().toString(),
+                    paidTax.getText().toString());
+        };
+        button(body,"Spremi porezne podatke",()->{
+            try{save.run();toast("Porezni podaci spremljeni samo u vaš lokalni profil.");}
+            catch(Exception e){error(e);}
+        });gap(body,10);
+        secondary(body,"Razvrstaj starije uplate bez načina naplate",
+            this::classifyOldTaxReceipts);
+        gap(body,15);
+        button(body,"Preuzmi Knjigu prometa (PDF)",()->{
+            try{
+                save.run();
+                CroatianTaxReports.Book book=CroatianTaxReports.book(db,
+                    from.getText().toString(),to.getText().toString(),"SVE");
+                pendingHrProfile=LocalAccounts.activeId();
+                pendingHrBook=book;pendingHrBusiness=CroatianTaxReports.business(db);
+                pendingHrPosd=null;
+                createFile(HR_KPR_PDF,"application/pdf",
+                    "Fakturiva-KPR-"+book.start+"-"+book.end+".pdf");
+            }catch(Exception e){clearPendingHrReport();error(e);}
+        });
+        gap(body,10);
+        button(body,"Preuzmi PO-SD (PDF)",()->{
+            try{
+                save.run();
+                pendingHrPosd=CroatianTaxReports.posd(db,
+                    Integer.parseInt(year.getText().toString()),
+                    activeFrom.getText().toString(),activeTo.getText().toString(),
+                    paidTax.getText().toString());
+                pendingHrProfile=LocalAccounts.activeId();
+                pendingHrBusiness=null;pendingHrBook=null;
+                createFile(HR_POSD_PDF,"application/pdf",
+                    "Fakturiva-PO-SD-"+pendingHrPosd.year+".pdf");
+            }catch(Exception e){clearPendingHrReport();error(e);}
+        });
+        gap(body,10);
+        secondary(body,"PO-SD XML (radni podatci – ne za ePoreznu)",()->{
+            try{
+                save.run();
+                pendingHrPosd=CroatianTaxReports.posd(db,
+                    Integer.parseInt(year.getText().toString()),
+                    activeFrom.getText().toString(),activeTo.getText().toString(),
+                    paidTax.getText().toString());
+                pendingHrProfile=LocalAccounts.activeId();
+                pendingHrBusiness=null;pendingHrBook=null;
+                new AlertDialog.Builder(this).setTitle("XML nije službeni format")
+                    .setMessage("Ovaj XML sadrži ispunjene radne podatke PO-SD. "+
+                        "Službena ePorezna XSD shema za godinu mora se dodatno "+
+                        "potvrditi i validirati prije uvoza u ePoreznu. "+
+                        "Nemojte slati ovaj XML kao službeni obrazac.")
+                    .setNegativeButton("Odustani",(d,w)->clearPendingHrReport())
+                    .setPositiveButton("Spremi radni XML",(d,w)->createFile(
+                        HR_POSD_XML,"application/xml",
+                        "Fakturiva-PO-SD-RADNI-"+pendingHrPosd.year+".xml"))
+                    .show();
+            }catch(Exception e){clearPendingHrReport();error(e);}
+        });
+        gap(body,15);
+        place(body,label("NAPOMENA: Financijski podatci trebaju biti usklađeni s "+
+            "bankom i blagajnom. Uplate bez klasifikacije blokiraju izvoz, "+
+            "a neizdani i nenaplaćeni računi nisu primitci. PO-SD za "+
+            "d.o.o. i za zajedničke djelatnosti ne računa se automatski.",
+            11,sub(),false));gap(body,20);
+    }
+
+    private void classifyOldTaxReceipts(){
+        if(db==null||LocalAccounts.activeId()==null)return;
+        Store.Payment pending=null;
+        for(Store.Payment payment:db.payments()){
+            if("UNKNOWN".equals(payment.channel)){
+                pending=payment;break;
+            }
+        }
+        if(pending==null){
+            new AlertDialog.Builder(this).setTitle("Načini naplate")
+                .setMessage("Nema uplata s nepoznatim načinom plaćanja.")
+                .setPositiveButton("U redu",null).show();
+            return;
+        }
+        final Store.Payment target=pending;
+        String[] labels={"Gotovina","Uplata na račun","Platna kartica","Ček"};
+        String[] codes={"CASH","BANK","CARD","CHEQUE"};
+        new AlertDialog.Builder(this).setTitle("Razvrstaj uplatu #"+target.id)
+            .setMessage("Račun "+target.invoiceNumber+" · "+target.paidOn+
+                " · "+CroatianTaxReports.euros(target.amountCents)+
+                "\nOdaberite stvarni način naplate prema izvodu ili blagajni.")
+            .setItems(labels,(dialog,index)->{
+                try{
+                    db.classifyPayment(target.id,codes[index]);
+                    classifyOldTaxReceipts();
+                }catch(Exception e){error(e);}
+            })
+            .setNegativeButton("Kasnije",null).show();
+    }
+
     /** Screen 15: reports are scoped to the selected accounting month. */
     private void reports(){
         setup("reports",true);
