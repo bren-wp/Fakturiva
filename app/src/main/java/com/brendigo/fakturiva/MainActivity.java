@@ -404,7 +404,7 @@ public final class MainActivity extends Activity {
             active=Store.QUOTE.equals(editType)?"quotes":"invoices";
         }else if("catalog".equals(screen)||"reports".equals(screen)||
                   "payments".equals(screen)||"company".equals(screen)||
-                  "guide".equals(screen)||"backup".equals(screen)||
+                  "guide".equals(screen)||"eracun".equals(screen)||"backup".equals(screen)||
                   "about".equals(screen)){
             active="settings";
         }else if("client_detail".equals(screen)){
@@ -1628,9 +1628,11 @@ public final class MainActivity extends Activity {
         gap(words,5);
         words.addView(label("Evo pregleda vašeg poslovanja.",12,sub(),false));
         welcome.addView(words,new LinearLayout.LayoutParams(0,-2,1));
-        String issuer=db.setting("name").trim();
-        String initial=issuer.isEmpty()?"B":issuer.substring(0,1)
-            .toUpperCase(Locale.forLanguageTag("hr-HR"));
+        // Avatar reflects the signed-in user, not the issuer's company name.
+        // The screenshot fixture has no active profile and uses neutral B.
+        String profileName=LocalAccounts.activeName();
+        String initial=(profileName==null || profileName.isEmpty())?"B":
+            profileName.substring(0,1).toUpperCase(Locale.forLanguageTag("hr-HR"));
         TextView avatar=label(initial,23,BLUE,true);
         avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(dark?0xff273962:0xffe6e9ff,16));
         avatar.setContentDescription("Profil tvrtke");
@@ -5136,18 +5138,18 @@ public final class MainActivity extends Activity {
 
         LinearLayout hero=vertical();
         hero.setGravity(Gravity.CENTER);
-        pad(hero,18,21);
+        pad(hero,18,16);
         hero.setBackground(shape(dark?0xff253451:0xffe9edff,20));
         TextView symbol=label("⇄",35,BLUE,true);
         symbol.setGravity(Gravity.CENTER);
         symbol.setBackground(shape(panel(),17));
-        hero.addView(symbol,lp(70,70));gap(hero,12);
+        hero.addView(symbol,lp(65,65));gap(hero,10);
         TextView heading=label("eRačuni i fiskalizacija",20,ink(),true);
         heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,9);
         TextView intro=label(
             "Pripremite aplikaciju za elektroničku razmjenu i fiskalizaciju računa.",
-            12,sub(),false);
-        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,16);
+            10,sub(),false);
+        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,13);
         TextView state=label("Povezivanje potrebno",11,0xffae6b00,true);
         state.setPadding(dp(10),dp(5),dp(10),dp(5));
         state.setBackground(shape(dark?0xff56472a:0xffffefd2,15));
@@ -5156,8 +5158,8 @@ public final class MainActivity extends Activity {
         hero.addView(state,statusLp);
         place(body,hero);gap(body,15);
 
-        LinearLayout section=card();pad(section,15,13);
-        place(section,label("Status integracije",15,ink(),true));gap(section,14);
+        LinearLayout section=card();pad(section,15,12);
+        place(section,label("Status integracije",15,ink(),true));gap(section,8);
         eracunStatusRow(section,profileComplete?"✓":"1","Profil tvrtke",
             profileComplete?"Osnovni podaci uneseni":"Unesite naziv, OIB i adresu",
             profileComplete,()->company());
@@ -5178,8 +5180,7 @@ public final class MainActivity extends Activity {
         place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,8);
         place(notice,label(
             "PDF datoteka nije strukturirani eRačun. Za razmjenu je potrebna "+
-            "odgovarajuća integracija i provjera ovlaštenja. Ovaj zaslon ne "+
-            "potvrđuje aktivnu fiskalizaciju ni slanje eRačuna.",
+            "odgovarajuća integracija.",
             11,sub(),false));
         place(body,notice);gap(body,14);
         TextView configure=action("⚙  Postavke integracije",BLUE,true,
