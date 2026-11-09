@@ -54,6 +54,11 @@ public final class MainActivity extends Activity {
         TEAL=0xff2fd2c5, LINE=0xffe9edf5, RED=0xffdb4c56;
     private static final int PDF_EXPORT=101,BACKUP_EXPORT=102,BACKUP_IMPORT=103,DEVICE_AUTH_REQUEST=105;
     private static final int BLUETOOTH_PRINT_PERMISSION_REQUEST=108;
+    private static final int HR_KPR_PDF=115,HR_POSD_PDF=116,HR_POSD_XML=117;
+    private CroatianTaxReports.Book pendingHrBook;
+    private CroatianTaxReports.Posd pendingHrPosd;
+    private CroatianTaxReports.Business pendingHrBusiness;
+    private String pendingHrProfile;
     private Store db; private SharedPreferences prefs;
     private String loginUsername="";
     private boolean selfHostedBusy=false;
@@ -321,7 +326,7 @@ public final class MainActivity extends Activity {
                 }catch(Exception e){home();}
                 break;
             case "local_accounts":case "self_host":case "privacy":settings();break;
-            case "catalog":case "reports":case "payments":case "company":case "guide":
+            case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
             case "backup":case "about":settings();break;
             default:home();
         }
@@ -3536,6 +3541,8 @@ public final class MainActivity extends Activity {
         clientField(payout,"Nenaplaćeno iz izdanih računa",money(totals[4]));
         place(body,payout);gap(body,13);
         secondary(body,"Pregled svih uplata",this::payments);
+        gap(body,10);
+        secondary(body,"Knjiga prometa / PO-SD (Hrvatska)",this::croatianTaxScreen);
         gap(body,20);
         // Totals reflect the currently selected reporting month.
     }
@@ -3586,6 +3593,10 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
+    }
+    private void clearPendingHrReport(){
+        pendingHrBook=null;pendingHrPosd=null;pendingHrBusiness=null;
+        pendingHrProfile=null;
     }
     private void payments(){
         setup("payments",true);
@@ -3820,6 +3831,8 @@ public final class MainActivity extends Activity {
         LinearLayout tools=card();pad(tools,0,2);
         settingRow(tools,"▣","Artikli i usluge","Katalog proizvoda i cijene",this::catalog);
         settingRow(tools,"▥","Izvještaji","Analitika računa i naplate",this::reports);
+        settingRow(tools,"▤","KPR i PO-SD (Hrvatska)",
+            "Knjiga prometa i godišnji porezni obračun",this::croatianTaxScreen);
         place(body,tools);
         gap(body,17);
         caption(body,"Fakturiva · Brendigo");
@@ -4452,6 +4465,8 @@ public final class MainActivity extends Activity {
             if(code==BACKUP_EXPORT||code==BACKUP_IMPORT)clearPass();
             if(code==104)pendingPaymentsCsvMonth=null;
             if(code==106)pendingReportCsvMonth=null;
+            if(code==HR_KPR_PDF||code==HR_POSD_PDF||code==HR_POSD_XML)
+                clearPendingHrReport();
             return;
         }
         Uri uri=data.getData();
@@ -4460,7 +4475,31 @@ public final class MainActivity extends Activity {
             return;
         }
         try{
-            if(code==PDF_EXPORT){
+            if(code==HR_KPR_PDF || code==HR_POSD_PDF || code==HR_POSD_XML){
+                if(pendingHrProfile==null ||
+                   !pendingHrProfile.equals(LocalAccounts.activeId()) || db==null ||
+                   !pendingHrProfile.equals(db.profileId()))
+                    throw new SecurityException("Korisnički račun za porezni izvoz nije aktivan.");
+                try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
+                    if(out==null)throw new IllegalStateException("Ne mogu otvoriti datoteku.");
+                    if(code==HR_KPR_PDF){
+                        if(pendingHrBook==null||pendingHrBusiness==null)
+                            throw new IllegalStateException("Ponovite pripremu KPR-a");
+                        CroatianTaxPdf.writeKpr(pendingHrBook,pendingHrBusiness,out);
+                    }else if(code==HR_POSD_PDF){
+                        if(pendingHrPosd==null)
+                            throw new IllegalStateException("Ponovite pripremu PO-SD");
+                        CroatianTaxPdf.writePosd(pendingHrPosd,out);
+                    }else{
+                        if(pendingHrPosd==null)
+                            throw new IllegalStateException("Ponovite pripremu PO-SD");
+                        out.write(CroatianTaxReports.workingXml(pendingHrPosd));
+                    }
+                }finally{clearPendingHrReport();}
+                toast(code==HR_POSD_XML?
+                    "XML radni podaci spremljeni; NISU za izravni uvoz u ePoreznu.":
+                    "PDF poreznog izvještaja uspješno spremljen.");
+            }else if(code==PDF_EXPORT){
                 if(pendingPdfId<=0)
                     throw new IllegalStateException("Dokument za izvoz nije poznat. Ponovite izvoz.");
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
