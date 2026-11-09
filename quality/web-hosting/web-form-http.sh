@@ -51,6 +51,25 @@ api_snapshot="$(curl -fsS -H 'Content-Type: application/json' \
   --data '{"action":"load"}' "$base/api.php")"
 printf '%s' "$api_snapshot" | python3 -c \
   'import sys,json;d=json.load(sys.stdin);assert d["ok"];assert d["data"]["revision"]==0'
+# Simulate an Android FAK1 encrypted sync, then prove that the very
+# same authenticated web session can unlock its persisted invoice.
+backup_b64="$(FAKTURIVA_FIXTURE_PASS="$passphrase" php quality/web-hosting/fak1-fixture.php)"
+api_save_payload="$(FAK1_B64="$backup_b64" python3 -c \
+  'import json,os;print(json.dumps({"action":"save","expected_revision":0,"backup_b64":os.environ["FAK1_B64"]}))')"
+api_saved="$(curl -fsS -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $api_token" \
+  --data "$api_save_payload" "$base/api.php")"
+printf '%s' "$api_saved" | python3 -c \
+  'import sys,json;d=json.load(sys.stdin);assert d["ok"];assert d["data"]["revision"]==1'
+curl -fsS -b "$jar" -c "$jar" "$base/finance.php" > "$temp/finance-form.html"
+finance_csrf="$(extract_csrf "$temp/finance-form.html")"
+curl -fsS -b "$jar" -c "$jar" -X POST "$base/finance.php" \
+  --data-urlencode "csrf=$finance_csrf" \
+  --data-urlencode "passphrase=$passphrase" \
+  --data-urlencode "from=2026-01-01" \
+  --data-urlencode "to=2026-12-31" > "$temp/finance-unlocked.html"
+grep -Fq 'R-2026-WEB-E2E' "$temp/finance-unlocked.html"
+grep -Fq 'Brendigo HTTP E2E Klijent' "$temp/finance-unlocked.html"
 curl -fsS -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $api_token" \
   --data '{"action":"logout"}' "$base/api.php" >/dev/null
