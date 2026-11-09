@@ -19,7 +19,8 @@ kopije i redovite provjere povrata.
 | URL nakon instalacije u root | Namjena |
 | --- | --- |
 | `/register.php` | Registracija korisničkog računa |
-| `/login.php` | Korisnička web prijava PIN-om |
+| `/login.php` | Prijava korisničkim imenom i lozinkom | 
+| `/login-pin.php` | Dodatna prijava starijim PIN-om |
 | `/dashboard.php` | Pregled računa, stanje servera i prava korisnika |
 | `/finance.php` | Pregled korisnikovih šifriranih poslovnih podataka nakon potvrde zasebnom lozinkom |
 | `/api.php` | HTTPS JSON API i server revizije |
@@ -161,7 +162,7 @@ za registraciju i prijavu te PHP API za Android:
 
 | Adresa nakon kopiranja u root | Namjena |
 | --- | --- |
-| `/register.php` | Registracija korisničkog računa, PIN od 4–6 znamenki |
+| `/register.php` | Registracija s PIN-om i zasebnom snažnom lozinkom za poslovne podatke |
 | `/identify.php` | Odabir korisničkog imena na novom pregledniku |
 | `/login.php` | Nativna HTML numerička PIN tipkovnica prema referenci |
 | `/dashboard.php` | Prijavljeni račun, revizija kopije i postavljanje zasebne Android lozinke |

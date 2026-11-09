@@ -24,7 +24,7 @@ try{
     if($mode==='identify'){
         FakturivaSelfHost\normalizeName($username);
         $_SESSION['last_username']=$username;
-        gotoPage('login.php');
+        gotoPage('login-pin.php');
     }
     if($mode==='register'){
         $result=FakturivaSelfHost\webRegister($username,$pin,$ip,$passphrase);

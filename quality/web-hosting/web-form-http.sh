@@ -47,6 +47,18 @@ test "$status" = 303
 curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/password-login.html"
 grep -Fq 'Dobro došli natrag' "$temp/password-login.html"
 grep -Fq 'name="passphrase"' "$temp/password-login.html"
+csrf="$(extract_csrf "$temp/password-login.html")"
+status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
+  -b "$jar" -c "$jar" -X POST "$base/auth.php" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "action=login-password" \
+  --data-urlencode "username=$username" --data-urlencode "passphrase=$passphrase" \
+  --data-urlencode "remember=yes")"
+test "$status" = 303
+curl -fsS -b "$jar" -c "$jar" "$base/dashboard.php" > "$temp/password-dashboard.html"
+grep -Fq "$username" "$temp/password-dashboard.html"
+csrf="$(extract_csrf "$temp/password-dashboard.html")"
+curl -sS -o /dev/null -b "$jar" -c "$jar" -X POST "$base/auth.php" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "action=logout"
 curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
 grep -Fq 'Prijava PIN-om' "$temp/login.html"
 grep -Fq 'data-keypad' "$temp/login.html"

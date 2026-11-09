@@ -42,6 +42,7 @@ assertWeb($a['id']!==$b['id'],'Profiles share an ID');
 $passwordLogin=webLoginPassword($userA,$serverPassA,$ip);
 assertWeb($passwordLogin['id']===$a['id'],
     'Password login must resolve exactly the same web tenant');
+$a['token']=$passwordLogin['token'];
 assertWeb(webAuthorized($a['id'],$passwordLogin['token'])['username']===$userA,
     'Password session does not authorize account');
 assertWeb(webAuthorized($a['id'],$a['token'])['username']===$userA,
