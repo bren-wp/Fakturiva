@@ -5,6 +5,7 @@ $account=requireWeb();
 $flash=takeFlash();
 $canSync=is_string($account['password_hash']??null) &&
           (string)$account['password_hash']!=='';
+$usesLegacyPin=isset($account['web_pin_hash']);
 ?><!doctype html>
 <html lang="hr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -42,7 +43,7 @@ Za otključavanje je potrebna zasebna lozinka za poslovne podatke.</p>
 </section>
 <section class="panel">
 <h2>Lozinka za Android sinkronizaciju</h2>
-<p>Web PIN služi za prijavu. Zasebna snažna lozinka štiti poslovne
+<p>Snažna lozinka služi za prijavu i zaštitu poslovnih
 podatke. Promjena lozinke uz postojeće šifrirane dokumente nije dostupna
 dok siguran postupak ponovnog šifriranja ne bude implementiran.</p>
 <?php if(!empty($account['backup'])):?>
@@ -52,10 +53,16 @@ kako postojeći računi ne bi postali nedostupni.</p>
 <form method="post" action="auth.php" data-auth-form autocomplete="off">
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <input type="hidden" name="action" value="set-sync">
-<label for="current-pin">Potvrdite svoj web PIN</label>
+<?php if($usesLegacyPin):?>
+<label for="current-pin">Potvrdite svoj postojeći web PIN</label>
 <input id="current-pin" name="pin" type="password" inputmode="numeric"
 pattern="[0-9]{4,6}" maxlength="6" minlength="4" autocomplete="off"
 data-numeric-pin required>
+<?php else:?>
+<label for="current-password">Trenutačna lozinka</label>
+<input id="current-password" name="pin" type="password"
+minlength="12" maxlength="256" autocomplete="current-password" required>
+<?php endif;?>
 <label for="sync-password">Nova zasebna lozinka hostinga</label>
 <input id="sync-password" name="passphrase" type="password"
 minlength="12" maxlength="256" autocomplete="new-password" required>
