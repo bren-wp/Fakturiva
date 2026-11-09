@@ -24,7 +24,7 @@ internal static class Program
 
 internal sealed class FakturivaWindow : Form
 {
-    private const string BaseUrl = "https://fakturiva.com/";
+    private const string BaseUrl = "https://fakturiva.eu/";
     private readonly WebView2 browser = new() { Dock = DockStyle.Fill };
     private readonly ToolStrip bar = new() { GripStyle = ToolStripGripStyle.Hidden };
     private readonly ToolStripStatusLabel status = new("Povezivanje s Fakturivom…");
@@ -102,7 +102,7 @@ internal sealed class FakturivaWindow : Form
     {
         return Uri.TryCreate(target, UriKind.Absolute, out var u)
             && u.Scheme == Uri.UriSchemeHttps
-            && u.Host.Equals("fakturiva.com", StringComparison.OrdinalIgnoreCase)
+            && u.Host.Equals("fakturiva.eu", StringComparison.OrdinalIgnoreCase)
             && u.Port == 443
             && string.IsNullOrEmpty(u.UserInfo);
     }

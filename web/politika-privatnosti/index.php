@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-/** Public, review-required legal text for fakturiva.com. */
+/** Public, review-required legal text for fakturiva.eu. */
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: public, max-age=3600');
 header('X-Content-Type-Options: nosniff');
@@ -9,7 +9,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Politika privatnosti — Fakturiva</title>
-<link rel="canonical" href="https://fakturiva.com/politika-privatnosti">
+<link rel="canonical" href="https://fakturiva.eu/politika-privatnosti">
 <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/app.css"></head>
 <body><main class="account-page legal-page">
@@ -25,7 +25,7 @@ pravnu provjeru. Naziv „Brendigo” sam po sebi ne određuje pravni subjekt.</
 usluge Fakturiva / Brendigo. <strong>Točan registrirani naziv, pravni oblik,
 adresa sjedišta i porezni identifikator moraju biti upisani prije
 produkcijskog puštanja.</strong> Kontakt za privatnost:
-<a href="mailto:info@fakturiva.com">info@fakturiva.com</a>.
+<a href="mailto:info@fakturiva.eu">info@fakturiva.eu</a>.
 Za računovodstvene podatke svojih kupaca i zaposlenika korisnik koji
 vodi poslovanje u pravilu je samostalan voditelj obrade, a pružatelj
 hostinga odnosno Fakturiva (ovisno o stvarnom ugovornom modelu)
@@ -100,7 +100,7 @@ moguća je ograničena daljnja pohrana uz obrazloženje.</p>
 <p>Imate pravo na informacije, pristup, ispravak, brisanje, ograničenje,
 prenosivost i prigovor u opsegu propisanom GDPR-om, kao i pravo
 povući privolu gdje je ona pravna osnova. Za zahtjeve kontaktirajte
-<a href="mailto:info@fakturiva.com">info@fakturiva.com</a>.
+<a href="mailto:info@fakturiva.eu">info@fakturiva.eu</a>.
 Radi zaštite drugih korisnika možemo zatražiti razumnu provjeru
 identiteta. Zahtjeve razmatramo u zakonskim rokovima.
 Imate pravo podnijeti pritužbu nadzornom tijelu, u Hrvatskoj

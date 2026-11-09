@@ -1,7 +1,7 @@
-# Fakturiva web — fakturiva.com i centralni korisnički računi
+# Fakturiva web — fakturiva.eu i centralni korisnički računi
 
 **Namjena:** sadržaj mape `web/` može se kopirati u root
-`https://fakturiva.com/` uz PHP 8.1+, HTTPS i zaštićen
+`https://fakturiva.eu/` uz PHP 8.1+, HTTPS i zaštićen
 `storage/data` s pravima zapisivanja. Autentifikacija i poslovne
 kopije izdvojene su po korisniku. Osnovna pohrana koristi šifrirani
 JSON, bez SQL baze.

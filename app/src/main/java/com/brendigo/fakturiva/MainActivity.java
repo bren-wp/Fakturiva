@@ -1062,8 +1062,8 @@ public final class MainActivity extends Activity {
             12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
         place(body,notice);gap(body,15);
         String id=LocalAccounts.activeId();
-        EditText url=field("https://fakturiva.com/",
-            prefs.getString("host_url_"+id,"https://fakturiva.com/"));
+        EditText url=field("https://fakturiva.eu/",
+            prefs.getString("host_url_"+id,"https://fakturiva.eu/"));
         fieldLabel(body,"Adresa vlastitog hostinga (HTTPS)",url);
         EditText user=field("ime@tvrtka.hr",
             prefs.getString("host_user_"+id,LocalAccounts.activeName()));
@@ -4332,7 +4332,7 @@ public final class MainActivity extends Activity {
             !"politika-privatnosti".equals(path) &&
             !"delete-account.php".equals(path))
             throw new IllegalArgumentException("Nepoznata stranica");
-        Uri uri=Uri.parse("https://fakturiva.com/"+path);
+        Uri uri=Uri.parse("https://fakturiva.eu/"+path);
         try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}
         catch(android.content.ActivityNotFoundException e){
             toast("Nema instaliranog preglednika za otvaranje stranice.");

@@ -8,7 +8,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Uvjeti korištenja — Fakturiva</title>
-<link rel="canonical" href="https://fakturiva.com/uvjeti-koristenja">
+<link rel="canonical" href="https://fakturiva.eu/uvjeti-koristenja">
 <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/app.css"></head>
 <body><main class="account-page legal-page">
@@ -128,7 +128,7 @@ dokumente, uz licence potrebne da ih sustav obradi i
 prikaže. Dokumenti i licencirane sastavnice trećih strana
 zadržavaju prava njihovih nositelja.</p>
 <h2>13. Podrška, izmjene i prigovori</h2>
-<p>Podrška: <a href="mailto:info@fakturiva.com">info@fakturiva.com</a>.
+<p>Podrška: <a href="mailto:info@fakturiva.eu">info@fakturiva.eu</a>.
 O značajnim promjenama funkcionalnosti i uvjeta
 korisnike treba obavijestiti na jasan način uz datum
 primjene, kada je to propisano. Za potrošačke ugovore
