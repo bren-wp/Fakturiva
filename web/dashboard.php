@@ -42,9 +42,13 @@ Za otključavanje je potrebna zasebna lozinka za poslovne podatke.</p>
 </section>
 <section class="panel">
 <h2>Lozinka za Android sinkronizaciju</h2>
-<p>Web PIN služi za prijavu na ovu web-stranicu. Za prijenos šifriranih
-preslika s Android uređaja potrebna je <strong>odvojena lozinka od najmanje
-12 znakova</strong>. Njezinim mijenjanjem prestaju vrijediti postojeće Android API sesije.</p>
+<p>Web PIN služi za prijavu. Zasebna snažna lozinka štiti poslovne
+podatke. Promjena lozinke uz postojeće šifrirane dokumente nije dostupna
+dok siguran postupak ponovnog šifriranja ne bude implementiran.</p>
+<?php if(!empty($account['backup'])):?>
+<p class="error-note" role="status">Promjena lozinke privremeno je blokirana
+kako postojeći računi ne bi postali nedostupni.</p>
+<?php else:?>
 <form method="post" action="auth.php" data-auth-form autocomplete="off">
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <input type="hidden" name="action" value="set-sync">
@@ -55,8 +59,9 @@ data-numeric-pin required>
 <label for="sync-password">Nova zasebna lozinka hostinga</label>
 <input id="sync-password" name="passphrase" type="password"
 minlength="12" maxlength="256" autocomplete="new-password" required>
-<button class="primary-action" type="submit">Spremi lozinku hostinga</button>
+<button class="primary-action" type="submit">Spremi lozinku</button>
 </form>
+<?php endif;?>
 </section>
 <nav class="account-links" aria-label="Korisnički račun">
 <form action="auth.php" method="post">

@@ -68,9 +68,11 @@ public final class ScreenshotHarness {
             case "01":call(a,"splash",new Class<?>[]{boolean.class},false);break;
             case "02":call(a,"welcome");break;
             case "03":
-                call(a,"securityScreen",new Class<?>[]{boolean.class,boolean.class},false,false);
-                // Genuine emulator QA screenshot only. Production screen keeps
-                // FLAG_SECURE to prevent sensitive data in recents/captures.
+                // Capture the REAL email/password form from the owner's
+                // reference, not the unrelated device-security prompt.
+                call(a,"loginServerScreen");
+                // Only the emulator debug harness can disable screenshot
+                // blocking; production credential screens retain FLAG_SECURE.
                 a.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
                 break;
             case "04":call(a,"home");break;

@@ -19,15 +19,18 @@ extract_csrf(){
 }
 username="ci_web_$(date +%s)_$RANDOM"
 pin=654321
+passphrase="Fakturiva-ci-registration-$RANDOM-example"
 curl -fsS -b "$jar" -c "$jar" "$base/register.php" > "$temp/register.html"
 grep -Fq 'Kreirajte novi račun i započnite s poslovanjem.' "$temp/register.html"
 grep -Fq 'name="pin"' "$temp/register.html"
+grep -Fq 'name="passphrase"' "$temp/register.html"
 csrf="$(extract_csrf "$temp/register.html")"
 test "$(printf '%s' "$csrf" | wc -c)" -eq 64
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \
   --data-urlencode "csrf=$csrf" --data-urlencode "action=register" \
-  --data-urlencode "username=$username" --data-urlencode "pin=$pin")"
+  --data-urlencode "username=$username" --data-urlencode "pin=$pin" \
+  --data-urlencode "passphrase=$passphrase")"
 test "$status" = 303
 grep -iq 'location: dashboard.php' "$temp/headers"
 curl -fsS -b "$jar" -c "$jar" "$base/dashboard.php" > "$temp/dashboard.html"
@@ -41,7 +44,22 @@ status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \
   --data-urlencode "csrf=$csrf" --data-urlencode "action=logout")"
 test "$status" = 303
-curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/login.html"
+curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/password-login.html"
+grep -Fq 'Dobro došli natrag' "$temp/password-login.html"
+grep -Fq 'name="passphrase"' "$temp/password-login.html"
+csrf="$(extract_csrf "$temp/password-login.html")"
+status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
+  -b "$jar" -c "$jar" -X POST "$base/auth.php" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "action=login-password" \
+  --data-urlencode "username=$username" --data-urlencode "passphrase=$passphrase" \
+  --data-urlencode "remember=yes")"
+test "$status" = 303
+curl -fsS -b "$jar" -c "$jar" "$base/dashboard.php" > "$temp/password-dashboard.html"
+grep -Fq "$username" "$temp/password-dashboard.html"
+csrf="$(extract_csrf "$temp/password-dashboard.html")"
+curl -sS -o /dev/null -b "$jar" -c "$jar" -X POST "$base/auth.php" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "action=logout"
+curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
 grep -Fq 'Prijava PIN-om' "$temp/login.html"
 grep -Fq 'data-keypad' "$temp/login.html"
 grep -Fq 'data-backspace' "$temp/login.html"
@@ -53,7 +71,7 @@ status="$(curl -sS -o /dev/null -w '%{http_code}' \
 test "$status" = 303
 status="$(curl -sS -o /dev/null -w '%{http_code}' -b "$jar" -c "$jar" "$base/dashboard.php")"
 test "$status" = 303
-curl -fsS -b "$jar" -c "$jar" "$base/login.php" > "$temp/login.html"
+curl -fsS -b "$jar" -c "$jar" "$base/login-pin.php" > "$temp/login.html"
 csrf="$(extract_csrf "$temp/login.html")"
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/auth.php" \

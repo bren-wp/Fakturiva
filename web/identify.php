@@ -13,7 +13,7 @@ $error=takeFlash();
 </head><body>
 <main class="auth-page auth-register">
 <header class="auth-head"><?=logoMarkup()?>
-<h1>Prijava</h1><p class="subtitle">Odaberite korisnički račun na ovom hostingu.</p></header>
+<h1>Prijava PIN-om</h1><p class="subtitle">Odaberite korisnički račun na ovom hostingu.</p></header>
 <?php if($error!==''):?><p class="error-note" role="alert"><?=h($error)?></p><?php endif;?>
 <form class="auth-form" action="auth.php" method="post" autocomplete="off">
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">

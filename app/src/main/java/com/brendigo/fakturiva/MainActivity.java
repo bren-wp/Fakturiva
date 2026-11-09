@@ -629,7 +629,7 @@ public final class MainActivity extends Activity {
     private void finishSplash(){
         if(!"splash".equals(screen)||isFinishing()||isDestroyed())return;
         try{
-            if(LocalAccounts.hasAccounts(this))loginPinScreen();
+            if(LocalAccounts.hasAccounts(this))loginServerScreen();
             else welcome();
         }catch(Exception e){
             accountStorageError(e);
@@ -712,10 +712,7 @@ public final class MainActivity extends Activity {
     }
     /** Account selection always precedes access to any locally stored invoice. */
     private void openExistingLocalAccess(){
-        try{
-            if(LocalAccounts.hasAccounts(this))loginPinScreen();
-            else registrationScreen();
-        }catch(Exception e){accountStorageError(e);}
+        loginServerScreen();
     }
     private void authPrimaryStyle(TextView button){
         // Preserve a genuine accessible TextView click action while matching
@@ -730,7 +727,119 @@ public final class MainActivity extends Activity {
         button.setElevation(dp(6));
     }
 
-    /** Local registration modeled on the supplied white/blue reference. */
+
+    /** Reference email/password login backed by the same Fakturiva web account. */
+    private void loginServerScreen(){
+        if(selfHostedBusy){toast("Povezivanje je u tijeku");return;}
+        setup("server_login",false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
+        pad(body,25,66);
+        localBrand();gap(body,28);
+        place(body,label("Dobro došli natrag",29,NAVY,true));gap(body,10);
+        place(body,label("Prijavite se i nastavite s poslovanjem.",
+            14,MUTED,false));gap(body,87);
+        place(body,label("E-adresa",14,NAVY,true));gap(body,10);
+        EditText username=field("ime@tvrtka.hr",
+            prefs.getString("remember_web_user",""));
+        username.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        place(body,username);gap(body,20);
+        place(body,label("Lozinka",14,NAVY,true));gap(body,10);
+        EditText pass=field("","");
+        pass.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        pass.setSaveEnabled(false);
+        if(Build.VERSION.SDK_INT>=26)
+            pass.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        place(body,pass);gap(body,18);
+        LinearLayout rememberRow=horizontal();
+        rememberRow.setGravity(Gravity.CENTER_VERTICAL);
+        android.widget.CheckBox remember=new android.widget.CheckBox(this);
+        remember.setText("Zapamti me");
+        remember.setTextColor(MUTED);remember.setTextSize(12);
+        remember.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE));
+        remember.setChecked(!prefs.getString("remember_web_user","").isEmpty());
+        rememberRow.addView(remember,new LinearLayout.LayoutParams(-2,dp(44)));
+        TextView help=label("Zaboravili ste lozinku?",12,BLUE,true);
+        help.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        help.setOnClickListener(v->{
+            try{startActivity(new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://fakturiva.eu/password-help.php")));}
+            catch(Exception e){toast("Stranica pomoći nije dostupna");}
+        });
+        rememberRow.addView(help,new LinearLayout.LayoutParams(0,dp(44),1));
+        place(body,rememberRow);gap(body,15);
+        TextView submit=action("›   Prijavi se",BLUE,true,()->{
+            if(selfHostedBusy)return;
+            String name=username.getText().toString().trim();
+            if(name.length()<3||pass.length()<12){
+                toast("Unesite korisničko ime i lozinku od najmanje 12 znakova.");
+                return;
+            }
+            if(remember.isChecked())
+                prefs.edit().putString("remember_web_user",name).apply();
+            else prefs.edit().remove("remember_web_user").apply();
+            try{
+                for(String saved:LocalAccounts.names(this)){
+                    if(saved.equalsIgnoreCase(name)){
+                        toast("Račun je već na ovom uređaju. Prijavite se PIN-om.");
+                        loginPinScreen();return;
+                    }
+                }
+            }catch(Exception e){accountStorageError(e);return;}
+            EditText localPin=field("PIN 4–6 znamenki","");
+            localPin.setInputType(InputType.TYPE_CLASS_NUMBER|
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            localPin.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(6)});
+            localPin.setSaveEnabled(false);
+            new AlertDialog.Builder(this)
+                .setTitle("Zaštitite račun na ovom uređaju")
+                .setMessage("Nakon provjere web računa preuzet ćemo šifriranu "+
+                    "sigurnosnu kopiju. Odaberite lokalni PIN za rad bez interneta.")
+                .setView(localPin)
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Prijava i obnova",(dialog,which)->{
+                    char[] digits=localPin.getText().toString().toCharArray();
+                    char[] secret=pass.getText().toString().toCharArray();
+                    try{
+                        if(!new String(digits).matches("[0-9]{4,6}")){
+                            toast("PIN mora imati 4–6 znamenki");return;
+                        }
+                        selfHostedBusy=true;
+                        AccountBridge.restoreLogin(this,name,secret,digits,
+                            (error,id)->{
+                                selfHostedBusy=false;
+                                pass.setText("");localPin.setText("");
+                                if(error!=null)toast(error);
+                                else openLocalSession(id);
+                            });
+                    }catch(Exception error){
+                        selfHostedBusy=false;
+                        toast(error.getMessage()==null?
+                            "Povezivanje nije uspjelo":error.getMessage());
+                    }finally{
+                        Arrays.fill(digits,'\0');
+                        Arrays.fill(secret,'\0');
+                    }
+                }).show();
+        });
+        authPrimaryStyle(submit);place(body,submit);gap(body,63);
+        TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
+        create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
+        create.setOnClickListener(v->registrationScreen());place(body,create);
+        try{
+            if(LocalAccounts.hasAccounts(this)){
+                gap(body,10);
+                secondary(body,"Prijava lokalnim PIN-om (bez interneta)",
+                    this::loginPinScreen);
+            }
+        }catch(Exception e){accountStorageError(e);}
+        gap(body,22);localPrivacyFooter();
+    }
+
+    /** Server-backed registration styled from the white/blue reference. */
     private void registrationScreen(){
         if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
         enteredLocalPin.setLength(0);
@@ -742,7 +851,7 @@ public final class MainActivity extends Activity {
         place(body,label("Registracija",30,NAVY,true));gap(body,9);
         place(body,label("Kreirajte novi račun i započnite s poslovanjem.",
             14,MUTED,false));
-        gap(body,62);
+        gap(body,32);
         place(body,label("Korisničko ime",14,0xff53627b,true));gap(body,10);
         EditText username=field("ime@tvrtka.hr","");
         username.setInputType(InputType.TYPE_CLASS_TEXT|
@@ -760,30 +869,54 @@ public final class MainActivity extends Activity {
         place(body,pin);gap(body,10);
         place(body,label("ⓘ  Unesite sigurnosni PIN (4–6 znamenki).",
             12,0xff64738d,false));
-        gap(body,48);
+
+        gap(body,20);
+        place(body,label("Lozinka za poslovne podatke",14,NAVY,true));
+        gap(body,10);
+        EditText password=field("Najmanje 12 znakova","");
+        password.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password.setSaveEnabled(false);
+        if(Build.VERSION.SDK_INT>=26)
+            password.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        place(body,password);gap(body,10);
+        place(body,label("Lozinka povezuje aplikaciju s fakturiva.eu i "+
+            "omogućuje obnovu podataka na drugom uređaju.",12,MUTED,false));
+        gap(body,27);
         TextView submit=action("♙   Registracija",BLUE,true,()->{
+            if(selfHostedBusy)return;
             char[] digits=pin.getText().toString().toCharArray();
+            char[] secret=password.getText().toString().toCharArray();
             try{
                 boolean first=!LocalAccounts.hasAccounts(this);
-                String id=LocalAccounts.register(this,username.getText().toString(),digits);
-                pin.setText("");
-                if(first&&getDatabasePath("fakturiva.db").isFile()){
-                    // Explicitly reserve the legacy database for the first
-                    // profile; later accounts can never claim its records.
-                    prefs.edit().putString("legacy_owner",id).commit();
-                }
-                openLocalSession(id);
-            }catch(Exception e){toast(e.getMessage()==null?
-                "Registracija nije uspjela":e.getMessage());}
-            finally{Arrays.fill(digits,'\0');}
+                selfHostedBusy=true;
+                AccountBridge.register(this,username.getText().toString(),
+                    secret,digits,(error,id)->{
+                        selfHostedBusy=false;
+                        if(error!=null){toast(error);return;}
+                        pin.setText("");password.setText("");
+                        if(first&&getDatabasePath("fakturiva.db").isFile()){
+                            // Only the first verified profile may own legacy data.
+                            prefs.edit().putString("legacy_owner",id).commit();
+                        }
+                        openLocalSession(id);
+                    });
+            }catch(Exception error){
+                selfHostedBusy=false;
+                toast(error.getMessage()==null?"Registracija nije uspjela":
+                    error.getMessage());
+            }finally{
+                Arrays.fill(digits,'\0');
+                Arrays.fill(secret,'\0');
+            }
         });
         authPrimaryStyle(submit);
-        submit.setContentDescription("Registracija lokalnog korisničkog računa");
-        place(body,submit);gap(body,46);
+        submit.setContentDescription("Registracija korisničkog računa na fakturiva.eu");
+        place(body,submit);gap(body,23);
         TextView login=label("Već imate račun?  Prijavite se",14,BLUE,true);
         login.setGravity(Gravity.CENTER);
         login.setMinimumHeight(dp(48));
-        login.setOnClickListener(v->openExistingLocalAccess());
+        login.setOnClickListener(v->loginServerScreen());
         place(body,login);
         gap(body,64);
         localPrivacyFooter();
@@ -903,6 +1036,8 @@ public final class MainActivity extends Activity {
             submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
             place(body,submit);gap(body,37);
             localPrivacyFooter();
+            gap(body,10);
+            secondary(body,"Prijava web računom",this::loginServerScreen);
             if(names.length>1){
                 TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
                 next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
@@ -1062,8 +1197,8 @@ public final class MainActivity extends Activity {
             12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
         place(body,notice);gap(body,15);
         String id=LocalAccounts.activeId();
-        EditText url=field("https://moja-domena.hr/",
-            prefs.getString("host_url_"+id,""));
+        EditText url=field("https://fakturiva.eu/",
+            prefs.getString("host_url_"+id,"https://fakturiva.eu/"));
         fieldLabel(body,"Adresa vlastitog hostinga (HTTPS)",url);
         EditText user=field("ime@tvrtka.hr",
             prefs.getString("host_user_"+id,LocalAccounts.activeName()));
@@ -4332,7 +4467,7 @@ public final class MainActivity extends Activity {
             !"politika-privatnosti".equals(path) &&
             !"delete-account.php".equals(path))
             throw new IllegalArgumentException("Nepoznata stranica");
-        Uri uri=Uri.parse("https://fakturiva.com/"+path);
+        Uri uri=Uri.parse("https://fakturiva.eu/"+path);
         try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}
         catch(android.content.ActivityNotFoundException e){
             toast("Nema instaliranog preglednika za otvaranje stranice.");
@@ -5159,7 +5294,8 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
-        if("local_login".equals(screen)||"local_register".equals(screen)){
+        if("server_login".equals(screen)){welcome();}
+        else if("local_login".equals(screen)||"local_register".equals(screen)){
             enteredLocalPin.setLength(0);
             if("local_register".equals(screen))welcome();else finish();
         }

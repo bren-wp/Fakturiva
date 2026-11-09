@@ -57,6 +57,14 @@ $error=takeFlash();
 Unesite sigurnosni PIN (4–6 znamenki).
 </p>
 </div>
+<label class="input-label" for="register-password">Lozinka za poslovne podatke</label>
+<div class="field-wrap">
+<input id="register-password" name="passphrase" required type="password"
+ minlength="12" maxlength="256" autocomplete="new-password"
+ placeholder="Najmanje 12 znakova" aria-describedby="password-help">
+</div>
+<p class="help-text" id="password-help">Snažna zasebna lozinka omogućuje pristup
+podacima nakon promjene uređaja. Pohranite je na sigurnom mjestu.</p>
 <button class="primary-action" type="submit">
 <svg viewBox="0 0 28 28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="11" cy="8" r="4.5"/><path d="M3 25v-2c0-5 3.3-8 8-8s8 3 8 8v2H3ZM22 9h6M25 6v6"/>

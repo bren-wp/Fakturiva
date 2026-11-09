@@ -2,61 +2,55 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 if(webCurrent()!==null)gotoPage('dashboard.php');
-if(!isset($_SESSION['last_username'])||!is_string($_SESSION['last_username'])||
-   $_SESSION['last_username']==='')gotoPage('identify.php');
-$username=(string)$_SESSION['last_username'];
 $error=takeFlash();
+$remembered=$_COOKIE['FakturivaRemember']??'';
+if(!is_string($remembered)||strlen($remembered)>80)$remembered='';
 ?><!doctype html>
-<html lang="hr"><head>
-<meta charset="utf-8">
+<html lang="hr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
-<meta name="robots" content="noindex,nofollow">
-<title>Prijava PIN-om — Fakturiva</title>
+<meta name="theme-color" content="#ffffff"><meta name="robots" content="noindex,nofollow">
+<title>Prijava — Fakturiva</title>
 <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/app.css">
-<script src="assets/auth.js" defer></script>
-</head><body>
-<main class="auth-page auth-login">
+<script src="assets/auth.js" defer></script></head>
+<body><main class="auth-page auth-reference-login">
 <header class="auth-head">
 <?=logoMarkup()?>
-<h1>Prijava PIN-om</h1>
-<p class="subtitle">Unesite svoj sigurnosni PIN za pristup računu.</p>
+<h1>Dobro došli natrag</h1>
+<p class="subtitle">Prijavite se i nastavite s poslovanjem.</p>
 </header>
 <?php if($error!==''):?><p class="error-note" role="alert"><?=h($error)?></p><?php endif;?>
-<form class="auth-form" method="post" action="auth.php" autocomplete="off" data-auth-form>
+<form class="auth-form" method="post" action="auth.php" data-auth-form>
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
-<input type="hidden" name="action" value="login">
-<input type="hidden" name="username" value="<?=h($username)?>">
-<label class="pin-label" for="login-pin">PIN</label>
-<div class="pin-wrap">
-<input class="pin-entry" id="login-pin" type="password" inputmode="none"
- name="pin" minlength="4" maxlength="6" pattern="[0-9]{4,6}" required
- aria-label="Sigurnosni PIN" autocomplete="off" data-numeric-pin data-keypad-input>
-<svg class="pin-lock" viewBox="0 0 24 27" fill="none" aria-hidden="true">
-<rect x="3.5" y="12" width="17" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
-<path d="M7.7 12V8.2a4.3 4.3 0 0 1 8.6 0V12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-</svg>
+<input type="hidden" name="action" value="login-password">
+<label class="input-label" for="email">E-adresa ili korisničko ime</label>
+<div class="field-wrap">
+<input id="email" name="username" type="text" minlength="3" maxlength="80"
+ autocomplete="username" autocapitalize="none" spellcheck="false" required
+ placeholder="ime@tvrtka.hr" value="<?=h($remembered)?>">
+<svg class="field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/>
+<path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.7"/>
+</svg></div>
+<label class="input-label password-label" for="password">Lozinka</label>
+<div class="field-wrap">
+<input id="password" name="passphrase" type="password" minlength="12" maxlength="256"
+ autocomplete="current-password" required aria-label="Lozinka">
+<svg class="field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<rect x="4" y="10" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/>
+<path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.7"/>
+</svg></div>
+<div class="login-actions">
+<label class="remember"><input type="checkbox" name="remember" value="yes"
+ <?=$remembered!==''?'checked':''?>> Zapamti me</label>
+<a href="password-help.php">Zaboravili ste lozinku?</a>
 </div>
-<div class="pin-grid" role="group" aria-label="Numerička tipkovnica PIN-a" data-keypad>
-<?php foreach([1,2,3,4,5,6,7,8,9] as $digit): ?>
-<button class="pin-key" type="button" data-digit="<?=$digit?>" aria-label="Znamenka <?=$digit?>"><?=$digit?></button>
-<?php endforeach; ?>
-<button class="pin-key is-delete" type="button" data-backspace aria-label="Obriši posljednju znamenku">
-<svg viewBox="0 0 35 27" aria-hidden="true">
-<path d="M12 3H31a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H12L2 13.5 12 3Z"/>
-<path d="m18 10 8 8m0-8-8 8"/>
-</svg>
-</button>
-<button class="pin-key" type="button" data-digit="0" aria-label="Znamenka 0">0</button>
-<span class="pin-key is-spacer" aria-hidden="true"></span>
-</div>
-<button class="primary-action" type="submit" data-login-submit>
-<svg viewBox="0 0 28 28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 5 9 9-9 9"/></svg>
-Prijavi se
-</button>
+<button class="primary-action" type="submit">
+<svg viewBox="0 0 28 28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 5 9 9-9 9"/></svg>
+Prijavi se</button>
 </form>
+<nav class="auth-switch"><span>Nemate račun?</span>
+<a href="register.php">Registrirajte se</a></nav>
+<p class="legacy-login">Već imate PIN? <a href="identify.php">Prijavite se PIN-om</a></p>
 <?=footerMarkup()?>
-<div class="detail-entry"><a href="identify.php" aria-label="Odaberi drugi korisnički račun">Promijeni korisnika</a></div>
-</main>
-</body></html>
+</main></body></html>

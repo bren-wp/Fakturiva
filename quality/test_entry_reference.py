@@ -24,12 +24,30 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('account.addView(label("Već imate račun? "',MAIN)
         self.assertIn('TextView signIn=label("Prijavite se"',MAIN)
         self.assertIn('account.setOnClickListener(v->openExistingLocalAccess())',MAIN)
-        # A real local account now replaces the former no-account unlock flow.
-        self.assertIn('if(LocalAccounts.hasAccounts(this))loginPinScreen()', MAIN)
+        # Remote email/password login is the default entry path; verified
+        # local PIN remains an offline fallback for existing profiles.
+        self.assertIn('if(LocalAccounts.hasAccounts(this))loginServerScreen()', MAIN)
+        self.assertIn('AccountBridge.restoreLogin(', MAIN)
+        self.assertIn('AccountBridge.register(', MAIN)
+        self.assertIn('secondary(body,"Prijava lokalnim PIN-om (bez interneta)"', MAIN)
+        self.assertIn('call(a,"loginServerScreen")', HARNESS)
         self.assertIn('String id=LocalAccounts.verify(this,loginUsername,digits)', MAIN)
         self.assertIn('openLocalSession(id)', MAIN)
         self.assertIn('if(prefs.getBoolean("device_lock",false))', MAIN)
         self.assertIn('securityScreen(true,false)', MAIN)
+
+    def test_server_first_auth_binds_only_acknowledged_snapshots(self):
+        bridge=(ROOT/"app/src/main/java/com/brendigo/fakturiva/AccountBridge.java").read_text(encoding="utf-8")
+        mirror=(ROOT/"app/src/main/java/com/brendigo/fakturiva/CloudMirror.java").read_text(encoding="utf-8")
+        self.assertIn('https://fakturiva.eu/',bridge)
+        self.assertIn('SelfHostedSyncClient.request(url, auth, null)',bridge)
+        self.assertIn('SecureBackup.decrypt(sealed, secret)',bridge)
+        self.assertIn('LocalAccounts.register(app, username, digits)',bridge)
+        self.assertIn('CloudMirror.connectAcknowledged(app, id, url, username',bridge)
+        self.assertIn('.putBoolean("dirty", false)',mirror)
+        self.assertIn('.putInt("revision", revision)',mirror)
+        self.assertIn('if (!sha256(sealed).equals(remote.getString("sha256")))',bridge)
+        self.assertIn('ensureNewLocalProfile(app, username)',bridge)
 
     def test_adaptive_launcher_uses_full_bleed_gradient_and_brand_glyph(self):
         self.assertIn('android:scaleX="1.35"',FOREGROUND)

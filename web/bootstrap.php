@@ -55,7 +55,7 @@ function checkCsrf():void{
 function gotoPage(string $path):never{
     // Only static site-relative destinations. No open redirects.
     if(!in_array($path,['index.php','login.php','register.php','dashboard.php',
-                        'link.php','delete-account.php'],true))
+                        'link.php','delete-account.php','login-pin.php'],true))
         throw new \RuntimeException('Unsafe redirect');
     header('Location: '.$path,true,303);exit;
 }

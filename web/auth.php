@@ -9,7 +9,8 @@ if((int)($_SERVER['CONTENT_LENGTH']??0)>4096){
 }
 $mode=(string)($_POST['action']??'');
 $redirect=match($mode){
-    'register'=>'register.php','login'=>'login.php',
+    'register'=>'register.php','login'=>'login-pin.php',
+    'login-password'=>'login.php',
     'link'=>'link.php','set-sync'=>'dashboard.php','identify'=>'identify.php',
     'logout'=>'login.php',default=>'login.php'
 };
@@ -23,12 +24,26 @@ try{
     if($mode==='identify'){
         FakturivaSelfHost\normalizeName($username);
         $_SESSION['last_username']=$username;
-        gotoPage('login.php');
+        gotoPage('login-pin.php');
     }
     if($mode==='register'){
-        $result=FakturivaSelfHost\webRegister($username,$pin,$ip);
+        $result=FakturivaSelfHost\webRegister($username,$pin,$ip,$passphrase);
         adoptWebLogin($result);
         flash('Račun je uspješno registriran.');
+        gotoPage('dashboard.php');
+    }
+    if($mode==='login-password'){
+        $result=FakturivaSelfHost\webLoginPassword($username,$passphrase,$ip);
+        adoptWebLogin($result);
+        // Remember only the username after an explicit opt-in, never a secret.
+        // Host-only first-party functional cookie; no analytics or third party.
+        $testHttp=PHP_SAPI==='cli-server' &&
+            getenv('FAKTURIVA_TEST_HTTP')==='1' &&
+            in_array($ip,['127.0.0.1','::1'],true);
+        $remember=($_POST['remember']??'')==='yes';
+        setcookie('FakturivaRemember',$remember?$username:'',[
+            'expires'=>$remember?time()+60*86400:time()-3600,
+            'path'=>'/','secure'=>!$testHttp,'httponly'=>true,'samesite'=>'Lax']);
         gotoPage('dashboard.php');
     }
     if($mode==='login'){
@@ -71,6 +86,6 @@ try{
     error_log('Fakturiva web auth: '.get_class($error));
     flash('Zahtjev nije uspio. Pokušajte ponovno.');
 }
-if($mode==='login'&&$username!==''&&strlen($username)<81)
+if(in_array($mode,['login','login-password'],true)&&$username!==''&&strlen($username)<81)
     $_SESSION['last_username']=$username;
 gotoPage($redirect);
