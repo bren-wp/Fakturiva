@@ -17,7 +17,7 @@ other="$temp/other"
 extract_csrf(){
   grep -o 'name="csrf" value="[a-f0-9]\{64\}"' "$1" | head -1 | cut -d '"' -f 4
 }
-username="ci_web_$(date +%s)_$RANDOM"
+username="ci_web_$(date +%s)_$RANDOM@example.test"
 pin=654321
 passphrase="Fakturiva-ci-registration-$RANDOM-example"
 curl -fsS -b "$jar" -c "$jar" "$base/register.php" > "$temp/register.html"
