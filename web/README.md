@@ -163,10 +163,10 @@ zamjena i revizije namjerno sprječavaju nevidljiv gubitak.
 
 ```sh
 find web -name '*.php' -print0 | xargs -0 -n1 php -l
-php web/tests/smoke.php
-php web/tests/web-auth-smoke.php
-bash web/tests/http-smoke.sh
-bash web/tests/web-form-http.sh
+php quality/web-hosting/smoke.php
+php quality/web-hosting/web-auth-smoke.php
+bash quality/web-hosting/http-smoke.sh
+bash quality/web-hosting/web-form-http.sh
 ```
 
 CI provjerava osnovnu izolaciju dva korisnika, HTTPS API u kodu,
