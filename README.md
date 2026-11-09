@@ -31,7 +31,7 @@
 
 Već potvrđeni dokumenti čuvaju izvorne podatke izdavatelja i kupca, pa izmjene profila ne mijenjaju njihovu povijest.
 
-## Hrvatska: KPR i PO-SD (lokalno, bez slanja podataka)
+## Hrvatska: Knjiga prometa i PO-SD
 
 Za hrvatske samostalne djelatnosti Fakturiva sada priprema **Knjigu prometa**
 prema datumu stvarne naplate i godišnji **PO-SD** za paušalne obveznike.
@@ -44,55 +44,70 @@ koja NIJE službeni XML za uvoz u ePoreznu**. Potvrda važeće XSD sheme
 i probni uvoz obvezni su prije najave punog XML izvoza. Podatci u
 referentnim PDF-ovima korisnika nisu kopirani u projekt.
 
-## Lokalni računi i vlastiti hosting — razvojna grana
+## Korisnički račun, sigurnosne kopije i oporavak
 
-Fakturiva ostaje **Android aplikacija**, namijenjena radu bez interneta.
-Novi zasloni **Registracija** i **Prijava PIN-om** izrađeni su kao nativne
-kontrole prema dostavljenim vizualnim referencama (nisu PNG pozadine).
-Korisnik stvara lokalno korisničko ime i PIN od 4–6 znamenki.
+Fakturiva koristi zasebne korisničke račune te šifrirane kopije podataka.
+Sadržaj korisničkog računa pohranjuje se na HTTPS serveru nakon
+provjerenog povezivanja. Android zadržava privremenu radnu bazu kako
+bi se promjene mogle pripremati i bez interneta; **nepotvrđene promjene
+mogu se izgubiti pri deinstalaciji** i zato aplikacija prikazuje
+status posljednjeg uspješnog prijenosa.
 
-- **Lokalno po zadanim postavkama:** profil je vezan uz ovaj Android
-  uređaj. Korisnička imena i PIN-ovi ne šalju se ni na jedan server.
-  Registar je zaštićen Android Keystoreom, PIN se provjerava putem
-  usporenog sažetka i pokušaji su ograničeni.
-- **Bez miješanja korisnika:** svaki lokalni profil koristi zasebnu
-  SQLite bazu i odvojene lokalne šifrirane oporavke. Prije stvaranja
-  prvog profila postojeći podaci stare verzije migriraju se samo
-  tom prvom korisniku, uz očuvanje izvornog sadržaja.
-- **Opcionalni vlastiti hosting:** ako korisnik **izričito želi**,
-  Android aplikacija podržava ručno slanje i vraćanje šifrirane kopije
-  na vlastiti HTTPS PHP hosting bez SQL baze. Podaci i zapisi korisnika
-  pohranjuju se u šifriranim JSON datotekama pod `storage/data`.
-  Poslužiteljska lozinka (najmanje 12 znakova) odvojena je od kratkog
-  lokalnog PIN-a; automatska pozadinska sinkronizacija nije uključena.
-- **Brisanje korisničkih podataka:** zasebno lokalno i udaljeno brisanje,
-  uz dodatnu potvrdu. Vanjski obrazac za udaljeno brisanje isporučen je
-  s poslužiteljskom skriptom.
+- **Pohrana uz revizije:** server pohranjuje šifrirane JSON zapise i
+  prethodne revizije, uz zaštitu od slučajnog prepisivanja.
+- **Sigurnost korisnika:** podatci su odvojeni po korisniku,
+  pristup se ograničava i autentificira, a sadržaj sigurnosnih
+  kopija ostaje šifriran korisnikovom jakom lozinkom.
+- **Oporavak:** nakon promjene ili deinstalacije uređaja korisnik
+  može ponovno pristupiti serveru i potvrđenu kopiju vratiti u profil.
+  Kratki lokalni PIN sam po sebi nije dovoljan za oporavak.
+- **Administracija:** web ima zaseban, posebno autentificiran
+  administratorski panel za korisničke račune, zabranu pristupa i
+  dodjelu statusa. Administrator ne može dešifrirati privatne
+  računovodstvene sadržaje korisnika.
+- **Za produkciju:** zasebni offsite backup, vraćanje podataka,
+  identitet voditelja obrade, pravna provjera i testirana
+  sinkronizacija obavezni su uvjeti prije objave.
 
-[Postavljanje na bilo koju HTTPS domenu](web/README.md) ·
-[Pravila autentikacije, privatnosti i testiranja](docs/ACCOUNT_AUTH_AND_HOSTING.md)
-
-**Napomena:** implementacija je u PR-u #26, a ne u trenutačno objavljenom
-APK-u. 0% odstupanja na dva nova referentna ekrana još nije verificirano
-pomoću stvarnih snimki istih dimenzija. Produkcijska Google Play objava
-zahtijeva prolazak QA-a, prilagođenu politiku privatnosti na javnoj
-HTTPS adresi, ispravan Data safety obrazac i testirano brisanje računa.
+[Web postavljanje](web/README.md) ·
+[Plan produkcijskih provjera](docs/PRODUCTION_ROADMAP_FAKTURIVA_2026.md) ·
+[Politika privatnosti](web/politika-privatnosti/index.php)
 
 ## Fakturiva u radu
 
-Prikazane su stvarne snimke aplikacije, a ne dizajnerski prikazi.
+Galerija sadrži **20 stvarnih snimki iz ranijeg Android QA izdanja** (ne umjetno generirane prikaze). Na svakoj novoj verziji potrebno je ponovno snimiti zaslone i izmjeriti odstupanja prema originalnim referencama; ova galerija nije dokaz 0% razlike.
 
 <div align="center">
 <table>
 <tr>
-<td align="center"><img src="docs/screenshots/02_dobrodosli.png" alt="Dobrodošli" width="195"><br><b>Jednostavan početak</b></td>
-<td align="center"><img src="docs/screenshots/04_pocetna.png" alt="Početna ploča" width="195"><br><b>Poslovanje na jednom mjestu</b></td>
-<td align="center"><img src="docs/screenshots/05_racuni.png" alt="Popis računa" width="195"><br><b>Pregled svih računa</b></td>
+<td align="center"><img src="docs/screenshots/01_pocetni_zaslon.png" alt="Splash — stvarni Android screenshot" width="145"><br><b>Splash</b></td>
+<td align="center"><img src="docs/screenshots/02_dobrodosli.png" alt="Dobrodošli — stvarni Android screenshot" width="145"><br><b>Dobrodošli</b></td>
+<td align="center"><img src="docs/screenshots/03_prijava.png" alt="Prijava — stvarni Android screenshot" width="145"><br><b>Prijava</b></td>
+<td align="center"><img src="docs/screenshots/04_pocetna.png" alt="Početna — stvarni Android screenshot" width="145"><br><b>Početna</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/screenshots/06_novi_racun.png" alt="Novi račun" width="195"><br><b>Račun korak po korak</b></td>
-<td align="center"><img src="docs/screenshots/08_pregled_racuna.png" alt="Pregled računa" width="195"><br><b>Dokument spreman za PDF</b></td>
-<td align="center"><img src="docs/screenshots/20_tamna_tema.png" alt="Tamna tema" width="195"><br><b>Udobna tamna tema</b></td>
+<td align="center"><img src="docs/screenshots/05_racuni.png" alt="Računi — stvarni Android screenshot" width="145"><br><b>Računi</b></td>
+<td align="center"><img src="docs/screenshots/06_novi_racun.png" alt="Novi račun — stvarni Android screenshot" width="145"><br><b>Novi račun</b></td>
+<td align="center"><img src="docs/screenshots/07_stavke_racuna.png" alt="Stavke — stvarni Android screenshot" width="145"><br><b>Stavke</b></td>
+<td align="center"><img src="docs/screenshots/08_pregled_racuna.png" alt="Pregled računa — stvarni Android screenshot" width="145"><br><b>Pregled računa</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/09_ponude.png" alt="Ponude — stvarni Android screenshot" width="145"><br><b>Ponude</b></td>
+<td align="center"><img src="docs/screenshots/10_nova_ponuda.png" alt="Nova ponuda — stvarni Android screenshot" width="145"><br><b>Nova ponuda</b></td>
+<td align="center"><img src="docs/screenshots/11_pregled_ponude.png" alt="Pregled ponude — stvarni Android screenshot" width="145"><br><b>Pregled ponude</b></td>
+<td align="center"><img src="docs/screenshots/12_klijenti.png" alt="Klijenti — stvarni Android screenshot" width="145"><br><b>Klijenti</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/13_detalji_klijenta.png" alt="Detalji klijenta — stvarni Android screenshot" width="145"><br><b>Detalji klijenta</b></td>
+<td align="center"><img src="docs/screenshots/14_artikli_usluge.png" alt="Artikli i usluge — stvarni Android screenshot" width="145"><br><b>Artikli i usluge</b></td>
+<td align="center"><img src="docs/screenshots/15_izvjestaji.png" alt="Izvještaji — stvarni Android screenshot" width="145"><br><b>Izvještaji</b></td>
+<td align="center"><img src="docs/screenshots/16_naplata.png" alt="Naplata — stvarni Android screenshot" width="145"><br><b>Naplata</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/17_eracun_integracija.png" alt="Pomoć — stvarni Android screenshot" width="145"><br><b>Pomoć</b></td>
+<td align="center"><img src="docs/screenshots/18_postavke.png" alt="Postavke — stvarni Android screenshot" width="145"><br><b>Postavke</b></td>
+<td align="center"><img src="docs/screenshots/19_profil_tvrtke.png" alt="Profil tvrtke — stvarni Android screenshot" width="145"><br><b>Profil tvrtke</b></td>
+<td align="center"><img src="docs/screenshots/20_tamna_tema.png" alt="Tamna tema — stvarni Android screenshot" width="145"><br><b>Tamna tema</b></td>
 </tr>
 </table>
 </div>
@@ -124,8 +139,12 @@ Posljednje objavljeno izdanje: [**v0.17.0-preview.1**](https://github.com/bren-w
 
 ## Android aplikacija na Windows računalu
 
-Fakturiva **ostaje Android aplikacija** — ne izrađuje se zasebna Windows
-aplikacija. Kompatibilan Android emulator na Windows računalu može pokrenuti
+Fakturiva ima Android aplikaciju. U mapi [`win/`](win/README.md)
+razvija se i zaseban **Windows klijent**, koji trenutačno prikazuje
+isti HTTPS web korisnički račun putem Microsoft WebView2.
+Njegovi zasloni još nisu izvorno 1:1 izvedeni prema 20 Android referenci.
+Zasebni Windows build isporučuje provjerene preview
+artifakte kada GitHub Actions uspješno završi. Kompatibilan Android emulator na Windows računalu može pokrenuti
 APK, uz ograničenja samog emulatora. Obrasci i navigacija prilagođavaju se
 veličini Android prozora: telefonski raspored ostaje jednak izvornim mobilnim
 referencama, a na širokim prozorima sadržaj je čitljivo centriran. Dostupni
@@ -152,7 +171,7 @@ Fakturiva podržava više načina ispisa dokumenata:
 - **Bluetooth Classic termalni pisači:** ESC/POS računi na **58 mm (384 točke)** ili **80 mm (512 ili 576 točaka)**, uz prethodno uparivanje.
 - **Mrežni termalni pisači:** ESC/POS preko lokalne IPv4 adrese i TCP priključka (obično **9100**), na 58 mm ili 80 mm. Adresu i priključak unosi korisnik; javne internetske adrese namjerno su blokirane.
 
-Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađeni PDF-ovi imaju sitnu oznaku **Powered by Brendigo** u podnožju svake stranice, a termalni računi pri samom dnu ispisa. Ako korisnik želi zatražiti uklanjanje te oznake, u **Postavke → O aplikaciji i podrška** može poslati upit na **info@plati.com.hr**.
+Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađeni PDF-ovi imaju sitnu oznaku **Powered by Brendigo** u podnožju svake stranice, a termalni računi pri samom dnu ispisa. Ako korisnik želi zatražiti uklanjanje te oznake, u **Postavke → O aplikaciji i podrška** može poslati upit na **info@fakturiva.com**.
 
 **Napomena:** Ne postoji univerzalna podrška za sve pisače i kartične POS terminale. Potrebna je kompatibilnost s Androidovim servisom ispisa ili ESC/POS protokolom i provjera konkretnog modela. Funkcija ne naplaćuje kartice i ne provodi fiskalizaciju.
 
