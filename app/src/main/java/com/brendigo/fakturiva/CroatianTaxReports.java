@@ -101,8 +101,13 @@ public final class CroatianTaxReports {
     public static long cents(String value){
         if(value==null||value.trim().isEmpty())throw new IllegalArgumentException(
             "Unesite iznos uplaćenog poreza za odabranu godinu (može biti 0,00)");
-        String normalized=value.trim().replace(" ","").replace('.','_')
-            .replace(',','.').replace("_","");
+        String normalized=value.trim().replace(" ","").replace("€","");
+        // Croatian thousands separator '.' and decimal ','; also accept
+        // a single dot as an English-style decimal separator.
+        if(normalized.indexOf(',')>=0)
+            normalized=normalized.replace(".","").replace(',','.');
+        else if(normalized.indexOf('.')!=normalized.lastIndexOf('.'))
+            throw new IllegalArgumentException("Nejasan decimalni zapis: koristite 1.234,56");
         if(!normalized.matches("[0-9]{1,12}(\\.[0-9]{1,2})?"))
             throw new IllegalArgumentException("Iznos mora biti broj s najviše 2 decimale");
         java.math.BigDecimal money=new java.math.BigDecimal(normalized);
