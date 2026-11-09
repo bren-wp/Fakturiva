@@ -817,8 +817,8 @@ public final class MainActivity extends Activity {
                         toast(error.getMessage()==null?
                             "Povezivanje nije uspjelo":error.getMessage());
                     }finally{
-                        Arrays.fill(digits,'\\0');
-                        Arrays.fill(secret,'\\0');
+                        Arrays.fill(digits,'\0');
+                        Arrays.fill(secret,'\0');
                     }
                 }).show();
         });
@@ -848,7 +848,7 @@ public final class MainActivity extends Activity {
         place(body,label("Registracija",30,NAVY,true));gap(body,9);
         place(body,label("Kreirajte novi račun i započnite s poslovanjem.",
             14,MUTED,false));
-        gap(body,62);
+        gap(body,32);
         place(body,label("Korisničko ime",14,0xff53627b,true));gap(body,10);
         EditText username=field("ime@tvrtka.hr","");
         username.setInputType(InputType.TYPE_CLASS_TEXT|
@@ -866,26 +866,50 @@ public final class MainActivity extends Activity {
         place(body,pin);gap(body,10);
         place(body,label("ⓘ  Unesite sigurnosni PIN (4–6 znamenki).",
             12,0xff64738d,false));
-        gap(body,48);
+
+        gap(body,20);
+        place(body,label("Lozinka za poslovne podatke",14,NAVY,true));
+        gap(body,10);
+        EditText password=field("Najmanje 12 znakova","");
+        password.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password.setSaveEnabled(false);
+        if(Build.VERSION.SDK_INT>=26)
+            password.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        place(body,password);gap(body,10);
+        place(body,label("Lozinka povezuje aplikaciju s fakturiva.eu i "+
+            "omogućuje obnovu podataka na drugom uređaju.",12,MUTED,false));
+        gap(body,27);
         TextView submit=action("♙   Registracija",BLUE,true,()->{
+            if(selfHostedBusy)return;
             char[] digits=pin.getText().toString().toCharArray();
+            char[] secret=password.getText().toString().toCharArray();
             try{
                 boolean first=!LocalAccounts.hasAccounts(this);
-                String id=LocalAccounts.register(this,username.getText().toString(),digits);
-                pin.setText("");
-                if(first&&getDatabasePath("fakturiva.db").isFile()){
-                    // Explicitly reserve the legacy database for the first
-                    // profile; later accounts can never claim its records.
-                    prefs.edit().putString("legacy_owner",id).commit();
-                }
-                openLocalSession(id);
-            }catch(Exception e){toast(e.getMessage()==null?
-                "Registracija nije uspjela":e.getMessage());}
-            finally{Arrays.fill(digits,'\0');}
+                selfHostedBusy=true;
+                AccountBridge.register(this,username.getText().toString(),
+                    secret,digits,(error,id)->{
+                        selfHostedBusy=false;
+                        if(error!=null){toast(error);return;}
+                        pin.setText("");password.setText("");
+                        if(first&&getDatabasePath("fakturiva.db").isFile()){
+                            // Only the first verified profile may own legacy data.
+                            prefs.edit().putString("legacy_owner",id).commit();
+                        }
+                        openLocalSession(id);
+                    });
+            }catch(Exception error){
+                selfHostedBusy=false;
+                toast(error.getMessage()==null?"Registracija nije uspjela":
+                    error.getMessage());
+            }finally{
+                Arrays.fill(digits,'\0');
+                Arrays.fill(secret,'\0');
+            }
         });
         authPrimaryStyle(submit);
-        submit.setContentDescription("Registracija lokalnog korisničkog računa");
-        place(body,submit);gap(body,46);
+        submit.setContentDescription("Registracija korisničkog računa na fakturiva.eu");
+        place(body,submit);gap(body,23);
         TextView login=label("Već imate račun?  Prijavite se",14,BLUE,true);
         login.setGravity(Gravity.CENTER);
         login.setMinimumHeight(dp(48));
