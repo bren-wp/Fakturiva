@@ -4450,6 +4450,179 @@ public final class MainActivity extends Activity {
         place(target,row);
         row.setOnClickListener(v->action.run());
     }
+    /** Invoice typography and branding only, never fiscalization or amounts. */
+    private void invoiceAppearance(){
+        if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
+        setup("invoice_appearance",true);
+        pad(body,17,17);
+        toolbar("Dizajn računa","Predložak, boja i logotip",true);
+        LinearLayout intro=card();
+        place(intro,label("Prilagodite izgled svojih dokumenata",17,ink(),true));
+        gap(intro,8);
+        place(intro,label("Odabrani dizajn vrijedi za nove račune i ponude. "+
+            "Izdani dokumenti zadržavaju izgled i logo koji su imali "+
+            "pri izdavanju. Oblik računa ne mijenja obavezne poslovne podatke.",
+            12,sub(),false));
+        place(body,intro);gap(body,14);
+        LinearLayout form=card();
+        place(form,label("Odabir predloška",15,ink(),true));gap(form,10);
+        Spinner template=new Spinner(this);
+        template.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,InvoiceTheme.NAMES));
+        String savedTheme=InvoiceTheme.validated(db.setting("invoice_theme"));
+        for(int i=0;i<InvoiceTheme.IDS.length;i++)
+            if(InvoiceTheme.IDS[i].equals(savedTheme))
+                template.setSelection(i);
+        place(form,template);
+        gap(form,17);
+        place(form,label("Boja naslova i istaknutih elemenata",15,ink(),true));
+        gap(form,7);
+        EditText color=field("#RRGGBB (npr. #14263F)",
+            db.setting("invoice_accent"));
+        color.setInputType(InputType.TYPE_CLASS_TEXT|
+            InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        place(form,color);
+        gap(form,10);
+        LinearLayout palette=horizontal();
+        String[] colors={"#14263F","#364CF5","#036E68","#772B64"};
+        for(String hex:colors){
+            TextView swatch=label("●",27,android.graphics.Color.parseColor(hex),true);
+            swatch.setGravity(Gravity.CENTER);
+            swatch.setContentDescription("Odaberi boju "+hex);
+            swatch.setBackground(shape(panel(),12));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(46),1);
+            lp.leftMargin=dp(3);lp.rightMargin=dp(3);
+            palette.addView(swatch,lp);
+            swatch.setOnClickListener(v->color.setText(hex));
+        }
+        place(form,palette);
+        gap(form,13);
+        place(form,label("Vaš logotip",15,ink(),true));gap(form,8);
+        String currentLogo=db.setting("logo_sha256");
+        if(currentLogo==null||currentLogo.trim().isEmpty()){
+            ImageView mark=new ImageView(this);
+            mark.setImageResource(R.drawable.brand_mark);
+            mark.setContentDescription("Zadani Fakturiva logo");
+            form.addView(mark,lp(68,68));
+            gap(form,7);
+            place(form,label("Koristi se izvorni Fakturiva logotip.",
+                12,sub(),false));
+        }else{
+            try{
+                byte[] bytes=db.brandingLogo(currentLogo);
+                android.graphics.BitmapFactory.Options options=
+                    new android.graphics.BitmapFactory.Options();
+                options.inSampleSize=2;
+                android.graphics.Bitmap bitmap=
+                    android.graphics.BitmapFactory.decodeByteArray(
+                        bytes,0,bytes.length,options);
+                if(bitmap!=null){
+                    ImageView preview=new ImageView(this);
+                    preview.setImageBitmap(bitmap);
+                    preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    preview.setContentDescription("Vaš odabrani logotip");
+                    form.addView(preview,lp(130,88));
+                }
+                Arrays.fill(bytes,(byte)0);
+                gap(form,7);
+                place(form,label("Vlastiti logo aktivan za nove dokumente.",
+                    12,TEAL,true));
+            }catch(Exception e){
+                place(form,label("Logo nije dostupan. Provjerite podatke.",
+                    12,RED,true));
+            }
+        }
+        gap(form,12);
+        secondary(form,"Odaberi PNG ili JPEG logo",()->{
+            pendingBrandProfile=LocalAccounts.activeId();
+            Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            picker.setType("image/*");
+            picker.addCategory(Intent.CATEGORY_OPENABLE);
+            picker.putExtra(Intent.EXTRA_MIME_TYPES,
+                new String[]{"image/png","image/jpeg"});
+            startActivityForResult(picker,PICK_BRANDING_LOGO);
+        });
+        gap(form,9);
+        secondary(form,"Vrati Fakturiva logo",()->{
+            try{db.clearBrandingLogo();invoiceAppearance();}
+            catch(Exception e){error(e);}
+        });
+        place(body,form);
+        gap(body,16);
+        button(body,"Spremi izgled računa",()->{
+            try{
+                String theme=InvoiceTheme.validated(
+                    InvoiceTheme.IDS[template.getSelectedItemPosition()]);
+                String accent=color.getText().toString().trim();
+                InvoiceTheme.accent(accent,theme); // reject unreadable colors
+                db.companySettings(
+                    new String[]{"invoice_theme","invoice_accent"},
+                    new String[]{theme,accent});
+                toast("Predložak i boja uspješno spremljeni.");
+                invoiceAppearance();
+            }catch(Exception e){error(e);}
+        });
+        gap(body,13);
+        secondary(body,"Pregledaj izgled na nacrtu računa",()->{
+            try{
+                for(Store.Document d:db.documents(Store.INVOICE)){
+                    if(Store.DRAFT.equals(d.status)){
+                        showActualPdfPreview(d);return;
+                    }
+                }
+                toast("Za pregled dizajna izradite novi nacrt računa.");
+            }catch(Exception e){error(e);}
+        });
+        gap(body,13);
+        place(body,label("Napomena: PDF račun nije sam po sebi strukturirani "+
+            "eRačun niti potvrda fiskalizacije. Za hrvatske obveznike "+
+            "vrijede dodatne zakonske obveze razmjene i fiskalizacije.",
+            11,sub(),false));
+        gap(body,20);
+    }
+    private byte[] prepareBrandingLogo(Uri uri)throws Exception{
+        ByteArrayOutputStream buffer=new ByteArrayOutputStream();
+        try(InputStream in=getContentResolver().openInputStream(uri)){
+            if(in==null)throw new IllegalStateException("Logo nije dostupna datoteka.");
+            byte[] block=new byte[8192];int n;
+            while((n=in.read(block))!=-1){
+                if(buffer.size()+n>2_000_000)
+                    throw new IllegalArgumentException("Logotip mora biti do 2 MB.");
+                buffer.write(block,0,n);
+            }
+        }
+        byte[] original=buffer.toByteArray();
+        try{
+            android.graphics.BitmapFactory.Options bounds=
+                new android.graphics.BitmapFactory.Options();
+            bounds.inJustDecodeBounds=true;
+            android.graphics.BitmapFactory.decodeByteArray(original,0,
+                original.length,bounds);
+            if(bounds.outWidth<1||bounds.outHeight<1||
+               (long)bounds.outWidth*bounds.outHeight>24_000_000L)
+                throw new IllegalArgumentException("Dimenzije logotipa nisu podržane.");
+            int sample=1;
+            while(bounds.outWidth/sample>512||bounds.outHeight/sample>512)
+                sample*=2;
+            android.graphics.BitmapFactory.Options scaled=
+                new android.graphics.BitmapFactory.Options();
+            scaled.inSampleSize=sample;
+            android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(
+                original,0,original.length,scaled);
+            if(bitmap==null)throw new IllegalArgumentException("PNG/JPEG nije moguće učitati.");
+            try{
+                ByteArrayOutputStream output=new ByteArrayOutputStream();
+                android.graphics.Bitmap.CompressFormat format=bitmap.hasAlpha()?
+                    android.graphics.Bitmap.CompressFormat.PNG:
+                    android.graphics.Bitmap.CompressFormat.JPEG;
+                if(!bitmap.compress(format,83,output)||output.size()>180000)
+                    throw new IllegalArgumentException(
+                        "Logo je prevelik. Odaberite jednostavniji PNG ili JPEG.");
+                return output.toByteArray();
+            }finally{bitmap.recycle();}
+        }finally{Arrays.fill(original,(byte)0);}
+    }
+
     private void company(){
         setup("company",true);
         pad(body,17,14);
