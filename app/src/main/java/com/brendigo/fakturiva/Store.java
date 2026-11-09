@@ -676,8 +676,14 @@ public final class Store extends SQLiteOpenHelper {
     /** Twelve chronological monthly receipt totals, with zeroes for empty months. */
     public long[] monthlyReceipts(){return monthlyReceipts("EUR");}
     public long[] monthlyReceipts(String currency){
+        return monthlyReceipts(currency,java.util.Calendar.getInstance());
+    }
+    /** Explicit as-of month for deterministic native reference QA. The
+     *  production entrypoint above always uses the actual system month.
+     */
+    public long[] monthlyReceipts(String currency,java.util.Calendar asOf){
         long[] values=new long[12];
-        java.util.Calendar month=java.util.Calendar.getInstance();
+        java.util.Calendar month=(java.util.Calendar)asOf.clone();
         month.set(java.util.Calendar.DAY_OF_MONTH,1);
         month.add(java.util.Calendar.MONTH,-11);
         java.text.SimpleDateFormat fmt=new java.text.SimpleDateFormat("yyyy-MM",java.util.Locale.ROOT);
