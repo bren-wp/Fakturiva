@@ -27,6 +27,10 @@ try{
         gotoPage('login-pin.php');
     }
     if($mode==='register'){
+        // Only new browser registrations require an actual email address.
+        // Legacy username-based accounts remain able to sign in.
+        if(filter_var($username,FILTER_VALIDATE_EMAIL)===false)
+            throw new FakturivaSelfHost\HttpFailure(422,'Unesite ispravnu e-adresu.');
         $result=FakturivaSelfHost\webRegister($username,$pin,$ip,$passphrase);
         adoptWebLogin($result);
         flash('Račun je uspješno registriran.');
