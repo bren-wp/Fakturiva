@@ -990,8 +990,8 @@ public final class MainActivity extends Activity {
                     toast(problem.getMessage()==null?
                         "Registracija nije uspjela":problem.getMessage());
                 }finally{
-                    Arrays.fill(digits,'\\0');
-                    Arrays.fill(secret,'\\0');
+                    Arrays.fill(digits,'\0');
+                    Arrays.fill(secret,'\0');
                 }
             }));
             dialog.show();
