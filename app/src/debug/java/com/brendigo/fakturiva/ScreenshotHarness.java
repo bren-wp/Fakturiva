@@ -135,12 +135,22 @@ public final class ScreenshotHarness {
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
             case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
-            case "07":
+            case "07":{
                 call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
                 ArrayList<Store.Item> lines=(ArrayList<Store.Item>)get(a,"draftItems");
-                Store.Item item=new Store.Item();item.name="Dizajn web stranice";item.qtyMilli=1000;item.unitCents=100000;item.taxRate=25;
-                lines.add(item);
-                call(a,"editItemsScreen");break;
+                Store.Item web=new Store.Item();
+                web.name="Izrada web stranice";
+                web.unit="kom";web.qtyMilli=1000;
+                web.unitCents=60000;web.taxRate=25;
+                lines.add(web);
+                Store.Item seo=new Store.Item();
+                seo.name="SEO optimizacija";
+                seo.unit="kom";seo.qtyMilli=1000;
+                seo.unitCents=25000;seo.taxRate=25;
+                lines.add(seo);
+                call(a,"editItemsScreen");
+                break;
+            }
             case "08":{
                 // Screen 08's reference is an invoice *draft* with two lines.
                 // Use a realistic debug-only draft, never a fabricated issued
