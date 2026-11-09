@@ -918,7 +918,7 @@ public final class MainActivity extends Activity {
             InputType.TYPE_TEXT_VARIATION_PASSWORD);
         password.setMinimumHeight(dp(52));password.setSaveEnabled(false);
         if(Build.VERSION.SDK_INT>=26)
-            password.setAutofillHints(View.AUTOFILL_HINT_NEW_PASSWORD);
+            password.setAutofillHints("newPassword");
         place(body,password);gap(body,16);
         place(body,label("Ponovite lozinku",12,NAVY,true));gap(body,6);
         EditText confirm=field("Ponovno unesite lozinku","");
@@ -926,7 +926,7 @@ public final class MainActivity extends Activity {
             InputType.TYPE_TEXT_VARIATION_PASSWORD);
         confirm.setMinimumHeight(dp(52));confirm.setSaveEnabled(false);
         if(Build.VERSION.SDK_INT>=26)
-            confirm.setAutofillHints(View.AUTOFILL_HINT_NEW_PASSWORD);
+            confirm.setAutofillHints("newPassword");
         place(body,confirm);gap(body,12);
         place(body,label("Istu e-adresu i lozinku koristite na fakturiva.eu "+
             "i za oporavak na drugom uređaju.",12,MUTED,false));gap(body,22);
