@@ -32,6 +32,11 @@ public final class ScreenshotHarness {
      * below are fictional and created through production Store APIs on a
      * throwaway emulator, never through mocked views or bundled PNGs.
      */
+    private static long fixtureClient(List<Store.Client> all,String name){
+        for(Store.Client candidate:all)
+            if(name.equals(candidate.name))return candidate.id;
+        throw new IllegalStateException("Missing seeded client: "+name);
+    }
     private static void seed(Store store){
         if(store.clients().isEmpty()){
             store.setting("name","Fakturiva Demo d.o.o.");
@@ -57,7 +62,10 @@ public final class ScreenshotHarness {
             List<Store.Client> people=store.clients();
             // Oldest first; Store.documents renders actual database rows newest
             // first, as in the visual reference, without fake invoice numbering.
-            int[] clientAt={0,1,1,5,4,3,2,1};
+            String[] clientAt={"Obrt Primjer","Studio Sjever d.o.o.",
+                "Studio Sjever d.o.o.","Lana Horvat",
+                "Terra Projekt j.d.o.o.","Marin Kovač",
+                "Adria Digital d.o.o.","Studio Sjever d.o.o."};
             int[] gross={100000,67000,69000,18000,215000,32000,85000,125000};
             String[] dates={"2026-10-02","2026-10-06","2026-10-09",
                 "2026-10-15","2026-10-19","2026-10-21",
@@ -71,7 +79,7 @@ public final class ScreenshotHarness {
                 line.taxRate=25;
                 String due=i==6?"2026-11-12":"2026-12-20";
                 long invoice=store.createDraft(Store.INVOICE,
-                    people.get(clientAt[i]).id,dates[i],due,"Primjer dokumenta",
+                    fixtureClient(people,clientAt[i]),dates[i],due,"Primjer dokumenta",
                     Arrays.asList(line));
                 store.confirm(invoice);
                 if(paid[i])store.pay(invoice,gross[i],dates[i]);
@@ -79,7 +87,9 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.QUOTE).isEmpty()){
             List<Store.Client> people=store.clients();
-            int[] clientAt={4,5,3,2,1,4};
+            String[] clientAt={"Terra Projekt j.d.o.o.","Lana Horvat",
+                "Marin Kovač","Adria Digital d.o.o.",
+                "Studio Sjever d.o.o.","Terra Projekt j.d.o.o."};
             int[] gross={98000,32000,45000,87000,125000,240000};
             String[] dates={"2026-10-16","2026-10-17","2026-10-18",
                 "2026-10-21","2026-10-23","2026-10-25"};
@@ -90,7 +100,7 @@ public final class ScreenshotHarness {
                 item.unitCents=gross[i]*4L/5L;
                 item.taxRate=25;
                 long quote=store.createDraft(Store.QUOTE,
-                    people.get(clientAt[i]).id,dates[i],"2026-11-28",
+                    fixtureClient(people,clientAt[i]),dates[i],"2026-11-28",
                     "2026-11-15","Primjer ponude",
                     "Usluge digitalnog marketinga",Arrays.asList(item));
                 store.confirm(quote);
