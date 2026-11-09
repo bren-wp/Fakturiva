@@ -4510,12 +4510,7 @@ public final class MainActivity extends Activity {
         }else{
             try{
                 byte[] bytes=db.brandingLogo(currentLogo);
-                android.graphics.BitmapFactory.Options options=
-                    new android.graphics.BitmapFactory.Options();
-                options.inSampleSize=2;
-                android.graphics.Bitmap bitmap=
-                    android.graphics.BitmapFactory.decodeByteArray(
-                        bytes,0,bytes.length,options);
+                android.graphics.Bitmap bitmap=InvoiceLogoIO.thumbnail(bytes);
                 if(bitmap!=null){
                     ImageView preview=new ImageView(this);
                     preview.setImageBitmap(bitmap);
@@ -4575,54 +4570,11 @@ public final class MainActivity extends Activity {
         });
         gap(body,13);
         place(body,label("Napomena: PDF račun nije sam po sebi strukturirani "+
-            "eRačun niti potvrda fiskalizacije. Za hrvatske obveznike "+
+            "e-račun niti porezno potvrđen dokument. Za hrvatske obveznike "+
             "vrijede dodatne zakonske obveze razmjene i fiskalizacije.",
             11,sub(),false));
         gap(body,20);
     }
-    private byte[] prepareBrandingLogo(Uri uri)throws Exception{
-        ByteArrayOutputStream buffer=new ByteArrayOutputStream();
-        try(InputStream in=getContentResolver().openInputStream(uri)){
-            if(in==null)throw new IllegalStateException("Logo nije dostupna datoteka.");
-            byte[] block=new byte[8192];int n;
-            while((n=in.read(block))!=-1){
-                if(buffer.size()+n>2_000_000)
-                    throw new IllegalArgumentException("Logotip mora biti do 2 MB.");
-                buffer.write(block,0,n);
-            }
-        }
-        byte[] original=buffer.toByteArray();
-        try{
-            android.graphics.BitmapFactory.Options bounds=
-                new android.graphics.BitmapFactory.Options();
-            bounds.inJustDecodeBounds=true;
-            android.graphics.BitmapFactory.decodeByteArray(original,0,
-                original.length,bounds);
-            if(bounds.outWidth<1||bounds.outHeight<1||
-               (long)bounds.outWidth*bounds.outHeight>24_000_000L)
-                throw new IllegalArgumentException("Dimenzije logotipa nisu podržane.");
-            int sample=1;
-            while(bounds.outWidth/sample>512||bounds.outHeight/sample>512)
-                sample*=2;
-            android.graphics.BitmapFactory.Options scaled=
-                new android.graphics.BitmapFactory.Options();
-            scaled.inSampleSize=sample;
-            android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(
-                original,0,original.length,scaled);
-            if(bitmap==null)throw new IllegalArgumentException("PNG/JPEG nije moguće učitati.");
-            try{
-                ByteArrayOutputStream output=new ByteArrayOutputStream();
-                android.graphics.Bitmap.CompressFormat format=bitmap.hasAlpha()?
-                    android.graphics.Bitmap.CompressFormat.PNG:
-                    android.graphics.Bitmap.CompressFormat.JPEG;
-                if(!bitmap.compress(format,83,output)||output.size()>180000)
-                    throw new IllegalArgumentException(
-                        "Logo je prevelik. Odaberite jednostavniji PNG ili JPEG.");
-                return output.toByteArray();
-            }finally{bitmap.recycle();}
-        }finally{Arrays.fill(original,(byte)0);}
-    }
-
     private void company(){
         setup("company",true);
         pad(body,17,14);
@@ -4918,7 +4870,7 @@ public final class MainActivity extends Activity {
                    !pendingBrandProfile.equals(LocalAccounts.activeId())||
                    !pendingBrandProfile.equals(db.profileId()))
                     throw new SecurityException("Profil se promijenio, odaberite logo ponovno.");
-                byte[] image=prepareBrandingLogo(uri);
+                byte[] image=InvoiceLogoIO.prepare(this,uri);
                 try{db.saveBrandingLogo(image);}
                 finally{Arrays.fill(image,(byte)0);}
                 toast("Logo spremljen i uključit će se u nove dokumente.");
