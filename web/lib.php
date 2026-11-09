@@ -346,6 +346,21 @@ function pinMatches(array $account,string $pin): bool {
     return is_string($hash) && preg_match('/^[0-9]{4,6}$/D',$pin)===1 &&
         password_verify(webPinDigest($pin),$hash);
 }
+/** PIN-confirmed destructive and credential-changing operations are throttled too. */
+function requireSensitiveWebPin(array &$account,string $pin):void {
+    if((int)($account['web_block_until']??0)>time())
+        fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
+    if(!pinMatches($account,$pin)){
+        $n=min(20,1+(int)($account['web_attempts']??0));
+        $account['web_attempts']=$n;
+        if($n>=5)$account['web_block_until']=time()+min(3600,
+            60*(1 << min($n-5,6)));
+        writeRecord(accountPath($account['id']),$account);
+        fail(401,'Neispravan PIN');
+    }
+    $account['web_attempts']=0;
+    $account['web_block_until']=0;
+}
 function issueWebSession(array &$account): string {
     $token=bin2hex(random_bytes(32));
     // One active browser token per account. Re-login invalidates old tabs.
@@ -458,7 +473,7 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
     requirePassphrase($newPassphrase);
     transaction(function()use($id,$token,$pin,$newPassphrase):void{
         $account=webAuthorized($id,$token);
-        if(!pinMatches($account,$pin))fail(401,'Neispravan PIN');
+        requireSensitiveWebPin($account,$pin);
         $account['password_hash']=password_hash($newPassphrase,
             defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT);
         // Existing Android API sessions are invalid after password change.
@@ -469,7 +484,7 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
 function webDeleteAccount(string $id,string $token,string $pin):void {
     transaction(function()use($id,$token,$pin):void{
         $account=webAuthorized($id,$token);
-        if(!pinMatches($account,$pin))fail(401,'Neispravan PIN');
+        requireSensitiveWebPin($account,$pin);
         // Clear credentials before file deletion, so interruption
         // cannot leave a valid session for a half-removed profile.
         $account['sessions']=[];
