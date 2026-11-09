@@ -5101,7 +5101,28 @@ public final class MainActivity extends Activity {
         if(db==null){openExistingLocalAccess();return;}
         setup("eracun",true);
         pad(body,18,18);
-        toolbar("eRačuni","Integracije i status usluge",true);
+        LinearLayout navigation=horizontal();
+        navigation.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView back=icon(R.drawable.ic_back,sub());
+        back.setPadding(dp(7),dp(7),dp(7),dp(7));
+        back.setContentDescription("Natrag");
+        navigation.addView(back,lp(40,46));
+        back.setOnClickListener(v->settings());
+        LinearLayout titles=vertical();
+        place(titles,label("eRačuni",24,ink(),true));
+        gap(titles,5);
+        place(titles,label("Integracije i status usluge",12,sub(),false));
+        LinearLayout.LayoutParams titleParams=new LinearLayout.LayoutParams(0,-2,1);
+        titleParams.leftMargin=dp(7);
+        navigation.addView(titles,titleParams);
+        TextView help=label("?",20,sub(),true);
+        help.setGravity(Gravity.CENTER);
+        help.setBackground(shape(panel(),13));
+        help.setContentDescription("Upute za eRačune");
+        navigation.addView(help,lp(42,42));
+        help.setOnClickListener(v->eracunRequirements());
+        place(body,navigation);
+        gap(body,19);
         String issuer=db.setting("name").trim();
         String oib=db.setting("oib").trim();
         String address=db.setting("address").trim();
@@ -5135,12 +5156,14 @@ public final class MainActivity extends Activity {
         eracunStatusRow(section,profileComplete?"✓":"1","Profil tvrtke",
             profileComplete?"Osnovni podaci uneseni":"Unesite naziv, OIB i adresu",
             profileComplete,()->company());
-        View d1=new View(this);d1.setBackgroundColor(border());place(section,d1);
+        View d1=new View(this);d1.setBackgroundColor(border());
+        section.addView(d1,lp(-1,1));
         eracunStatusRow(section,"2","Informacijski posrednik",
             mediator.isEmpty()?"Odaberite i povežite pružatelja":
                 mediator+" · povezivanje nije potvrđeno",
             false,this::eracunMediatorSettings);
-        View d2=new View(this);d2.setBackgroundColor(border());place(section,d2);
+        View d2=new View(this);d2.setBackgroundColor(border());
+        section.addView(d2,lp(-1,1));
         eracunStatusRow(section,"3","Ovlaštenja i testiranje",
             "Provjera prije stvarnog slanja",false,this::eracunRequirements);
         place(body,section);gap(body,15);
