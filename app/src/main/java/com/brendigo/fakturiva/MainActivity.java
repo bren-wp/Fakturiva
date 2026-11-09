@@ -343,7 +343,7 @@ public final class MainActivity extends Activity {
                 }catch(Exception e){home();}
                 break;
             case "local_accounts":case "self_host":case "privacy":settings();break;
-            case "invoice_appearance":case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":
+            case "invoice_appearance":case "hr_tax":case "catalog":case "reports":case "payments":case "company":case "guide":case "eracun":
             case "backup":case "about":case "support":settings();break;
             default:home();
         }
@@ -512,6 +512,7 @@ public final class MainActivity extends Activity {
             case "settings":settings();break;
             case "company":company();break;
             case "guide":guide();break;
+            case "eracun":eracunScreen();break;
             default:home();
         }
     }
@@ -4295,6 +4296,8 @@ public final class MainActivity extends Activity {
         settingRow(options,"◈","Dizajn računa i vlastiti logo",
             "Četiri izgleda · boja · vaš logo ili Fakturiva",
             this::invoiceAppearance);
+        settingRow(options,"⇄","eRačuni i fiskalizacija",
+            "Integracije · status povezivanja",this::eracunScreen);
         settingRow(options,"?","Pomoć i upute",
             "Računi, ponude i načini rada",this::guide);
         settingRow(options,"☁","Pohrana na serveru i oporavak",
@@ -5082,6 +5085,148 @@ public final class MainActivity extends Activity {
         gap(body,16);
     }
     /** Guidance to create an invoice or quote without obsolete integrations. */
+    /**
+     * The owner's reference #17 describes an onboarding/status view, not a
+     * completed government eInvoice connection. Keep every action functional,
+     * but never present a chosen mediator as a successful certified link.
+     */
+    private void eracunScreen(){
+        if(db==null){openExistingLocalAccess();return;}
+        setup("eracun",true);
+        pad(body,18,18);
+        toolbar("eRačuni","Integracije i status usluge",true);
+        String issuer=db.setting("name").trim();
+        String oib=db.setting("oib").trim();
+        String address=db.setting("address").trim();
+        boolean profileComplete=!issuer.isEmpty()&&Oib.valid(oib)&&!address.isEmpty();
+        String mediator=db.setting("eracun_mediator_name").trim();
+
+        LinearLayout hero=vertical();
+        hero.setGravity(Gravity.CENTER);
+        pad(hero,18,21);
+        hero.setBackground(shape(dark?0xff253451:0xffe9edff,20));
+        TextView symbol=label("⇄",35,BLUE,true);
+        symbol.setGravity(Gravity.CENTER);
+        symbol.setBackground(shape(panel(),17));
+        hero.addView(symbol,lp(70,70));gap(hero,12);
+        TextView heading=label("eRačuni i fiskalizacija",20,ink(),true);
+        heading.setGravity(Gravity.CENTER);place(hero,heading);gap(hero,9);
+        TextView intro=label(
+            "Pripremite aplikaciju za elektroničku razmjenu i fiskalizaciju računa.",
+            12,sub(),false);
+        intro.setGravity(Gravity.CENTER);place(hero,intro);gap(hero,16);
+        TextView state=label("Povezivanje potrebno",11,0xffae6b00,true);
+        state.setPadding(dp(10),dp(5),dp(10),dp(5));
+        state.setBackground(shape(dark?0xff56472a:0xffffefd2,15));
+        LinearLayout.LayoutParams statusLp=lp(-2,-2);
+        statusLp.gravity=Gravity.CENTER_HORIZONTAL;
+        hero.addView(state,statusLp);
+        place(body,hero);gap(body,15);
+
+        LinearLayout section=card();pad(section,15,13);
+        place(section,label("Status integracije",15,ink(),true));gap(section,14);
+        eracunStatusRow(section,profileComplete?"✓":"1","Profil tvrtke",
+            profileComplete?"Osnovni podaci uneseni":"Unesite naziv, OIB i adresu",
+            profileComplete,()->company());
+        View d1=new View(this);d1.setBackgroundColor(border());place(section,d1);
+        eracunStatusRow(section,"2","Informacijski posrednik",
+            mediator.isEmpty()?"Odaberite i povežite pružatelja":
+                mediator+" · povezivanje nije potvrđeno",
+            false,this::eracunMediatorSettings);
+        View d2=new View(this);d2.setBackgroundColor(border());place(section,d2);
+        eracunStatusRow(section,"3","Ovlaštenja i testiranje",
+            "Provjera prije stvarnog slanja",false,this::eracunRequirements);
+        place(body,section);gap(body,15);
+
+        LinearLayout notice=vertical();pad(notice,17,16);
+        notice.setBackground(shape(dark?0xff263853:0xffeef2ff,18));
+        place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,8);
+        place(notice,label(
+            "PDF datoteka nije strukturirani eRačun. Za razmjenu je potrebna "+
+            "odgovarajuća integracija i provjera ovlaštenja. Ovaj zaslon ne "+
+            "potvrđuje aktivnu fiskalizaciju ni slanje eRačuna.",
+            11,sub(),false));
+        place(body,notice);gap(body,14);
+        TextView configure=action("⚙  Postavke integracije",BLUE,true,
+            this::eracunMediatorSettings);
+        place(body,configure);
+        gap(body,18);
+    }
+
+    private void eracunStatusRow(LinearLayout parent,String indicator,
+            String heading,String subtitle,boolean checked,Runnable onClick){
+        LinearLayout row=horizontal();
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        pad(row,2,12);
+        TextView step=label(indicator,13,
+            checked?0xff078a65:sub(),true);
+        step.setGravity(Gravity.CENTER);
+        step.setBackground(shape(checked?
+            (dark?0xff274f44:0xffdcf8ec):(dark?0xff26344c:0xffeef1f7),13));
+        row.addView(step,lp(34,34));
+        LinearLayout detail=vertical();
+        LinearLayout.LayoutParams detailLp=new LinearLayout.LayoutParams(0,-2,1);
+        detailLp.leftMargin=dp(10);
+        row.addView(detail,detailLp);
+        place(detail,label(heading,12,ink(),true));gap(detail,4);
+        TextView explanation=label(subtitle,10,sub(),false);
+        explanation.setMaxLines(2);place(detail,explanation);
+        TextView arrow=label("›",24,sub(),false);
+        arrow.setGravity(Gravity.CENTER);row.addView(arrow,lp(28,40));
+        row.setFocusable(true);
+        row.setContentDescription(heading+". "+subtitle);
+        row.setOnClickListener(v->onClick.run());
+        place(parent,row);
+    }
+
+    /** Only provider identification is stored locally and mirrored securely.
+     *  Never collect or persist a service credential in company settings.
+     */
+    private void eracunMediatorSettings(){
+        if(db==null){openExistingLocalAccess();return;}
+        LinearLayout form=vertical();pad(form,18,10);
+        EditText provider=field("Naziv informacijskog posrednika",
+            db.setting("eracun_mediator_name"));
+        fieldLabel(form,"Odabrani pružatelj (bez lozinki i API ključeva)",provider);
+        gap(form,14);
+        place(form,label(
+            "Unos naziva posrednika nije povezivanje. Aktivno slanje i "+
+            "fiskalizacija zahtijevaju zasebnu, ovlaštenu integraciju.",
+            12,sub(),false));
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle("Postavke eRačuna")
+            .setView(form)
+            .setNegativeButton("Odustani",null)
+            .setNeutralButton("Uvjeti i provjera",(d,which)->eracunRequirements())
+            .setPositiveButton("Spremi naziv",null)
+            .create();
+        dialog.setOnShowListener(v->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            .setOnClickListener(w->{
+                try{
+                    String value=provider.getText().toString().trim();
+                    if(value.length()>120||value.contains("\n")||value.contains("\r"))
+                        throw new IllegalArgumentException("Neispravan naziv posrednika.");
+                    db.setting("eracun_mediator_name",value);
+                    dialog.dismiss();eracunScreen();
+                }catch(Exception e){error(e);}
+            }));
+        dialog.show();
+    }
+
+    private void eracunRequirements(){
+        new AlertDialog.Builder(this)
+            .setTitle("eRačuni — ovlaštenja i testiranje")
+            .setMessage("Provjerite valjan OIB i identitet izdavatelja, "+
+                "ugovor s ovlaštenim informacijskim posrednikom, "+
+                "pristup produkcijskom servisu, certifikate i rezultate "+
+                "integracijskih testova. Fakturiva zasad ne šalje "+
+                "strukturirane eRačune niti automatski fiskalizira "+
+                "dokumente bez verificirane produkcijske integracije.")
+            .setNegativeButton("Zatvori",null)
+            .setPositiveButton("Profil tvrtke",(d,which)->company())
+            .show();
+    }
+
     private void guide(){
         setup("guide",true);
         toolbar("Pomoć","Računi, ponude i osnovne radnje",true);
