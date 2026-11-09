@@ -24,6 +24,7 @@ curl -fsS -b "$jar" -c "$jar" "$base/register.php" > "$temp/register.html"
 grep -Fq 'Kreirajte novi račun i započnite s poslovanjem.' "$temp/register.html"
 ! grep -Fq 'name="pin"' "$temp/register.html"
 grep -Fq 'name="passphrase"' "$temp/register.html"
+grep -Fq 'name="confirm_passphrase"' "$temp/register.html"
 csrf="$(extract_csrf "$temp/register.html")"
 test "$(printf '%s' "$csrf" | wc -c)" -eq 64
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
