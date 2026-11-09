@@ -22,12 +22,13 @@ public final class QuoteOverviewTest extends FakturivaTestCase {
             quote(Store.QUOTE,Store.SENT,"2026-11-15",240000),
             quote(Store.QUOTE,Store.SENT,"2026-11-01",125000),
             quote(Store.QUOTE,Store.SENT,"2026-10-31",87000),
+            quote(Store.QUOTE,Store.ACCEPTED,"2026-11-15",40000),
             quote(Store.QUOTE,Store.DRAFT,"2026-12-20",999000),
             quote(Store.QUOTE,Store.VOID,"2026-11-15",900000),
             quote(Store.INVOICE,Store.ISSUED,"2026-11-15",300000)
         ),"2026-11-01");
-        assertEquals(2L,totals[0]);
-        assertEquals(365000L,totals[1]);
+        assertEquals(3L,totals[0]);
+        assertEquals(405000L,totals[1]);
     }
 
     @Test
