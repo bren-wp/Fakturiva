@@ -1573,6 +1573,11 @@ public final class MainActivity extends Activity {
     }
     private void home(){
         setup("home",true);
+        // Only the isolated debug screenshot action receives the date of the
+        // owner's 2026-10-27 reference. Production always uses real time.
+        Calendar displayClock=Calendar.getInstance();
+        if(runScreenshotModeOnly() && qaReferenceCroatian)
+            displayClock.set(2026,Calendar.OCTOBER,27,9,41,0);
         // The reference dashboard uses a 22 dp gutter on 393 dp phones.
         // Keep all dashboard figures sourced from the local SQLite database.
         // Reference Home gutter is 18dp at 393dp; rows remain width-adaptive.
@@ -1610,10 +1615,10 @@ public final class MainActivity extends Activity {
         LinearLayout welcome=horizontal();welcome.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout words=vertical();
         SimpleDateFormat fullDate=new SimpleDateFormat("EEEE, d. MMMM",Locale.forLanguageTag("hr-HR"));
-        words.addView(label(fullDate.format(new java.util.Date())
+        words.addView(label(fullDate.format(displayClock.getTime())
             .toUpperCase(Locale.forLanguageTag("hr-HR")),11,0xff6A81A5,true));
         gap(words,5);
-        int hour=Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int hour=displayClock.get(Calendar.HOUR_OF_DAY);
         words.addView(label((hour<11?"Dobro jutro":hour<18?"Dobar dan":"Dobra večer")+"! 👋",
             22,ink(),true));
         gap(words,5);
@@ -1634,7 +1639,7 @@ public final class MainActivity extends Activity {
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
-        long[] monthly=db.monthlyReceipts(selectedCurrency());
+        long[] monthly=db.monthlyReceipts(selectedCurrency(),displayClock);
         LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
         heading.addView(label("Naplaćeno ovaj mjesec",12,0xffcedbf2,false),
             new LinearLayout.LayoutParams(0,-2,1));
@@ -1653,11 +1658,11 @@ public final class MainActivity extends Activity {
         hero.addView(label(money(monthly[11]),31,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
-        hero.addView(new RevenueLine(this),lp(-1,43));
+        hero.addView(new RevenueLine(this,displayClock),lp(-1,43));
         place(body,hero);gap(body,dark?10:16);
 
         LinearLayout stats=horizontal();
-        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(new java.util.Date());
+        String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(displayClock.getTime());
         metric(stats,"Računi",String.valueOf(db.countMonth(Store.INVOICE,month)),"▤",BLUE);
         metric(stats,"Ponude",String.valueOf(db.countMonth(Store.QUOTE,month)),"▣",TEAL);
         place(body,stats);
@@ -5574,9 +5579,9 @@ public final class MainActivity extends Activity {
     private final class RevenueLine extends View{
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
         private final long[] cumulative;
-        RevenueLine(android.content.Context context){
+        RevenueLine(android.content.Context context,Calendar selectedMonth){
             super(context);
-            Calendar calendar=Calendar.getInstance();
+            Calendar calendar=(Calendar)selectedMonth.clone();
             String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(calendar.getTime());
             cumulative=ReceiptsChart.cumulative(
                 paymentsForCurrency(db.payments(),selectedCurrency()),month,
