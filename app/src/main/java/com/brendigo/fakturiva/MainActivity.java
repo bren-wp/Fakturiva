@@ -3498,6 +3498,20 @@ public final class MainActivity extends Activity {
         paidTax.setInputType(InputType.TYPE_CLASS_NUMBER|
             InputType.TYPE_NUMBER_FLAG_DECIMAL);
         fieldLabel(period,"Već uplaćeni paušalni porez (EUR, ručni unos)",paidTax);
+        java.util.TreeSet<String> uniqueUnits=new java.util.TreeSet<>();
+        for(Store.Payment item:db.payments())
+            uniqueUnits.add(item.businessUnit==null||item.businessUnit.isEmpty()?
+                "PP1":item.businessUnit);
+        if(uniqueUnits.isEmpty())uniqueUnits.add("PP1");
+        ArrayList<String> unitChoices=new ArrayList<>();unitChoices.add("SVE");
+        unitChoices.addAll(uniqueUnits);
+        Spinner unit=new Spinner(this);
+        unit.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,unitChoices));
+        if(uniqueUnits.size()==1)unit.setSelection(1);
+        place(period,label("Poslovna jedinica za KPR (za više jedinica odaberite jednu)",
+            12,ink(),true));gap(period,5);
+        place(period,unit);gap(period,10);
         place(period,label("Uplaćeni porez provjerite u poreznoj knjigovodstvenoj "+
             "kartici. Mjeseci rada izračunavaju se iz odabranog "+
             "kontinuiranog razdoblja. Više prekida ili zajednička djelatnost "+
@@ -3536,8 +3550,12 @@ public final class MainActivity extends Activity {
         button(body,"Preuzmi Knjigu prometa (PDF)",()->{
             try{
                 save.run();
+                String selectedUnit=unitChoices.get(unit.getSelectedItemPosition());
+                if(uniqueUnits.size()>1&&"SVE".equals(selectedUnit))
+                    throw new IllegalArgumentException("KPR se vodi po poslovnoj jedinici. "+
+                        "Odaberite jedinicu; PO-SD i dalje zbraja sve primitke.");
                 CroatianTaxReports.Book book=CroatianTaxReports.book(db,
-                    from.getText().toString(),to.getText().toString(),"SVE");
+                    from.getText().toString(),to.getText().toString(),selectedUnit);
                 pendingHrProfile=LocalAccounts.activeId();
                 pendingHrBook=book;pendingHrBusiness=CroatianTaxReports.business(db);
                 pendingHrPosd=null;
