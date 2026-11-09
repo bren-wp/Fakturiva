@@ -1218,9 +1218,48 @@ public final class MainActivity extends Activity {
         place(info,label(CloudMirror.status(this,LocalAccounts.activeId()),
             12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
         place(body,info);gap(body,15);
-        secondary(body,"Provjeri server i pošalji promjene",()->{
+        secondary(body,"Pošalji lokalne promjene na web",()->{
             CloudMirror.runPending(this,LocalAccounts.activeId());
-            toast("Provjera sinkronizacije pokrenuta.");
+            toast("Prijenos je pokrenut; provjerite potvrdu servera.");
+        });
+        gap(body,12);
+        secondary(body,"Preuzmi novije podatke s weba",()->{
+            String profile=LocalAccounts.activeId();
+            if(selfHostedBusy||profile==null||!CloudMirror.enabled(this,profile)){
+                toast("Najprije povežite korisnički račun s fakturiva.eu.");
+                return;
+            }
+            new AlertDialog.Builder(this)
+                .setTitle("Obnova najnovijih podataka")
+                .setMessage("Ako je na serveru novija kopija, trenutni podatci "+
+                    "bit će sačuvani u lokalnoj rezervnoj kopiji prije obnove. "+
+                    "Neprenesene promjene neće se prepisati. Nastaviti?")
+                .setNegativeButton("Odustani",null)
+                .setPositiveButton("Provjeri i preuzmi",(d,which)->{
+                    selfHostedBusy=true;
+                    AlertDialog progress=new AlertDialog.Builder(this)
+                        .setTitle("Povezivanje s Fakturivom")
+                        .setMessage("Provjera šifrirane kopije na serveru...")
+                        .setCancelable(false).create();
+                    progress.show();
+                    CloudMirror.pullNewer(this,profile,(error,updated)->{
+                        progress.dismiss();
+                        selfHostedBusy=false;
+                        if(!profile.equals(LocalAccounts.activeId()))return;
+                        if(error!=null){toast(error);localAccountSettings();return;}
+                        if(updated){
+                            try{
+                                if(db!=null)db.close();
+                                db=new Store(this,profile);
+                                toast("Najnoviji podatci preuzeti su s weba.");
+                                home();
+                            }catch(Exception e){accountStorageError(e);}
+                        }else{
+                            toast("Lokalni podatci već su ažurni.");
+                            localAccountSettings();
+                        }
+                    });
+                }).show();
         });
         gap(body,12);
         button(body,"Odjava s uređaja",()->new AlertDialog.Builder(this)
