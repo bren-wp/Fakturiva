@@ -173,6 +173,35 @@ public final class CloudMirror {
             if(callback!=null)MAIN.post(()->callback.completed(result));
         });
     }
+    /**
+     * Bind a freshly verified server snapshot to a local offline profile.
+     * Unlike enable(), this must NOT mark a clean, just-restored snapshot as
+     * pending or overwrite it with a different local database.
+     */
+    static void connectAcknowledged(Context ctx, String id, String endpoint,
+                                    String username, char[] password, int revision)
+                                    throws Exception {
+        if (!LocalAccounts.validProfileId(id) || revision < 1 ||
+            password == null || password.length < 12)
+            throw new IllegalArgumentException("Neispravna potvrda servera");
+        String url = SelfHostedSyncClient.apiUrl(endpoint);
+        String encrypted = seal(password);
+        SharedPreferences.Editor editor = state(ctx, id).edit();
+        editor.putBoolean("enabled", true)
+            .putString("api", url)
+            .putString("username", username.trim())
+            .putString("sealed_password", encrypted)
+            .putInt("revision", revision)
+            .putBoolean("dirty", false)
+            .putBoolean("conflict", false)
+            .putBoolean("paused", false)
+            .remove("last_error")
+            .remove("pending_change")
+            .putLong("synced_at", System.currentTimeMillis());
+        if (!editor.commit())
+            throw new IllegalStateException("Povezivanje s hostingom nije potvrđeno");
+    }
+
     public static void changed(Context ctx,String id){
         if(!enabled(ctx,id))return;
         SharedPreferences pref=state(ctx,id);
