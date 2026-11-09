@@ -4652,6 +4652,25 @@ public final class MainActivity extends Activity {
         // Align the first business form with the reference. Preserve the
         // immutable-issuer disclosure below the editable sections.
         place(body,hero);gap(body,18);
+        LinearLayout legalChoice=card();
+        place(legalChoice,label("Država i oblik poslovanja",17,ink(),true));
+        gap(legalChoice,10);
+        Spinner countrySelector=new Spinner(this);
+        countrySelector.setAdapter(new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item,BusinessProfileRules.COUNTRIES));
+        String previousCountry=BusinessProfileRules.country(db.setting("country"));
+        for(int i=0;i<BusinessProfileRules.COUNTRY_CODES.length;i++)
+            if(BusinessProfileRules.COUNTRY_CODES[i].equals(previousCountry))
+                countrySelector.setSelection(i);
+        place(legalChoice,countrySelector);gap(legalChoice,12);
+        Spinner formSelector=new Spinner(this);
+        place(legalChoice,label("Pravni oblik",12,ink(),true));gap(legalChoice,6);
+        place(legalChoice,formSelector);
+        gap(legalChoice,10);
+        place(legalChoice,label("Prikazat će se polja relevantna za odabranu "+
+            "državu i pravni oblik. Posebne porezne obveze i podaci "+
+            "fiskalizacije provjeravaju se zasebno.",12,sub(),false));
+        place(body,legalChoice);gap(body,14);
         LinearLayout form=card();
         place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note",
@@ -4666,6 +4685,7 @@ public final class MainActivity extends Activity {
             "Contact person","Bank account number (non-IBAN)","Bank routing number / ABA",
             "Sort code / branch code","Bank address","Purchase order / invoice reference"};
         EditText[] fields=new EditText[keys.length];
+        LinearLayout[] fieldBlocks=new LinearLayout[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
         int[][] sections={{0,19,20,1,3,24,6,7,8,28},
             {10,11,12,16,17,26,29,30,31,32},
@@ -4678,6 +4698,8 @@ public final class MainActivity extends Activity {
                 gap(card,12);
             }
             for(int index:sections[group]){
+                LinearLayout fieldBlock=vertical();
+                fieldBlocks[index]=fieldBlock;
                 fields[index]=field(labels[index],db.setting(keys[index]));
                 if(index==7){
                     fields[index].setInputType(InputType.TYPE_CLASS_TEXT|
@@ -4697,7 +4719,7 @@ public final class MainActivity extends Activity {
                 // order. Sensitive value toggles share the label's line.
                 fields[index].setPadding(dp(14),dp(9),dp(14),dp(9));
                 fields[index].setMinimumHeight(dp(47));
-                gap(card,index==sections[group][0]?5:10);
+                gap(fieldBlock,index==sections[group][0]?5:10);
                 LinearLayout fieldHeading=horizontal();
                 fieldHeading.setGravity(Gravity.CENTER_VERTICAL);
                 TextView fieldName=label(labels[index],12,ink(),true);
@@ -4720,14 +4742,89 @@ public final class MainActivity extends Activity {
                     });
                     fieldHeading.addView(reveal);
                 }
-                place(card,fieldHeading);
-                gap(card,5);
-                place(card,fields[index]);
+                place(fieldBlock,fieldHeading);
+                gap(fieldBlock,5);
+                place(fieldBlock,fields[index]);
+                place(card,fieldBlock);
             }
             if(group==0)place(body,form);
             else place(body,card);
             gap(body,14);
         }
+        EditText nkdCode=field("NKD 2025 — npr. 62.10.0",db.setting("nkd_code"));
+        LinearLayout nkdGroup=card();
+        place(nkdGroup,label("NKD 2025 — djelatnost",15,ink(),true));
+        gap(nkdGroup,8);
+        place(nkdGroup,nkdCode);
+        gap(nkdGroup,8);
+        place(nkdGroup,label("Šifra se provjerava prema službenoj "+
+            "klasifikaciji. Za buduće e-račune mogu biti potrebne i KPD "+
+            "šifre proizvoda i usluga.",11,sub(),false));
+        place(body,nkdGroup);gap(body,14);
+        EditText register=field("Oznaka naplatnog uređaja",db.setting("cash_register"));
+        LinearLayout cashierGroup=card();
+        place(cashierGroup,label("Oznaka blagajne ili naplatnog uređaja",
+            15,ink(),true));
+        gap(cashierGroup,8);place(cashierGroup,register);
+        place(body,cashierGroup);gap(body,14);
+        final ArrayList<Integer> visibleForms=new ArrayList<>();
+        final String initialForm=BusinessProfileRules.form(db.setting("legal_form"));
+        final boolean[] initialized={false};
+        Runnable refreshFields=()->{
+            String chosenCountry=BusinessProfileRules.COUNTRY_CODES[
+                countrySelector.getSelectedItemPosition()];
+            if(formSelector.getSelectedItemPosition()<0||
+               formSelector.getSelectedItemPosition()>=visibleForms.size())return;
+            String chosenForm=BusinessProfileRules.FORM_CODES[
+                visibleForms.get(formSelector.getSelectedItemPosition())];
+            for(int i=0;i<keys.length;i++){
+                boolean shown=BusinessProfileRules.visible(chosenCountry,chosenForm,keys[i]);
+                fieldBlocks[i].setVisibility(shown?View.VISIBLE:View.GONE);
+                if(shown && BusinessProfileRules.required(chosenCountry,chosenForm,
+                    keys[i],false))fields[i].setHint(labels[i]+" *");
+            }
+            nkdGroup.setVisibility("HR".equals(chosenCountry)?View.VISIBLE:View.GONE);
+            cashierGroup.setVisibility("HR".equals(chosenCountry)?View.VISIBLE:View.GONE);
+            fields[6].setText(chosenCountry);
+            fields[19].setText(chosenForm);
+        };
+        Runnable resetForms=()->{
+            String chosen=BusinessProfileRules.COUNTRY_CODES[
+                countrySelector.getSelectedItemPosition()];
+            visibleForms.clear();
+            ArrayList<String> names=new ArrayList<>();
+            for(int i=0;i<BusinessProfileRules.FORM_CODES.length;i++){
+                String home=BusinessProfileRules.compatibleCountry(
+                    BusinessProfileRules.FORM_CODES[i]);
+                if(home.equals(chosen)||"OTHER".equals(home)){
+                    visibleForms.add(i);names.add(BusinessProfileRules.FORMS[i]);
+                }
+            }
+            formSelector.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item,names));
+            int index=0;
+            if(!initialized[0]){
+                for(int i=0;i<visibleForms.size();i++)
+                    if(BusinessProfileRules.FORM_CODES[visibleForms.get(i)]
+                        .equals(initialForm))index=i;
+                initialized[0]=true;
+            }
+            formSelector.setSelection(index);
+            refreshFields.run();
+        };
+        formSelector.setOnItemSelectedListener(
+            new android.widget.AdapterView.OnItemSelectedListener(){
+                @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                    View view,int position,long id){refreshFields.run();}
+                @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            });
+        countrySelector.setOnItemSelectedListener(
+            new android.widget.AdapterView.OnItemSelectedListener(){
+                @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                    View view,int position,long id){resetForms.run();}
+                @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            });
+        resetForms.run();
         Runnable saveCompany=()->{
             try{
                 String name=fields[0].getText().toString().trim();
@@ -4735,11 +4832,22 @@ public final class MainActivity extends Activity {
                 String iban=fields[10].getText().toString().trim();
                 if(name.isEmpty())throw new IllegalArgumentException("Enter a legal business name");
                 if(oib.length()>40)throw new IllegalArgumentException("Porezni broj može imati najviše 40 znakova");
-                if(!iban.isEmpty()&&!Iban.valid(iban))throw new IllegalArgumentException("IBAN nije valjan");
+                if(!iban.isEmpty()&&!Iban.valid(iban))
+                    throw new IllegalArgumentException("IBAN nije valjan");
                 String[] vals=new String[keys.length];
-                for(int i=0;i<keys.length;i++)vals[i]=fields[i].getText().toString().trim();
+                for(int i=0;i<keys.length;i++)
+                    vals[i]=fields[i].getText().toString().trim();
+                java.util.HashMap<String,String> values=new java.util.HashMap<>();
+                for(int i=0;i<keys.length;i++)values.put(keys[i],vals[i]);
+                values.put("nkd_code",nkdCode.getText().toString().trim());
+                BusinessProfileRules.validate(values.get("country"),
+                    values.get("legal_form"),values,false);
                 db.companySettings(keys,vals);
-                toast("Company details saved");settings();
+                if("HR".equals(values.get("country"))){
+                    db.setting("nkd_code",values.get("nkd_code"));
+                    db.setting("cash_register",register.getText().toString().trim());
+                }
+                toast("Podatci izdavatelja su spremljeni.");settings();
             }catch(Exception e){error(e);}
         };
         gap(body,8);
