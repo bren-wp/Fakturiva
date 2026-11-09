@@ -1,0 +1,160 @@
+name: Fakturiva PR27 preview candidate release
+on:
+  push:
+    branches: [feat/server-accounts-admin-compliance-win-2026]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  android:
+    if: contains(github.event.head_commit.message, '[release-preview]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Install Android SDK
+        run: |
+          SDK="$ANDROID_HOME"
+          MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          "$MANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build all APK and AAB candidates and lint
+        run: |
+          gradle :app:assembleDebug :app:assembleDemo :app:bundleDebug :app:bundleRelease :app:lintDebug :app:lintDemo --stacktrace
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/apk/demo/app-demo.apk
+          test -s app/build/outputs/bundle/debug/app-debug.aab
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test ! -e app/src/main/java/com/brendigo/fakturiva/DemoSeeder.java
+          jarsigner -verify app/build/outputs/bundle/debug/app-debug.aab
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify app/build/outputs/apk/demo/app-demo.apk
+      - name: Package Android builds
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk out/Fakturiva-debug.apk
+          cp app/build/outputs/apk/demo/app-demo.apk out/Fakturiva-demo.apk
+          cp app/build/outputs/bundle/debug/app-debug.aab out/Fakturiva-DEBUG-SIGNED.aab
+          cp app/build/outputs/bundle/release/app-release.aab out/Fakturiva-UNSIGNED.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fakturiva-android-candidate
+          path: out/*
+          if-no-files-found: error
+
+  windows:
+    if: contains(github.event.head_commit.message, '[release-preview]')
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish Windows portable
+        shell: pwsh
+        run: |
+          dotnet restore win/Fakturiva.Win.csproj
+          dotnet publish win/Fakturiva.Win.csproj -c Release -r win-x64 --self-contained true -o win/publish
+          if (!(Test-Path win/publish/Fakturiva.exe)) { throw "Missing Fakturiva.exe" }
+          New-Item -ItemType Directory out -Force | Out-Null
+          Copy-Item win/publish/Fakturiva.exe out/Fakturiva-portable.exe
+          Compress-Archive -Path win/publish/* -DestinationPath out/Fakturiva-portable-complete.zip -Force
+      - name: Build setup.exe
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $compiler = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $compiler)) { throw "Inno Setup missing" }
+          Push-Location win
+          try {
+            & $compiler installer.iss
+            if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+          } finally { Pop-Location }
+          if (!(Test-Path win/build/Fakturiva-setup.exe)) { throw "Missing setup.exe" }
+          Copy-Item win/build/Fakturiva-setup.exe out/Fakturiva-setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fakturiva-windows-candidate
+          path: out/*
+          if-no-files-found: error
+
+  publish:
+    if: contains(github.event.head_commit.message, '[release-preview]')
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: fakturiva-android-candidate
+          path: out/android
+      - uses: actions/download-artifact@v4
+        with:
+          name: fakturiva-windows-candidate
+          path: out/windows
+      - name: Verify latest Android, Web, Windows and responsive CI passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=50")"
+            pending=0
+            while IFS= read -r name; do
+              test -n "$name" || continue
+              result="$(jq -r --arg n "$name" --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.name == $n and .head_sha == $sha)] | .[0].conclusion // "pending"' <<< "$json")"
+              echo "$name: $result"
+              case "$result" in
+                success) ;;
+                failure|cancelled|timed_out|action_required) exit 1 ;;
+                *) pending=1 ;;
+              esac
+            done <<'REQUIRED'
+          Android verification
+          Verify native Android screens
+          Responsive Android screen matrix
+          Self-hosted Fakturiva JSON API security smoke
+          Fakturiva Windows preview build
+          REQUIRED
+            if test "$pending" -eq 0; then exit 0; fi
+            sleep 25
+          done
+          echo "::error::Not all five required workflows completed successfully."
+          exit 1
+      - name: Package all source and preview assets
+        run: |
+          mkdir -p release-assets
+          cp out/android/* release-assets/
+          cp out/windows/* release-assets/
+          git archive --format=zip --output=release-assets/Fakturiva-v0.18.0-preview.1-source.zip HEAD
+          (cd web && zip -q -r ../release-assets/Fakturiva-v0.18.0-preview.1-web.zip . -x '*/secret.php' '*/.env' '*/storage/data/accounts/*' '*/storage/data/sessions/*' '*.log')
+          (cd release-assets && sha256sum *.apk *.aab *.zip *.exe > SHA256SUMS.txt)
+          cat > release-notes.md <<'NOTES'
+          Fakturiva v0.18.0-preview.1 — razvojno izdanje (nije produkcijski certificirano).
+
+          Android: debug-signed QA APK, zasebni DEMO APK (demo@fakturiva.test / PIN 123456, samo sintetički podatci), debug-signed test AAB i nepotpisani release AAB.
+          Windows: setup.exe i portable-complete.zip za probu, te portable.exe koji može zahtijevati WebView2 Runtime i pomoćne datoteke iz kompletnog ZIP-a.
+          Priložen je puni izvorni kod i zasebna PHP/JSON web skripta.
+
+          NEMA produkcijskog Google Play potpisa, potvrđene fiskalizacije 1.0/2.0 ni službenog PO-SD XML uvoza. Zakonski obrasci i pohrana zahtijevaju dodatne provjere i server backup.
+          NOTES
+      - name: Publish immutable preview GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.18.0-preview.1 >/dev/null 2>&1; then
+            echo "::error::Release tag already exists."
+            exit 1
+          fi
+          gh release create v0.18.0-preview.1 release-assets/* \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Fakturiva v0.18.0 — pregledno izdanje" \
+            --notes-file release-notes.md
