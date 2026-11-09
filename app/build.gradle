@@ -2,6 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.brendigo.fakturiva'
     compileSdk 36
+    buildFeatures { buildConfig true }
     useLibrary "android.test.base"
     useLibrary "android.test.runner"
     defaultConfig {
