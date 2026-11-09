@@ -120,7 +120,7 @@ zakonski KPR izvezite PDF u Android aplikaciji.</p><?php endif;?>
 <?php if(count($overview['invoices'])>200):?><p>Prikazano prvih 200
 računa. Cjelovita arhiva ostaje u šifriranoj kopiji.</p><?php endif;?>
 <button class="secondary print-button" type="button" data-print-finance>
-<icon aria-hidden="true">▤</icon> Ispiši ili spremi pregled u PDF</button>
+<span aria-hidden="true">▤</span> Ispiši ili spremi pregled u PDF</button>
 </section>
 <?php endif;?>
 <nav class="account-links" aria-label="Navigacija">
