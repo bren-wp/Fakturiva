@@ -60,6 +60,37 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.INVOICE).isEmpty()){
             List<Store.Client> people=store.clients();
+            // Historical receipts make the October 27 dashboard reference
+            // reproducible, but only inside a throwaway debug emulator.
+            Store.Item previous=new Store.Item();
+            previous.name="Usluge prethodnog mjeseca";
+            previous.qtyMilli=1000;previous.unitCents=597200;
+            previous.taxRate=25;
+            long september=store.createDraft(Store.INVOICE,
+                fixtureClient(people,"Obrt Primjer"),
+                "2026-09-20","2026-09-30","Ranije usluge",
+                Arrays.asList(previous));
+            store.confirm(september);
+            store.pay(september,746500,"2026-09-20");
+            // Fifteen earlier October records + eight visible reference rows
+            // produce 24 invoices, and confirmed October receipts total
+            // €8,420 (rather than hardcoding a KPI into the native UI).
+            for(int i=0;i<15;i++){
+                long gross=i<14?35000:77000;
+                Store.Item prior=new Store.Item();
+                prior.name="Usluge listopada";
+                prior.qtyMilli=1000;
+                prior.unitCents=gross*4/5;
+                prior.taxRate=25;
+                String paidAt=String.format(java.util.Locale.ROOT,
+                    "2026-10-%02d",2+i);
+                long id=store.createDraft(Store.INVOICE,
+                    fixtureClient(people,"Obrt Primjer"),
+                    paidAt,"2026-12-20","Raniji račun",
+                    Arrays.asList(prior));
+                store.confirm(id);
+                store.pay(id,gross,paidAt);
+            }
             // Oldest first; Store.documents renders actual database rows newest
             // first, as in the visual reference, without fake invoice numbering.
             String[] clientAt={"Obrt Primjer","Studio Sjever d.o.o.",
@@ -87,6 +118,22 @@ public final class ScreenshotHarness {
         }
         if(store.documents(Store.QUOTE).isEmpty()){
             List<Store.Client> people=store.clients();
+            // Six earlier confirmed quotes plus six visible reference quotes
+            // yield 12 active offers worth €7,870, computed by Store.
+            for(int i=0;i<6;i++){
+                long gross=i<5?25000:35000;
+                Store.Item line=new Store.Item();
+                line.name="Ponuda usluga";
+                line.qtyMilli=1000;line.unitCents=gross*4/5;
+                line.taxRate=25;
+                String issued=String.format(java.util.Locale.ROOT,
+                    "2026-10-%02d",1+i);
+                long quote=store.createDraft(Store.QUOTE,
+                    fixtureClient(people,"Obrt Primjer"),
+                    issued,"2026-11-28","2026-11-15",
+                    "Ponuda usluga","",Arrays.asList(line));
+                store.confirm(quote);
+            }
             String[] clientAt={"Terra Projekt j.d.o.o.","Lana Horvat",
                 "Marin Kovač","Adria Digital d.o.o.",
                 "Studio Sjever d.o.o.","Terra Projekt j.d.o.o."};
@@ -135,12 +182,22 @@ public final class ScreenshotHarness {
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
             case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
-            case "07":
+            case "07":{
                 call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
                 ArrayList<Store.Item> lines=(ArrayList<Store.Item>)get(a,"draftItems");
-                Store.Item item=new Store.Item();item.name="Dizajn web stranice";item.qtyMilli=1000;item.unitCents=100000;item.taxRate=25;
-                lines.add(item);
-                call(a,"editItemsScreen");break;
+                Store.Item web=new Store.Item();
+                web.name="Izrada web stranice";
+                web.unit="kom";web.qtyMilli=1000;
+                web.unitCents=60000;web.taxRate=25;
+                lines.add(web);
+                Store.Item seo=new Store.Item();
+                seo.name="SEO optimizacija";
+                seo.unit="kom";seo.qtyMilli=1000;
+                seo.unitCents=25000;seo.taxRate=25;
+                lines.add(seo);
+                call(a,"editItemsScreen");
+                break;
+            }
             case "08":{
                 // Screen 08's reference is an invoice *draft* with two lines.
                 // Use a realistic debug-only draft, never a fabricated issued
@@ -168,7 +225,25 @@ public final class ScreenshotHarness {
                 set(a,"draftQuoteTitle","Usluge digitalnog marketinga");
                 call(a,"editDocumentScreen");
                 break;
-            case "11":call(a,"showDocument",new Class<?>[]{long.class},db.documents(Store.QUOTE).get(0).id);break;
+            case "11":{
+                // Actual persisted two-line offer, matching the structure and
+                // VAT arithmetic of reference 11 without drawing a mockup.
+                Store.Item campaign=new Store.Item();
+                campaign.name="Vođenje kampanje";
+                campaign.unit="kom";campaign.qtyMilli=1000;
+                campaign.unitCents=80000;campaign.taxRate=25;
+                Store.Item content=new Store.Item();
+                content.name="Izrada sadržaja";
+                content.unit="kom";content.qtyMilli=1000;
+                content.unitCents=40000;content.taxRate=25;
+                long quote=db.createDraft(Store.QUOTE,
+                    fixtureClient(db.clients(),"Terra Projekt j.d.o.o."),
+                    "2026-10-27","2026-11-10","2026-11-15",
+                    "Ponuda za usluge","",Arrays.asList(campaign,content));
+                db.confirm(quote);
+                call(a,"showDocument",new Class<?>[]{long.class},quote);
+                break;
+            }
             case "12":call(a,"clients");break;
             case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
             case "14":call(a,"catalog");break;
@@ -177,7 +252,7 @@ public final class ScreenshotHarness {
                 call(a,"reports");
                 break;
             case "16":call(a,"payments");break;
-            case "17":call(a,"guide");break;
+            case "17":call(a,"eracunScreen");break;
             case "18":call(a,"settings");break;
             case "19":call(a,"company");break;
             case "20":set(a,"dark",true);call(a,"home");break;

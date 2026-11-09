@@ -470,6 +470,22 @@ function requireSensitiveWebPin(array &$account,string $pin):void {
     $account['web_attempts']=0;
     $account['web_block_until']=0;
 }
+/**
+ * Sensitive actions require the credential actually configured on this
+ * account: an existing web PIN or the current strong login password.
+ * Never silently bypass reauthentication for newly registered accounts.
+ */
+function requireSensitiveWebCredential(array &$account,string $credential): void {
+    if(isset($account['web_pin_hash'])){
+        requireSensitiveWebPin($account,$credential);
+        return;
+    }
+    $hash=$account['password_hash']??null;
+    if(!is_string($hash)||strlen($credential)<12||
+       !password_verify($credential,$hash)){
+        fail(401,'Neispravna lozinka računa.');
+    }
+}
 function issueWebSession(array &$account): string {
     $token=bin2hex(random_bytes(32));
     // One active browser token per account. Re-login invalidates old tabs.
@@ -478,7 +494,9 @@ function issueWebSession(array &$account): string {
     return $token;
 }
 function webRegister(string $username,string $pin,string $address,string $passphrase): array {
-    checkWebPin($pin);
+    // New browser accounts use email + password only. PIN remains optional for
+    // legacy programmatic registrations and prior PIN-enabled accounts.
+    if($pin!=='')checkWebPin($pin);
     requirePassphrase($passphrase);
     return transaction(function()use($username,$pin,$address,$passphrase):array{
         rateLimit($address,true);
@@ -499,7 +517,6 @@ function webRegister(string $username,string $pin,string $address,string $passph
             // Strong independent passphrase is required for recoverable backups.
             'password_hash'=>password_hash($passphrase,
                 defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT),
-            'web_pin_hash'=>pinHash($pin),
             'web_attempts'=>0,
             'web_block_until'=>0,
             'revision'=>0,
@@ -507,6 +524,7 @@ function webRegister(string $username,string $pin,string $address,string $passph
             'sessions'=>[],
             'created_at'=>gmdate('c')
         ];
+        if($pin!=='')$account['web_pin_hash']=pinHash($pin);
         $token=issueWebSession($account);
         writeRecord(accountPath($id),$account);
         try{writeRecord($index,['id'=>$id]);}
@@ -608,7 +626,7 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
     requirePassphrase($newPassphrase);
     transaction(function()use($id,$token,$pin,$newPassphrase):void{
         $account=webAuthorized($id,$token);
-        requireSensitiveWebPin($account,$pin);
+        requireSensitiveWebCredential($account,$pin);
         // Changing only the authentication hash would orphan all FAK1
         // archives encrypted with the old passphrase. Fail closed.
         if(is_string($account['backup']??null) && $account['backup']!=='')
@@ -624,7 +642,7 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
 function webDeleteAccount(string $id,string $token,string $pin):void {
     transaction(function()use($id,$token,$pin):void{
         $account=webAuthorized($id,$token);
-        requireSensitiveWebPin($account,$pin);
+        requireSensitiveWebCredential($account,$pin);
         // Clear credentials before file deletion, so interruption
         // cannot leave a valid session for a half-removed profile.
         $account['sessions']=[];

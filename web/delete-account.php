@@ -51,8 +51,13 @@ zakonima morate čuvati.</p>
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <?php if($account!==null):?>
 <p>Prijavljeni korisnik: <strong><?=h((string)$account['username'])?></strong></p>
+<?php if(isset($account['web_pin_hash'])):?>
 <label for="pin">PIN za brisanje</label>
 <input type="password" id="pin" name="pin" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" data-numeric-pin required autocomplete="off">
+<?php else:?>
+<label for="current-password">Lozinka računa za potvrdu brisanja</label>
+<input type="password" id="current-password" name="pin" minlength="12" maxlength="256" required autocomplete="current-password">
+<?php endif;?>
 <?php else:?>
 <p>Ako nemate otvorenu web sesiju, možete potvrditi brisanje
 svojim korisničkim imenom i <strong>zasebnom lozinkom hostinga</strong>.</p>

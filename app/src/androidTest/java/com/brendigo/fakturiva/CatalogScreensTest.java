@@ -100,6 +100,35 @@ public final class CatalogScreensTest extends FakturivaTestCase {
             context.clean();
         }
     }
+    @Test
+    public void testEracunOnboardingProviderIsPersistedInEncryptedBackupData() throws Exception {
+        IsolatedContext context=new IsolatedContext(getContext());
+        IsolatedContext restoredContext=null;
+        Store original=null,restored=null;
+        try {
+            original=new Store(context);
+            original.setting("name","Izdavatelj eRačuna");
+            original.setting("oib","12345678903");
+            original.setting("address","Rijeka");
+            original.setting("eracun_mediator_name","Odabrani posrednik");
+            JSONObject copy=original.backup();
+            restoredContext=new IsolatedContext(getContext());
+            restored=new Store(restoredContext);
+            restored.restore(copy);
+            assertEquals("Odabrani posrednik",
+                restored.setting("eracun_mediator_name"));
+            assertEquals("Izdavatelj eRačuna",restored.setting("name"));
+            assertEquals("12345678903",restored.setting("oib"));
+            // A configured provider name is NOT a certified connection.
+            assertEquals("",restored.setting("eracun_service_connected"));
+        } finally {
+            if(restored!=null)restored.close();
+            if(original!=null)original.close();
+            if(restoredContext!=null)restoredContext.clean();
+            context.clean();
+        }
+    }
+
     private static Store.Item find(List<Store.Item> all,long id){
         for(Store.Item item:all)if(item.id==id)return item;
         throw new AssertionError("Missing "+id);

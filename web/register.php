@@ -35,36 +35,14 @@ $error=takeFlash();
 <path d="M3 21v-1.5c0-4 3.6-6.5 9-6.5s9 2.5 9 6.5V21H3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
 </svg>
 </div>
-<div class="form-row-pin">
-<label class="input-label" for="register-pin">PIN</label>
-<div class="field-wrap">
-<input id="register-pin" name="pin" required type="password" inputmode="numeric"
- autocomplete="new-password" pattern="[0-9]{4,6}" maxlength="6"
- minlength="4" placeholder="••••" aria-describedby="pin-help"
- data-numeric-pin>
-<svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
-<g fill="none" stroke="currentColor" stroke-width="1.4">
-<circle cx="5" cy="5" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="19" cy="5" r="1.5"/>
-<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-<circle cx="5" cy="19" r="1.5"/><circle cx="12" cy="19" r="1.5"/><circle cx="19" cy="19" r="1.5"/>
-</g>
-</svg>
-</div>
-<p class="help-text" id="pin-help">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.5" stroke-linecap="round"/>
-</svg>
-Unesite sigurnosni PIN (4–6 znamenki).
-</p>
-</div>
-<label class="input-label" for="register-password">Lozinka za poslovne podatke</label>
+<label class="input-label" for="register-password">Lozinka</label>
 <div class="field-wrap">
 <input id="register-password" name="passphrase" required type="password"
  minlength="12" maxlength="256" autocomplete="new-password"
  placeholder="Najmanje 12 znakova" aria-describedby="password-help">
 </div>
-<p class="help-text" id="password-help">Snažna zasebna lozinka omogućuje pristup
-podacima nakon promjene uređaja. Pohranite je na sigurnom mjestu.</p>
+<p class="help-text" id="password-help">Snažna lozinka za web i Android omogućuje pristup
+podacima nakon promjene uređaja. Pohranite je na sigurnom mjestu; Android dodatno koristi lokalni PIN.</p>
 <button class="primary-action" type="submit">
 <svg viewBox="0 0 28 28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="11" cy="8" r="4.5"/><path d="M3 25v-2c0-5 3.3-8 8-8s8 3 8 8v2H3ZM22 9h6M25 6v6"/>

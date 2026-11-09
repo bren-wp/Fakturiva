@@ -17,14 +17,19 @@ def java_literals(content: str) -> str:
 
 
 class ProductionCopyTests(unittest.TestCase):
-    def test_invoice_quote_copy_has_no_removed_integration_or_developer_messages(self):
+    def test_reference_eracun_onboarding_never_claims_certified_activation(self):
+        # eRačuni and fiscalization are owner-required features. Their names
+        # must be retained in the app; only unverified success claims are barred.
         strings = java_literals(MAIN.read_text(encoding="utf-8"))
-        for obsolete in (
-            "fiskaliz", "eRačun", "eRačuni", "eracun",
+        for misleading in (
+            "eRačun uspješno poslan", "Fiskalizacija je aktivirana",
+            "Certificirana automatska fiskalizacija",
             "Vaši podaci ostaju na uređaju", "ostaju lokalno na uređaju",
             "Nativna Android aplikacija", "stvarnog PDF-a",
         ):
-            self.assertNotIn(obsolete.casefold(), strings.casefold(), obsolete)
+            self.assertNotIn(misleading.casefold(), strings.casefold(), misleading)
+        self.assertIn("eRačuni i fiskalizacija", strings)
+        self.assertIn("Povezivanje potrebno", strings)
 
     def test_pdf_does_not_brand_customer_document_as_test_or_technical_output(self):
         strings = java_literals(PDF.read_text(encoding="utf-8"))
@@ -32,11 +37,11 @@ class ProductionCopyTests(unittest.TestCase):
         self.assertNotIn("eRačun".casefold(), strings.casefold())
         self.assertNotIn("lokalno izrađen PDF", strings)
 
-    def test_help_replaces_integration_in_screenshot_capture(self):
+    def test_reference_eracun_screen_replaces_unrelated_help_capture(self):
         source = MAIN.read_text(encoding="utf-8")
         harness = HARNESS.read_text(encoding="utf-8")
         self.assertIn('case "guide":guide();break;', source)
-        self.assertIn('case "17":call(a,"guide");break;', harness)
+        self.assertIn('case "17":call(a,"eracunScreen");break;', harness)
         # Import the active responsive checker to verify its screen-to-title
         # mapping. Literal-line matching breaks when locales are added.
         import importlib.util
@@ -45,8 +50,7 @@ class ProductionCopyTests(unittest.TestCase):
         spec.loader.exec_module(checker)
         self.assertEqual(len(checker.SCREEN_NAMES), 20)
         names = checker.VISIBLE_HEADERS[16]
-        self.assertIn("Pomoć", names)
-        self.assertIn("Help", names)
+        self.assertIn("eRačuni", names)
         self.assertIn("Naplata", checker.VISIBLE_HEADERS[15])
         self.assertIn("Postavke", checker.VISIBLE_HEADERS[17])
 

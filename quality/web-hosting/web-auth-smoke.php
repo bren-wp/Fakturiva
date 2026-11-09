@@ -28,6 +28,33 @@ function mustDeny(callable $call,int $status,string $description):void{
     }
 }
 
+// New email/password accounts have no PIN, but still own the exact same
+// Android API identity and can verify sensitive operations with their password.
+$noPinSuffix=bin2hex(random_bytes(7));
+$noPinUser='mobile_'.$noPinSuffix.'@example.test';
+$noPinPassword='Brendigo-cross-platform-test-'.$noPinSuffix;
+$noPinIp='192.0.2.141';
+$noPinAccount=webRegister($noPinUser,'',$noPinIp,$noPinPassword);
+assertWeb(webAuthorized($noPinAccount['id'],$noPinAccount['token'])
+    ['username']===$noPinUser,'Password-only account creation failed');
+$noPinApi=signIn($noPinUser,$noPinPassword,$noPinIp);
+assertWeb(explode('.',$noPinApi['token'])[0]===$noPinAccount['id'],
+    'Web and Android created distinct accounts for one email');
+mustDeny(fn()=>webLogin($noPinUser,'123456',$noPinIp),401,
+    'Password-only account unexpectedly acquired a PIN');
+mustDeny(fn()=>webDeleteAccount($noPinAccount['id'],$noPinAccount['token'],
+    'wrong-password-2026'),401,'Deletion accepted incorrect password');
+$newNoPinPassword='Brendigo-rotated-test-'.$noPinSuffix;
+webChangeAndroidPassphrase($noPinAccount['id'],$noPinAccount['token'],
+    $noPinPassword,$newNoPinPassword);
+mustDeny(fn()=>signIn($noPinUser,$noPinPassword,$noPinIp),401,
+    'Old web password still signs into Android after rotation');
+assertWeb(signIn($noPinUser,$newNoPinPassword,$noPinIp)
+    ['username']===$noPinUser,'New password cannot authenticate Android');
+webDeleteAccount($noPinAccount['id'],$noPinAccount['token'],$newNoPinPassword);
+mustDeny(fn()=>signIn($noPinUser,$newNoPinPassword,$noPinIp),401,
+    'Deleted email/password account still authorizes Android');
+
 $suffix=bin2hex(random_bytes(6));
 $ip='192.0.2.'.random_int(30,100);
 $userA='web_'.$suffix.'_a';
