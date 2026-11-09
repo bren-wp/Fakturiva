@@ -17,14 +17,19 @@ Ovaj predložak sam po sebi nije dovršena pravna politika privatnosti.</p>
 <h2>Podaci i svrha</h2>
 <p>Poslužitelj pohranjuje korisničko ime, sažetak poslužiteljske lozinke,
 vremenski ograničene sesije i šifrirane sigurnosne kopije računa i ponuda
-samo kada korisnik izričito uključi vlastiti hosting. Lokalni PIN ne šalje
-se na poslužitelj. Poslužiteljska lozinka drugačija je od kratkog PIN-a.
+samo kada korisnik izričito uključi vlastiti hosting. Androidov lokalni
+PIN ostaje na Android uređaju. Ako koristite web-registraciju, web PIN od
+4–6 znamenki šalje se isključivo putem HTTPS-a radi provjere i pohranjuje
+kao zaštićeni sažetak. Za Android sinkronizaciju koristi se druga,
+zasebna poslužiteljska lozinka od najmanje 12 znakova.
 Podaci su u lokalnim JSON datotekama, dodatno šifriranima AES-256-GCM.
 Sadržaj sigurnosne kopije dodatno je šifriran na Android uređaju prije prijenosa.</p>
 <h2>Kontrola i brisanje</h2>
 <p>Korisnik može preuzeti svoju šifriranu kopiju putem aplikacije.
 Za brisanje poslužiteljskog računa i njegovih podataka:
 <a href="delete-account.php">obrazac za brisanje računa</a>.
+Web prijava koristi prvostranački, Secure/HttpOnly/SameSite kolačić sesije.
+Ne koristi se reklamno ni analitičko praćenje.
 U postavkama Android aplikacije postoji odvojeno brisanje lokalnog profila.
 Administrator mora objaviti postupke i ograničenja čuvanja koje zahtijeva zakon.</p>
 <h2>Prijenos podataka</h2>
