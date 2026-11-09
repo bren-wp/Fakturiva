@@ -909,7 +909,8 @@ public final class MainActivity extends Activity {
         email.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         email.setSingleLine(true);email.setMinimumHeight(dp(52));
-        email.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS);
+        if(Build.VERSION.SDK_INT>=26)
+            email.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS);
         place(body,email);gap(body,16);
         place(body,label("Lozinka",12,NAVY,true));gap(body,6);
         EditText password=field("Najmanje 12 znakova","");
