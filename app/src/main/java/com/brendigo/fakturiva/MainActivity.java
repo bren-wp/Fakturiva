@@ -2847,25 +2847,29 @@ public final class MainActivity extends Activity {
                 !Store.VOID.equals(d.status) && d.outstanding()>0){
             place(body,action("Evidentiraj uplatu",0xff17b99a,true,
                 ()->payDialog(id)));
-        }else if(!invoice && Store.SENT.equals(d.status)){
-            place(body,action("Označi ponudu kao prihvaćenu",0xff17b99a,true,()->
-                new AlertDialog.Builder(this)
-                    .setTitle("Potvrda prihvata ponude")
-                    .setMessage("Potvrdite samo ako je klijent stvarno prihvatio ovu ponudu.")
-                    .setNegativeButton("Odustani",null)
-                    .setPositiveButton("Potvrdi prihvat",(dialog,which)->{
-                        try{db.acceptQuote(id);showDocument(id);}
-                        catch(Exception e){error(e);}
-                    }).show()));
-        }
-        if(!invoice && (Store.SENT.equals(d.status)||Store.ACCEPTED.equals(d.status))){
-            place(body,action("Pretvori u nacrt računa",0xff17b99a,true,()->{
+        }else if(!invoice && (Store.SENT.equals(d.status)||
+                             Store.ACCEPTED.equals(d.status))){
+            // Keep the primary conversion control visible above the fold, as
+            // in reference #11. Client acceptance is separate and optional.
+            place(body,action("Pretvori u račun",0xff17b99a,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
                     showDocument(invoiceId);
                     toast("Stvoren je nacrt računa");
                 }catch(Exception e){error(e);}
             }));
+            if(Store.SENT.equals(d.status)){
+                gap(body,9);
+                secondary(body,"Označi ponudu kao prihvaćenu",()->
+                    new AlertDialog.Builder(this)
+                        .setTitle("Potvrda prihvata ponude")
+                        .setMessage("Potvrdite samo ako je klijent stvarno prihvatio ovu ponudu.")
+                        .setNegativeButton("Odustani",null)
+                        .setPositiveButton("Potvrdi prihvat",(dialog,which)->{
+                            try{db.acceptQuote(id);showDocument(id);}
+                            catch(Exception e){error(e);}
+                        }).show());
+            }
         }
         gap(body,12);
         caption(body,invoice?
@@ -3006,7 +3010,7 @@ public final class MainActivity extends Activity {
         }
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
-        gap(paper,Store.QUOTE.equals(d.type)?29:28);
+        gap(paper,Store.QUOTE.equals(d.type)?34:28);
         paperRule(paper);gap(paper,12);
         return paper;
     }
