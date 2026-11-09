@@ -25,7 +25,7 @@ SCREEN_NAMES = [
 ]
 VISIBLE_HEADERS = [
     ("Fakturiva",), ("Fakturiva",),
-    ("Protect your business", "Zaštitite svoje poslovanje"),
+    ("Dobro došli natrag",),  # #03: real web-account email/password login
     ("Fakturiva",),
     ("Invoices", "Računi"),
     ("New invoice", "Novi račun"),
