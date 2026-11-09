@@ -135,7 +135,7 @@ public final class CroatianTaxPdf {
                 d.cell("3. ADRESA: "+company.address,x,y,w,26,9,false,false);y+=26;
                 d.cell("4. OIB: "+company.oib,x,y,w,26,9,false,false);y+=26;
                 y=d.section("II. PODACI O POSLOVNOJ JEDINICI",y,x,w);
-                d.cell("1. NAZIV: "+("SVE".equals(book.unit)?"SVE JEDINICE":company.unit),
+                d.cell("1. NAZIV: "+("SVE".equals(book.unit)?"SVE JEDINICE":book.unit),
                     x,y,w,25,9,false,false);y+=25;
                 d.cell("2. ADRESA: "+company.place,x,y,w,25,9,false,false);y+=25;
                 d.text("PRIMICI PREMA DATUMU STVARNE NAPLATE",x,y+16,9,true);y+=22;
