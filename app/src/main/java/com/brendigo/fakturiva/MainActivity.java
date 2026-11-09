@@ -4983,7 +4983,7 @@ public final class MainActivity extends Activity {
             String filename="share-"+java.util.UUID.randomUUID().toString()+".pdf";
             File f=new File(getCacheDir(),filename);
             try(FileOutputStream output=new FileOutputStream(f)){PdfMaker.write(db,db.document(id),output);}
-            Uri shared=PdfShareProvider.uri(filename);
+            Uri shared=PdfShareProvider.uri(this,filename);
             Intent share=new Intent(Intent.ACTION_SEND);share.setType("application/pdf");
             share.putExtra(Intent.EXTRA_STREAM,shared);
             share.setClipData(ClipData.newUri(getContentResolver(),"Fakturiva PDF",shared));
