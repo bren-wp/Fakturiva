@@ -86,6 +86,9 @@ public final class CloudMirror {
         return id!=null&&LocalAccounts.validProfileId(id)&&
             state(ctx,id).getBoolean("enabled",false);
     }
+    static int expectedRevision(Context ctx,String id){
+        return enabled(ctx,id)?state(ctx,id).getInt("revision",-1):-1;
+    }
     public static String status(Context ctx,String id){
         if(!enabled(ctx,id))
             return "Server nije povezan. Za obnovu nakon deinstalacije povežite račun.";
