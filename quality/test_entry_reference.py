@@ -65,6 +65,7 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('SPLASH_DURATION_MS=4500',MAIN)
         self.assertIn('frame.postDelayed(this::finishSplash,SPLASH_DURATION_MS)',MAIN)
         self.assertNotIn('frame.setOnClickListener(v->finishSplash())',MAIN)
+        self.assertIn('if("splash".equals(screen)){finish();return;}',MAIN)
 
     def test_splash_and_welcome_are_real_native_views_not_static_pngs(self):
         self.assertIn('new SplashBackdrop(this)',MAIN)
