@@ -1,81 +1,51 @@
 <div align="center">
 
-<img src="docs/assets/fakturiva-logo.svg" alt="Fakturiva — računi i ponude" width="440">
+<img src="docs/assets/fakturiva-logo.svg" alt="Fakturiva — poslovanje pod kontrolom" width="440">
 
-### Računi i ponude. Jednostavno.
+# Fakturiva
+### Vaši računi. Vaše ponude. Vaše poslovanje.
 
-**Fakturiva** je Android aplikacija za izradu i organizaciju računa, ponuda, klijenata i uplata. Unesite podatke, pripremite dokument, pregledajte ga i podijelite kao PDF — bez nepotrebnih koraka.
+**Izradite profesionalne račune, pripremite ponude, pratite naplatu i organizirajte klijente — iz jedne aplikacije.**
 
-[**Preuzmite aplikaciju**](https://github.com/bren-wp/Fakturiva/releases) · [**Pogledajte zaslone**](#fakturiva-u-radu) · [**Kako koristiti**](#kako-koristiti-fakturivu)
+Android aplikacija • Web pristup poslovnom pregledu • Windows klijent
+
+[**Preuzmi najnovije izdanje**](https://github.com/bren-wp/Fakturiva/releases/latest) · [**Pogledaj stvarne ekrane**](#stvarni-zasloni-aplikacije) · [**Fakturiva web**](https://fakturiva.eu/)
+
+<img src="docs/assets/fakturiva-banner.svg" alt="Fakturiva — računi, ponude i naplata" width="900">
 
 </div>
 
-![Fakturiva — računi i ponude](docs/assets/fakturiva-banner.svg)
+## Od ponude do naplate, na jednom mjestu
 
-## Sve za vaše račune i ponude
-
-| 🧾 Računi | 📋 Ponude | 👥 Klijenti |
+| 🧾 Računi | 📋 Ponude | 💶 Naplata |
 | :--- | :--- | :--- |
-| Izrada računa, stavke, iznosi, datumi dospijeća i evidencija naplate. | Profesionalne ponude s mogućnošću pretvaranja u nacrt računa. | Kontakti, adrese, identifikacijski brojevi i povijest dokumenata. |
+| Kreiranje, numeriranje, pregled, PDF i evidencija statusa. | Izrada ponuda, status prihvata i pretvaranje u račun. | Evidencija stvarnih uplata, djelomičnih plaćanja i preostalih iznosa. |
+| 👥 Klijenti | 🏷️ Artikli i usluge | 📊 Izvještaji |
+| Poslovni partneri, kontaktni podaci i povezani dokumenti. | Cijene, vrste stavki, jedinice mjere i stope PDV-a. | Financijski pregled, mjesečni pokazatelji i hrvatski KPR/PO-SD alati. |
 
-| 🏷️ Artikli i usluge | 📈 Pregled poslovanja | 📄 PDF |
-| :--- | :--- | :--- |
-| Katalog, količine, cijene i porezne stope koje unosite. | Mjesečni pokazatelji, naplata i izvještaji. | Pregled, spremanje, dijeljenje i višestranični A4 dokumenti. |
+### Prilagođena svakodnevnom poslovanju
 
-## Kako koristiti Fakturivu
+- **Jednostavan radni tok:** podaci dokumenta → stavke → provjera → spremanje, dijeljenje ili ispis.
+- **Različite valute:** valute se čuvaju uz dokument; iznosi iz različitih valuta ne zbrajaju se bez tečaja.
+- **Račun i ponuda kao PDF:** podaci izdavatelja ostaju zamrznuti na potvrđenim dokumentima.
+- **Offline rad i oporavak:** Android radi nad lokalnom bazom, a šifrirane kopije šalje na server nakon potvrđene sinkronizacije.
+- **Svijetla i tamna tema:** prilagodljiv raspored za telefone, tablete i veći prikaz.
+- **Ispis:** Androidov servis ispisa i podržani termalni ESC/POS uređaji, uz uvjete kompatibilnosti pojedinog pisača.
 
-1. **Postavite profil izdavatelja.** Unesite naziv, adresu, državu, kontakt i ostale podatke koje želite prikazati na dokumentima. Porezni identifikacijski broj nije obvezan unos u aplikaciji.
-2. **Dodajte klijenta.** Unesite naziv, adresu i željene kontaktne podatke. Podržani su različiti formati međunarodnih poreznih identifikacijskih oznaka.
-3. **Izradite račun ili ponudu.** Dodajte stavke, količine, cijene, stope poreza, datume i napomene te pregledajte izračun.
-4. **Potvrdite dokument i podijelite PDF.** Nakon potvrde dodjeljuje se broj dokumenta. Za račune možete evidentirati primljene uplate.
+## Jedan Fakturiva račun za web i Android
 
-Već potvrđeni dokumenti čuvaju izvorne podatke izdavatelja i kupca, pa izmjene profila ne mijenjaju njihovu povijest.
+**Registracija i prijava koriste e-adresu i lozinku na [fakturiva.eu](https://fakturiva.eu/).** Android za pristup lokalnoj kopiji dodatno postavlja osobni PIN. Za postojeće starije račune dostupna je i prethodna PIN prijava.
 
-## Hrvatska: Knjiga prometa i PO-SD
+1. Registrirajte se e-adresom i snažnom lozinkom na webu ili u Android aplikaciji.
+2. Prijavite se istim poslužiteljskim računom na drugom uređaju.
+3. Nakon provjere vjerodajnica vratite posljednju potvrđenu šifriranu sigurnosnu kopiju.
+4. Na webu pregledajte račun, revizije sigurnosnih kopija, financije i podržane porezne preglede.
 
-Za hrvatske samostalne djelatnosti Fakturiva sada priprema **Knjigu prometa**
-prema datumu stvarne naplate i godišnji **PO-SD** za paušalne obveznike.
-KPR možete izvesti u PDF za odabrani raspon datuma, a PO-SD u PDF za
-2025. ili 2026. godinu. Upute, ograničenja, porezni razredi i provjere:
-[Hrvatski KPR i PO-SD](docs/HR_KPR_POSD.md).
+**Važno:** web poslovni pregled trenutačno čita potvrđene šifrirane preslike, ali nije puni dvosmjerni web editor svih poslovnih zapisa. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
 
-**Važno:** PO-SD XML trenutno se može preuzeti samo kao **radna datoteka
-koja NIJE službeni XML za uvoz u ePoreznu**. Potvrda važeće XSD sheme
-i probni uvoz obvezni su prije najave punog XML izvoza. Podatci u
-referentnim PDF-ovima korisnika nisu kopirani u projekt.
+## Stvarni zasloni aplikacije
 
-## Korisnički račun, sigurnosne kopije i oporavak
-
-Fakturiva koristi zasebne korisničke račune te šifrirane kopije podataka.
-Sadržaj korisničkog računa pohranjuje se na HTTPS serveru nakon
-provjerenog povezivanja. Android zadržava privremenu radnu bazu kako
-bi se promjene mogle pripremati i bez interneta; **nepotvrđene promjene
-mogu se izgubiti pri deinstalaciji** i zato aplikacija prikazuje
-status posljednjeg uspješnog prijenosa.
-
-- **Pohrana uz revizije:** server pohranjuje šifrirane JSON zapise i
-  prethodne revizije, uz zaštitu od slučajnog prepisivanja.
-- **Sigurnost korisnika:** podatci su odvojeni po korisniku,
-  pristup se ograničava i autentificira, a sadržaj sigurnosnih
-  kopija ostaje šifriran korisnikovom jakom lozinkom.
-- **Oporavak:** nakon promjene ili deinstalacije uređaja korisnik
-  može ponovno pristupiti serveru i potvrđenu kopiju vratiti u profil.
-  Kratki lokalni PIN sam po sebi nije dovoljan za oporavak.
-- **Administracija:** web ima zaseban, posebno autentificiran
-  administratorski panel za korisničke račune, zabranu pristupa i
-  dodjelu statusa. Administrator ne može dešifrirati privatne
-  računovodstvene sadržaje korisnika.
-- **Za produkciju:** zasebni offsite backup, vraćanje podataka,
-  identitet voditelja obrade, pravna provjera i testirana
-  sinkronizacija obavezni su uvjeti prije objave.
-
-[Web postavljanje](web/README.md) ·
-[Plan produkcijskih provjera](docs/PRODUCTION_ROADMAP_FAKTURIVA_2026.md) ·
-[Politika privatnosti](web/politika-privatnosti/index.php)
-
-## Fakturiva u radu
-
-Galerija sadrži **20 stvarnih snimki iz ranijeg Android QA izdanja** (ne umjetno generirane prikaze). Na svakoj novoj verziji potrebno je ponovno snimiti zaslone i izmjeriti odstupanja prema originalnim referencama; ova galerija nije dokaz 0% razlike.
+Svih **20 fotografija su stvarne snimke pokrenute Android aplikacije na QA emulatoru**, nisu dizajnerski mockupovi ni AI generirane ilustracije. Kod svakog uspješnog izdanja CI ih snima ponovno iz instaliranog APK-a i ažurira galeriju. Referentne dizajnerske slike koriste se isključivo za usporedbu, nikad kao dokaz implementacije.
 
 <div align="center">
 <table>
@@ -104,7 +74,7 @@ Galerija sadrži **20 stvarnih snimki iz ranijeg Android QA izdanja** (ne umjetn
 <td align="center"><img src="docs/screenshots/16_naplata.png" alt="Naplata — stvarni Android screenshot" width="145"><br><b>Naplata</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/screenshots/17_eracun_integracija.png" alt="Pomoć — stvarni Android screenshot" width="145"><br><b>Pomoć</b></td>
+<td align="center"><img src="docs/screenshots/17_eracun_integracija.png" alt="eRačuni — stvarni Android screenshot" width="145"><br><b>eRačuni</b></td>
 <td align="center"><img src="docs/screenshots/18_postavke.png" alt="Postavke — stvarni Android screenshot" width="145"><br><b>Postavke</b></td>
 <td align="center"><img src="docs/screenshots/19_profil_tvrtke.png" alt="Profil tvrtke — stvarni Android screenshot" width="145"><br><b>Profil tvrtke</b></td>
 <td align="center"><img src="docs/screenshots/20_tamna_tema.png" alt="Tamna tema — stvarni Android screenshot" width="145"><br><b>Tamna tema</b></td>
@@ -112,81 +82,50 @@ Galerija sadrži **20 stvarnih snimki iz ranijeg Android QA izdanja** (ne umjetn
 </table>
 </div>
 
-U aplikaciji su dostupni i ponude, artikli i usluge, klijenti, izvještaji, naplata, pomoć, profil izdavatelja i postavke. Sučelje se prilagođava manjim i većim Android uređajima.
+## Sigurnost podataka i privatnost
 
-## Važne mogućnosti
+Fakturiva šifrira sigurnosne kopije pomoću AES-256-GCM, provjerava integritet podataka i odjeljuje zapise korisničkih računa. Lokalni PIN i snažna poslužiteljska lozinka imaju različite uloge. Neuspjeh mreže ili sukob revizija ne smije automatski prebrisati noviju kopiju.
 
-- **Automatsko spremanje nacrta** i nastavak započetog dokumenta.
-- **Zaštita pri otvaranju** prema postavkama Androidova zaključavanja.
-- **Sigurnosne kopije** koje možete izvesti i vratiti uz vlastitu lozinku.
-- **Svijetla i tamna tema** i pristupačne funkcionalne kontrole.
-- **Uređivanje podataka izdavatelja i klijenata** bez promjene već potvrđenih dokumenata.
+Sigurnosni mehanizmi ne zamjenjuju potrebu za **provjerenim HTTPS hostingom, sigurnim čuvanjem poslužiteljskog ključa, offsite backupom i testom povrata podataka**. [Saznajte više o web postavljanju](web/README.md).
 
-## Preuzimanje za Android
+## eRačuni, fiskalizacija i hrvatski porezni alati
 
-[**Sva izdanja Fakturive**](https://github.com/bren-wp/Fakturiva/releases)
+U aplikaciji su dostupni **ekran eRačuna**, koraci konfiguracije informacijskog posrednika te alati za hrvatsku **Knjigu prometa i PO-SD**. Postavljanje naziva posrednika samo po sebi **nije aktivacija službene integracije**. Strukturirano slanje eRačuna, potvrda fiskalizacije i regulatorno certificirani tokovi zahtijevaju odgovarajuće poslužiteljske integracije i vjerodajnice.
 
-Preuzimanja za Android, Windows i web nalaze se na [GitHub Releases](https://github.com/bren-wp/Fakturiva/releases). Izdanje s oznakom **preview** nije produkcijski potpisano niti je potvrđena usklađenost sa svim poreznim obvezama.
+PO-SD XML je trenutačno **radni XML koji nije namijenjen izravnom uvozu u ePoreznu**. [Pravila i ograničenja KPR/PO-SD](docs/HR_KPR_POSD.md).
 
-| Paket | Namjena |
+## Preuzimanje
+
+[**GitHub Releases — Android, Windows i web**](https://github.com/bren-wp/Fakturiva/releases)
+
+| Paket | Sadržaj |
 | :--- | :--- |
-| `debug.apk` | Instalacijski paket za testiranje na Androidu 7.0 i novijem |
-| `DEBUG-SIGNED.aab` | Testni Android App Bundle |
-| `UNSIGNED.aab` | Paket koji treba odgovarajuće potpisati prije distribucije kroz trgovinu |
-| `SHA256SUMS.txt` | Provjera integriteta datoteka |
+| **Android APK** | Instalacija i funkcionalno testiranje na Androidu 7.0+ (API 24+) |
+| **Android AAB** | Testni debug-signed AAB i zaseban nepotpisani release AAB |
+| **Windows portable / setup** | Windows klijent temeljen na webu, uz WebView2 i dostupnost servera |
+| **Web paket** | PHP/JSON hosting za korisničke račune i šifrirane preslike |
+| **SHA256SUMS.txt** | Provjera integriteta objavljenih datoteka |
 
-**Prije zamjene aplikacije ili promjene telefona izvezite i provjerite sigurnosnu kopiju.** Različiti potpisni certifikati mogu spriječiti instalaciju preko postojeće verzije.
+**Preview paketi nisu automatski potpisani produkcijskim Google Play ključem.** Pri prijelazu između različitih certifikata instalacije možda neće biti moguće ažurirati izravno. Produkcijska kompatibilnost, regulatorne integracije i dostupnost servera potvrđuju se zasebno.
 
-## Android aplikacija na Windows računalu
+## Praktični vodič
 
-Fakturiva ima Android aplikaciju. U mapi [`win/`](win/README.md)
-razvija se i zaseban **Windows klijent**, koji trenutačno prikazuje
-isti HTTPS web korisnički račun putem Microsoft WebView2.
-Njegovi zasloni još nisu izvorno 1:1 izvedeni prema 20 Android referenci.
-Zasebni Windows build isporučuje provjerene preview
-artifakte kada GitHub Actions uspješno završi. Kompatibilan Android emulator na Windows računalu može pokrenuti
-APK, uz ograničenja samog emulatora. Obrasci i navigacija prilagođavaju se
-veličini Android prozora: telefonski raspored ostaje jednak izvornim mobilnim
-referencama, a na širokim prozorima sadržaj je čitljivo centriran. Dostupni
-su prečaci Ctrl+1–5 za glavne zaslone te Ctrl+P za ispis otvorenog dokumenta.
+1. U **Profilu tvrtke** ispunite podatke izdavatelja i valutu.
+2. U **Klijentima** i **Artiklima i uslugama** pripremite osnovne podatke.
+3. Odaberite **Novi račun** ili **Nova ponuda**, unesite stavke i provjerite PDV i ukupni iznos.
+4. Spremite ili podijelite PDF; za stvarno primljena plaćanja koristite **Naplatu**.
+5. Provjerite **Pohranu na serveru i oporavak** te izvezite vlastitu sigurnosnu kopiju.
 
-**Napomena:** Windows Subsystem for Android više nije dostupan putem
-Microsoft Storea od 5. ožujka 2025. Podrška za fizičke pisače i ostale USB
-uređaje ovisi o njihovoj dostupnosti unutar Android emulatora.
-[Upute i provjera kompatibilnosti](docs/ANDROID_ON_WINDOWS.md).
-
-## Međunarodni računi i ponude — razvojna grana
-
-Fakturiva je namijenjena i obrtima, samostalnim djelatnostima, d.o.o., j.d.o.o., Ltd, LLC, Inc, GmbH i drugim oblicima poslovanja. U novoj razvojnoj grani profil izdavatelja sadrži pravni oblik, registracijski broj i tijelo, trgovački naziv, državu i regiju, dodatne porezne podatke, kontakt-osobu te detaljne bankovne i platne upute. Porezni broj može ostati prazan ili sadržavati međunarodnu oznaku.
-
-**Valute:** EUR je zadana. Za nove dokumente možete odabrati podržanu ISO valutu s dvije decimalne znamenke (npr. USD, GBP, CHF, CAD, AUD i mnoge druge). Valuta se sprema uz račun ili ponudu i ostaje vezana uz dokument. Evidencija i izvještaji ne zbrajaju različite valute. **Konverzija tečaja nije automatska.** Valute s 0 ili 3 decimalna mjesta (npr. JPY, KWD) nisu još dostupne zbog potrebne zasebne nadogradnje novčanog modela.
-
-**Jezici:** nova osnova koristi engleski kao zadani jezik, a korisnik u Postavkama može izabrati hrvatski. Pripremljen je popis **31 ciljnog jezika**, ali cjelovito prevođenje svih zaslona, obrazaca, dijaloga, PDF-a i sistemskih poruka još **nije dovršeno**, pa se ostali jezici ne prikazuju kao podržani. I dio engleskog/hrvatskog sučelja još zahtijeva lekturu i uklanjanje preostalih neprevedenih tekstova. [Pravila objave prijevoda](docs/INTERNATIONALIZATION_QA.md).
-
-### Ispis računa i ponuda — razvojna verzija
-
-Fakturiva podržava više načina ispisa dokumenata:
-
-- **Pisači za A3, A4, A5, A6, US Letter i Legal:** preko Androidova sustava ispisa i instaliranih servisa proizvođača, uključujući kompatibilne Wi-Fi, USB i mrežne pisače.
-- **Bluetooth Classic termalni pisači:** ESC/POS računi na **58 mm (384 točke)** ili **80 mm (512 ili 576 točaka)**, uz prethodno uparivanje.
-- **Mrežni termalni pisači:** ESC/POS preko lokalne IPv4 adrese i TCP priključka (obično **9100**), na 58 mm ili 80 mm. Adresu i priključak unosi korisnik; javne internetske adrese namjerno su blokirane.
-
-Korisnik odabire format i pisač u pregledu računa ili Postavkama. Svi izrađeni PDF-ovi imaju sitnu oznaku **Powered by Brendigo** u podnožju svake stranice, a termalni računi pri samom dnu ispisa. Ako korisnik želi zatražiti uklanjanje te oznake, u **Postavke → O aplikaciji i podrška** može poslati upit na **info@fakturiva.com**.
-
-**Napomena:** Ne postoji univerzalna podrška za sve pisače i kartične POS terminale. Potrebna je kompatibilnost s Androidovim servisom ispisa ili ESC/POS protokolom i provjera konkretnog modela. Funkcija ne naplaćuje kartice i ne provodi fiskalizaciju.
-
-[**Priručnik za pisače, kompatibilnost i privatnost**](docs/PRINTING_SUPPORT.md) · [**Proizvođači pisača i hrvatski POS servisi**](docs/PRINTER_VENDOR_AND_POS_MATRIX.md) · [**SUNMI SDK i drugi proizvođači**](docs/POS_INTEGRATION_MATRIX.md)
-
-Mogućnosti se dovršavaju odvojeno za Android, web i Windows. [Plan produkcijske pripreme](docs/PRODUCTION_ROADMAP_FAKTURIVA_2026.md) opisuje preostale sigurnosne, pravne i vizualne provjere.
+Dokumentacija: [Android na Windowsu](docs/ANDROID_ON_WINDOWS.md) · [Ispis i pisači](docs/PRINTING_SUPPORT.md) · [KPR/PO-SD](docs/HR_KPR_POSD.md) · [Privatnost](web/politika-privatnosti/index.php) · [Plan provjera produkcije](docs/PRODUCTION_ROADMAP_FAKTURIVA_2026.md).
 
 ---
 
 <div align="center">
 
-<img src="docs/assets/fakturiva-logo.svg" width="280" alt="Fakturiva by Brendigo">
+<img src="docs/assets/fakturiva-logo.svg" alt="Fakturiva by Brendigo" width="260">
 
 **Fakturiva · [Brendigo](https://brendigo.com)**
 
-*Računi i ponude, jednostavno.*
+*Pametniji način upravljanja računima, ponudama i naplatom.*
 
 </div>
