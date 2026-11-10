@@ -5327,10 +5327,7 @@ public final class MainActivity extends Activity {
                 if(!"security_unlock".equals(screen))return;
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                 navigate("home");offerWorkingDraftRecovery();
-            }else if(completedAction==4){
-                // OS confirmation does not replace email/password sign-in.
-                if(!"server_login".equals(screen))return;
-                loginServerScreen();
+
             }else if(completedAction==3){
                 prefs.edit().putBoolean("device_lock",false).apply();
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
