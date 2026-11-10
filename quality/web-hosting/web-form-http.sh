@@ -18,13 +18,20 @@ extract_csrf(){
   grep -o 'name="csrf" value="[a-f0-9]\{64\}"' "$1" | head -1 | cut -d '"' -f 4
 }
 username="ci_web_$(date +%s)_$RANDOM@example.test"
-pin=654321
 passphrase="Fakturiva-ci-registration-$RANDOM-example"
 curl -fsS -b "$jar" -c "$jar" "$base/register.php" > "$temp/register.html"
 grep -Fq 'Kreirajte novi račun i započnite s poslovanjem.' "$temp/register.html"
 ! grep -Fq 'name="pin"' "$temp/register.html"
 grep -Fq 'name="passphrase"' "$temp/register.html"
 grep -Fq 'name="confirm_passphrase"' "$temp/register.html"
+# Retired public authentication endpoints may remain as bookmarks, but
+# must never render or accept the old secondary credential UI.
+for legacy in login-pin.php identify.php link.php; do
+  old_status="$(curl -sS -o /dev/null -D "$temp/legacy-headers" -w '%{http_code}'     -b "$jar" -c "$jar" "$base/$legacy")"
+  test "$old_status" = 303 || { echo "$legacy did not redirect" >&2; exit 1; }
+  grep -iq '^location: login.php' "$temp/legacy-headers" ||
+    { echo "$legacy did not redirect to password login" >&2; exit 1; }
+done
 csrf="$(extract_csrf "$temp/register.html")"
 test "$(printf '%s' "$csrf" | wc -c)" -eq 64
 status="$(curl -sS -o /dev/null -D "$temp/headers" -w '%{http_code}' \
@@ -113,7 +120,7 @@ grep -Fq 'Lozinka računa za potvrdu brisanja' "$temp/delete.html"
 csrf="$(extract_csrf "$temp/delete.html")"
 status="$(curl -sS -o "$temp/delete-result.html" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/delete-account.php" \
-  --data-urlencode "csrf=$csrf" --data-urlencode "pin=$passphrase" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "current_password=$passphrase" \
   --data-urlencode "confirm=DELETE")"
 test "$status" = 200
 grep -Fq 'trajno su uklonjeni' "$temp/delete-result.html"

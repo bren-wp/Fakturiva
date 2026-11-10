@@ -26,7 +26,7 @@ import javax.crypto.spec.GCMParameterSpec;
  * A mutation is "saved" on the server ONLY after a matching authenticated
  * response and its SHA-256 have been verified. Conflicts are NEVER overwritten.
  * A fresh installation must reauthenticate with the user's server passphrase
- * and explicitly restore; an old device-only PIN cannot reconstruct a key.
+ * and explicitly restore; credentials alone cannot restore unsynced data.
  */
 public final class CloudMirror {
     private static final String KEY_ALIAS="fakturiva-cloud-credentials-v1";
@@ -116,6 +116,24 @@ public final class CloudMirror {
     public static void disconnect(Context ctx,String id){
         // Does not delete server data; users can restore it by logging in.
         state(ctx,id).edit().clear().commit();
+    }
+    /**
+     * Refresh only the Keystore-sealed cloud credential after the same
+     * account was positively authenticated by the canonical HTTPS server.
+     * Never change revisions, dirty markers or stored business data here.
+     */
+    static void rebindVerifiedPassword(Context ctx,String id,String endpoint,
+                                       String username,char[] password) throws Exception {
+        SharedPreferences prefs=state(ctx,id);
+        if(!prefs.getBoolean("enabled",false))return;
+        String url=SelfHostedSyncClient.apiUrl(endpoint);
+        if(!url.equals(prefs.getString("api","")) ||
+           !username.trim().equalsIgnoreCase(prefs.getString("username","")))
+            return; // Custom hosting is a different identity provider.
+        if(password==null || password.length<12)throw new SecurityException("Lozinka nedostaje");
+        String sealed=seal(password);
+        if(!prefs.edit().putString("sealed_password",sealed).commit())
+            throw new IllegalStateException("Nova vjerodajnica nije spremljena.");
     }
     /**
      * Called only after the user has explicitly uploaded a verified first

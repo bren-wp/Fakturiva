@@ -209,10 +209,9 @@ function rateLimit(string $address,bool $failed): void {
         writeRecord($path,$item);
     }
 }
-function signUp(string $username,string $password,string $address,?string $webPin=null): array {
+function signUp(string $username,string $password,string $address): array {
     requirePassphrase($password);
-    if($webPin!==null)checkWebPin($webPin);
-    return transaction(function() use($username,$password,$address,$webPin): array {
+    return transaction(function() use($username,$password,$address): array {
         // Account creation also consumes the IP budget to prevent unbounded
         // JSON-file creation on shared hosting from scripted registrations.
         rateLimit($address,true);
@@ -236,12 +235,6 @@ function signUp(string $username,string $password,string $address,?string $webPi
                 defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT),
             'revision'=>0,'backup'=>null,'sessions'=>[],
             'created_at'=>gmdate('c')];
-        // API-created accounts may also sign into the web with their PIN.
-        if($webPin!==null){
-            $account['web_pin_hash']=pinHash($webPin);
-            $account['web_attempts']=0;
-            $account['web_block_until']=0;
-        }
         $token=mintToken($account);
         $path=accountPath($id);
         writeRecord($path,$account);
@@ -435,51 +428,10 @@ function enforceHttps(): void {
 
 
 /**
- * Browser PIN is separate from Android's 12+ character sync passphrase.
- * A 4–6 digit PIN is only acceptable with per-account AND per-IP throttling,
- * encrypted server records, session expiry and HTTPS. It is not strong enough
- * to encrypt synced business backups.
- */
-function checkWebPin(string $pin): void {
-    if(!preg_match('/^[0-9]{4,6}$/D',$pin))fail(422,'PIN mora imati 4–6 znamenki');
-}
-function webPinDigest(string $pin): string {
-    return hash_hmac('sha256',"fakturiva-web-pin-v1\0".$pin,secret());
-}
-function pinHash(string $pin): string {
-    return password_hash(webPinDigest($pin),
-        defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT);
-}
-function pinMatches(array $account,string $pin): bool {
-    $hash=$account['web_pin_hash']??null;
-    return is_string($hash) && preg_match('/^[0-9]{4,6}$/D',$pin)===1 &&
-        password_verify(webPinDigest($pin),$hash);
-}
-/** PIN-confirmed destructive and credential-changing operations are throttled too. */
-function requireSensitiveWebPin(array &$account,string $pin):void {
-    if((int)($account['web_block_until']??0)>time())
-        fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
-    if(!pinMatches($account,$pin)){
-        $n=min(20,1+(int)($account['web_attempts']??0));
-        $account['web_attempts']=$n;
-        if($n>=5)$account['web_block_until']=time()+min(3600,
-            60*(1 << min($n-5,6)));
-        writeRecord(accountPath($account['id']),$account);
-        fail(401,'Neispravan PIN');
-    }
-    $account['web_attempts']=0;
-    $account['web_block_until']=0;
-}
-/**
- * Sensitive actions require the credential actually configured on this
- * account: an existing web PIN or the current strong login password.
- * Never silently bypass reauthentication for newly registered accounts.
+ * All account-sensitive actions reauthenticate using the same web password,
+ * including accounts migrated from an older authentication scheme.
  */
 function requireSensitiveWebCredential(array &$account,string $credential): void {
-    if(isset($account['web_pin_hash'])){
-        requireSensitiveWebPin($account,$credential);
-        return;
-    }
     $hash=$account['password_hash']??null;
     if(!is_string($hash)||strlen($credential)<12||
        !password_verify($credential,$hash)){
@@ -493,12 +445,9 @@ function issueWebSession(array &$account): string {
     $account['web_token_until']=time()+1800;
     return $token;
 }
-function webRegister(string $username,string $pin,string $address,string $passphrase): array {
-    // New browser accounts use email + password only. PIN remains optional for
-    // legacy programmatic registrations and prior PIN-enabled accounts.
-    if($pin!=='')checkWebPin($pin);
+function webRegister(string $username,string $address,string $passphrase): array {
     requirePassphrase($passphrase);
-    return transaction(function()use($username,$pin,$address,$passphrase):array{
+    return transaction(function()use($username,$address,$passphrase):array{
         rateLimit($address,true);
         $index=indexPath($username);
         if(is_file($index)) {
@@ -524,7 +473,6 @@ function webRegister(string $username,string $pin,string $address,string $passph
             'sessions'=>[],
             'created_at'=>gmdate('c')
         ];
-        if($pin!=='')$account['web_pin_hash']=pinHash($pin);
         $token=issueWebSession($account);
         writeRecord(accountPath($id),$account);
         try{writeRecord($index,['id'=>$id]);}
@@ -532,39 +480,7 @@ function webRegister(string $username,string $pin,string $address,string $passph
         return ['id'=>$id,'token'=>$token,'username'=>$account['username']];
     });
 }
-function webLogin(string $username,string $pin,string $address): array {
-    return transaction(function()use($username,$pin,$address):array{
-        rateLimit($address,false);
-        $account=accountByName($username);
-        if($account===null || !isset($account['web_pin_hash'])) {
-            rateLimit($address,true);
-            fail(401,'Korisničko ime ili PIN nisu ispravni');
-        }
-        if(!empty($account['suspended']))fail(403,'Račun je privremeno onemogućen.');
-        if((int)($account['web_block_until']??0)>time())
-            fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
-        if(!pinMatches($account,$pin)){
-            $n=min(20,1+(int)($account['web_attempts']??0));
-            $account['web_attempts']=$n;
-            if($n>=5) {
-                $seconds=min(3600,60*(1 << min($n-5,6)));
-                $account['web_block_until']=time()+$seconds;
-            }
-            writeRecord(accountPath($account['id']),$account);
-            rateLimit($address,true);
-            fail(401,'Korisničko ime ili PIN nisu ispravni');
-        }
-        $account['web_attempts']=0;
-        $account['web_block_until']=0;
-        $token=issueWebSession($account);
-        writeRecord(accountPath($account['id']),$account);
-        return ['id'=>$account['id'],'token'=>$token,
-            'username'=>$account['username']];
-    });
-}
-/** Password-based web sign-in uses the same server identity as Android.
- * Legacy PIN sign-in stays available separately for existing accounts.
- */
+/** Password-based web sign-in uses the same server identity as Android. */
 function webLoginPassword(string $username,string $passphrase,string $address): array {
     return transaction(function()use($username,$passphrase,$address):array{
         rateLimit($address,false);
@@ -576,6 +492,9 @@ function webLoginPassword(string $username,string $passphrase,string $address): 
             fail(401,'Korisničko ime ili lozinka nisu ispravni');
         }
         if(!empty($account['suspended']))fail(403,'Račun je privremeno onemogućen.');
+        // Remove obsolete web PIN verifier after successful strong password
+        // authentication. Existing account ID and encrypted backup stay intact.
+        unset($account['web_pin_hash'],$account['web_attempts'],$account['web_block_until']);
         $token=issueWebSession($account);
         writeRecord(accountPath($account['id']),$account);
         return ['id'=>$account['id'],'token'=>$token,'username'=>$account['username']];
@@ -600,33 +519,12 @@ function webLogout(string $id,string $token): void {
         writeRecord(accountPath($id),$account);
     });
 }
-function webLinkAndroidAccount(string $username,string $passphrase,
-                               string $newPin,string $address):array {
-    requirePassphrase($passphrase);checkWebPin($newPin);
-    return transaction(function()use($username,$passphrase,$newPin,$address):array{
-        rateLimit($address,false);
-        $account=accountByName($username);
-        if($account===null ||
-           !is_string($account['password_hash']??null) ||
-           !password_verify($passphrase,$account['password_hash'])){
-            rateLimit($address,true);
-            fail(401,'Neispravno korisničko ime ili lozinka hostinga');
-        }
-        if(!empty($account['suspended']))fail(403,'Račun je onemogućen');
-        $account['web_pin_hash']=pinHash($newPin);
-        $account['web_attempts']=0;
-        $account['web_block_until']=0;
-        $token=issueWebSession($account);
-        writeRecord(accountPath($account['id']),$account);
-        return ['id'=>$account['id'],'username'=>$account['username'],'token'=>$token];
-    });
-}
-function webChangeAndroidPassphrase(string $id,string $token,string $pin,
+function webChangeAndroidPassphrase(string $id,string $token,string $currentPassword,
                                     string $newPassphrase):void {
     requirePassphrase($newPassphrase);
-    transaction(function()use($id,$token,$pin,$newPassphrase):void{
+    transaction(function()use($id,$token,$currentPassword,$newPassphrase):void{
         $account=webAuthorized($id,$token);
-        requireSensitiveWebCredential($account,$pin);
+        requireSensitiveWebCredential($account,$currentPassword);
         // Changing only the authentication hash would orphan all FAK1
         // archives encrypted with the old passphrase. Fail closed.
         if(is_string($account['backup']??null) && $account['backup']!=='')
@@ -639,10 +537,10 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
         writeRecord(accountPath($id),$account);
     });
 }
-function webDeleteAccount(string $id,string $token,string $pin):void {
-    transaction(function()use($id,$token,$pin):void{
+function webDeleteAccount(string $id,string $token,string $currentPassword):void {
+    transaction(function()use($id,$token,$currentPassword):void{
         $account=webAuthorized($id,$token);
-        requireSensitiveWebCredential($account,$pin);
+        requireSensitiveWebCredential($account,$currentPassword);
         // Clear credentials before file deletion, so interruption
         // cannot leave a valid session for a half-removed profile.
         $account['sessions']=[];

@@ -3,13 +3,11 @@ declare(strict_types=1);
 require_once __DIR__.'/../../web/lib.php';
 
 use function FakturivaSelfHost\webRegister;
-use function FakturivaSelfHost\webLogin;
 use function FakturivaSelfHost\webLoginPassword;
 use function FakturivaSelfHost\webAuthorized;
 use function FakturivaSelfHost\webLogout;
 use function FakturivaSelfHost\webDeleteAccount;
 use function FakturivaSelfHost\webChangeAndroidPassphrase;
-use function FakturivaSelfHost\webLinkAndroidAccount;
 use function FakturivaSelfHost\signUp;
 use function FakturivaSelfHost\signIn;
 use function FakturivaSelfHost\loadBackup;
@@ -34,14 +32,14 @@ $noPinSuffix=bin2hex(random_bytes(7));
 $noPinUser='mobile_'.$noPinSuffix.'@example.test';
 $noPinPassword='Brendigo-cross-platform-test-'.$noPinSuffix;
 $noPinIp='192.0.2.141';
-$noPinAccount=webRegister($noPinUser,'',$noPinIp,$noPinPassword);
+$noPinAccount=webRegister($noPinUser,$noPinIp,$noPinPassword);
 assertWeb(webAuthorized($noPinAccount['id'],$noPinAccount['token'])
     ['username']===$noPinUser,'Password-only account creation failed');
 $noPinApi=signIn($noPinUser,$noPinPassword,$noPinIp);
 assertWeb(explode('.',$noPinApi['token'])[0]===$noPinAccount['id'],
     'Web and Android created distinct accounts for one email');
-mustDeny(fn()=>webLogin($noPinUser,'123456',$noPinIp),401,
-    'Password-only account unexpectedly acquired a PIN');
+mustDeny(fn()=>webLoginPassword($noPinUser,'incorrect-password-2026',$noPinIp),401,
+    'Incorrect password must never open a user account');
 mustDeny(fn()=>webDeleteAccount($noPinAccount['id'],$noPinAccount['token'],
     'wrong-password-2026'),401,'Deletion accepted incorrect password');
 $newNoPinPassword='Brendigo-rotated-test-'.$noPinSuffix;
@@ -63,8 +61,8 @@ $pinA='123456';$pinB='456789';
 $serverPassA='Different-long-server-passphrase-'.$suffix;
 $serverPassB='Another-long-server-passphrase-'.$suffix;
 
-$a=webRegister($userA,$pinA,$ip,$serverPassA);
-$b=webRegister($userB,$pinB,$ip,$serverPassB);
+$a=webRegister($userA,$ip,$serverPassA);
+$b=webRegister($userB,$ip,$serverPassB);
 assertWeb($a['id']!==$b['id'],'Profiles share an ID');
 $passwordLogin=webLoginPassword($userA,$serverPassA,$ip);
 assertWeb($passwordLogin['id']===$a['id'],
@@ -87,7 +85,7 @@ assertWeb(loadBackup($android['token'])['revision']===0,
 $sealed=base64_encode('FAK1'.str_repeat('X',60));
 $ack=saveBackup($android['token'],$sealed,0);
 assertWeb($ack['revision']===1,'Encrypted revision was not stored');
-mustDeny(fn()=>webChangeAndroidPassphrase($a['id'],$a['token'],$pinA,
+mustDeny(fn()=>webChangeAndroidPassphrase($a['id'],$a['token'],$serverPassA,
     'New-long-secret-'.$suffix),409,'Rotation stranded the encrypted snapshot');
 assertWeb(signIn($userA,$serverPassA,$ip)['username']===$userA,
     'Blocked rotation still changed the active passphrase');
@@ -95,26 +93,34 @@ assertWeb(webAuthorized($b['id'],$b['token'])['backup']===null,
     'Web B gained Web A backup');
 webLogout($a['id'],$a['token']);
 mustDeny(fn()=>webAuthorized($a['id'],$a['token']),401,'Logout token still works');
-$newA=webLogin($userA,$pinA,$ip);
+$newA=webLoginPassword($userA,$serverPassA,$ip);
 assertWeb($newA['id']===$a['id'],'Login opened wrong profile');
-webDeleteAccount($a['id'],$newA['token'],$pinA);
+webDeleteAccount($a['id'],$newA['token'],$serverPassA);
 mustDeny(fn()=>webAuthorized($a['id'],$newA['token']),401,'Deleted web user stays active');
 assertWeb(webAuthorized($b['id'],$b['token'])['username']===$userB,
     'Deleting A corrupted B');
 
 $apiUser='api_'.$suffix;
 $api=signUp($apiUser,$serverPassB,$ip);
-$link=webLinkAndroidAccount($apiUser,$serverPassB,$pinB,$ip);
-assertWeb($link['id']===explode('.',$api['token'])[0],
-    'Linking Android account created a duplicate tenant');
-$linkedLogin=webLogin($apiUser,$pinB,$ip);
-assertWeb($linkedLogin['username']===$apiUser,'Linked Android PIN login failed');
-webDeleteAccount($link['id'],$linkedLogin['token'],$pinB);
+$apiWeb=webLoginPassword($apiUser,$serverPassB,$ip);
+assertWeb($apiWeb['id']===explode('.',$api['token'])[0],
+    'Same password must resolve the existing Android account');
+webDeleteAccount($apiWeb['id'],$apiWeb['token'],$serverPassB);
+// An older stored PIN verifier is never an alternative authentication path.
+// Password login keeps the same account ID and clears the obsolete verifier.
 $nativeUser='native_'.$suffix;
-$native=signUp($nativeUser,$serverPassB,$ip,$pinB);
-$nativeWeb=webLogin($nativeUser,$pinB,$ip);
-assertWeb($nativeWeb['id']===explode('.',$native['token'])[0],
-    'Android and web registration created different tenants');
-webDeleteAccount($nativeWeb['id'],$nativeWeb['token'],$pinB);
-webDeleteAccount($b['id'],$b['token'],$pinB);
-echo "Web PIN register/login, tenant isolation, separate Android passphrase, link and deletion: OK\n";
+$native=signUp($nativeUser,$serverPassB,$ip);
+$legacyId=explode('.',$native['token'])[0];
+$legacyRecord=FakturivaSelfHost\readRecord(
+    FakturivaSelfHost\accountPath($legacyId));
+$legacyRecord['web_pin_hash']='retired-legacy-verifier';
+FakturivaSelfHost\writeRecord(
+    FakturivaSelfHost\accountPath($legacyId),$legacyRecord);
+$nativeWeb=webLoginPassword($nativeUser,$serverPassB,$ip);
+assertWeb($nativeWeb['id']===$legacyId,
+    'Password login created a new tenant for migrated data');
+assertWeb(!isset(webAuthorized($nativeWeb['id'],$nativeWeb['token'])['web_pin_hash']),
+    'Legacy PIN verifier was not retired after verified password login');
+webDeleteAccount($nativeWeb['id'],$nativeWeb['token'],$serverPassB);
+webDeleteAccount($b['id'],$b['token'],$serverPassB);
+echo "Email/password web/API identity, migration, isolation and deletion: OK\n";

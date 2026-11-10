@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '9.6.0'
+          gradle-version: '9.9.0'
       - name: Install Android SDK
         run: |
           SDK="$ANDROID_HOME"
@@ -41,7 +41,7 @@ jobs:
           cp app/build/outputs/apk/demo/app-demo.apk out/Fakturiva-demo.apk
           cp app/build/outputs/bundle/debug/app-debug.aab out/Fakturiva-DEBUG-SIGNED.aab
           cp app/build/outputs/bundle/release/app-release.aab out/Fakturiva-UNSIGNED.aab
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fakturiva-android-candidate
           path: out/*
@@ -52,8 +52,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Publish Windows portable
@@ -78,7 +78,7 @@ jobs:
           } finally { Pop-Location }
           if (!(Test-Path win/build/Fakturiva-setup.exe)) { throw "Missing setup.exe" }
           Copy-Item win/build/Fakturiva-setup.exe out/Fakturiva-setup.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fakturiva-windows-candidate
           path: out/*
@@ -92,12 +92,12 @@ jobs:
     # takes longer than the artifact-producing jobs; do not time out early.
     timeout-minutes: 70
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: fakturiva-android-candidate
           path: out/android
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: fakturiva-windows-candidate
           path: out/windows

@@ -8,11 +8,11 @@ import java.util.List;
 /** Only compiled into com.brendigo.fakturiva.demo; NEVER production. */
 public final class DemoSeeder {
     public static final String USERNAME="demo@fakturiva.test";
-    public static final String PIN="123456";
+    public static final String PASSWORD="Brendigo-Demo-Password-2026";
     private DemoSeeder(){}
     public static void seed(Context context) throws Exception{
         if(LocalAccounts.hasAccounts(context))return;
-        char[] secret=PIN.toCharArray();
+        char[] secret=PASSWORD.toCharArray();
         Store db=null;
         try{
             String id=LocalAccounts.register(context,USERNAME,secret);

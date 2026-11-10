@@ -48,7 +48,7 @@ $error=takeFlash();
  placeholder="Ponovite lozinku">
 </div>
 <p class="help-text" id="password-help">Snažna lozinka za web i Android omogućuje pristup
-podacima nakon promjene uređaja. Pohranite je na sigurnom mjestu; Android dodatno koristi lokalni PIN.</p>
+podacima nakon promjene uređaja. Pohranite je na sigurnom mjestu; ista lozinka koristi se za Android i web.</p>
 <button class="primary-action" type="submit">
 <svg viewBox="0 0 28 28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="11" cy="8" r="4.5"/><path d="M3 25v-2c0-5 3.3-8 8-8s8 3 8 8v2H3ZM22 9h6M25 6v6"/>

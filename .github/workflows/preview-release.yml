@@ -9,8 +9,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Publish Windows portable and complete distribution
@@ -36,7 +36,7 @@ jobs:
           if (!(Test-Path win/build/Fakturiva-setup.exe)) { throw "Setup missing" }
           Copy-Item win/build/Fakturiva-setup.exe build/windows/Fakturiva-setup.exe
       - name: Upload verified Windows preview assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Fakturiva-Windows-preview
           path: build/windows/*
@@ -48,14 +48,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '9.6.0'
+          gradle-version: '9.9.0'
       - name: Install Android platform
         run: |
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
@@ -100,7 +100,7 @@ jobs:
           script: bash ci/run_android_qa.sh
       - name: Preserve tested emulator screenshots and instrumentation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Fakturiva-release-${{ env.VERSION }}-real-screens
           path: |
@@ -126,7 +126,7 @@ jobs:
       - name: Verify debug-signing (not a production Google Play signature)
         run: jarsigner -verify app/build/outputs/bundle/debug/app-debug.aab
       - name: Download matching Windows setup and portable artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: Fakturiva-Windows-preview
           path: build/publish
@@ -152,7 +152,7 @@ jobs:
           cp app/build/outputs/bundle/debug/app-debug.aab "build/publish/Fakturiva-v${VERSION}-DEBUG-SIGNED.aab"
           cp app/build/outputs/bundle/release/app-release.aab "build/publish/Fakturiva-v${VERSION}-UNSIGNED.aab"
           (cd build/publish && sha256sum *.apk *.aab *.exe *.zip > SHA256SUMS.txt)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Fakturiva-preview-${{ env.VERSION }}-packages
           path: build/publish/*

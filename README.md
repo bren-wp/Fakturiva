@@ -34,15 +34,15 @@ Android aplikacija • Web pristup poslovnom pregledu • Windows klijent
 
 ## Jedan Fakturiva račun za web i Android
 
-**Registracija i prijava koriste e-adresu i lozinku na [fakturiva.eu](https://fakturiva.eu/).** Android za pristup lokalnoj kopiji dodatno postavlja osobni PIN. Za postojeće starije račune dostupna je i prethodna PIN prijava. Novi korisnici na webu i Androidu unose i potvrđuju lozinku prije stvaranja računa.
+**Registracija i prijava koriste e-adresu i lozinku na [fakturiva.eu](https://fakturiva.eu/), Androidu i webu.** U aplikaciji više nema dodatnog lokalnog koda ni alternativne prijave. Lozinka štiti i prijavu za rad bez interneta. Postojeći korisnici mogu migrirati lokalnu zaštitu nakon prve uspješne web prijave; ne brišite podatke ni aplikaciju prije provjere sigurnosne kopije.
 
 1. Registrirajte se e-adresom, snažnom lozinkom i potvrdom lozinke na webu ili u Android aplikaciji.
-2. Na Androidu zatim postavite **lokalni PIN (4–6 znamenki)** za šifriranu radnu kopiju. PIN se ne šalje na web.
+2. Na Androidu unesite **istu e-adresu i lozinku**. Nakon uspješne HTTPS provjere aplikacija sprema zaštićeni lokalni profil za rad bez interneta.
 3. Prijavite se istom e-adresom i lozinkom na drugom uređaju i vratite posljednju serverom potvrđenu šifriranu kopiju.
 4. U aplikaciji otvorite **Postavke → Korisnički računi → Preuzmi novije podatke s weba** za sigurnu obnovu podataka promijenjenih na drugom uređaju. Lokalna kopija prvo se zaštićuje, a nepotvrđene offline promjene ne prepisuju se.
 5. Na webu pregledajte korisnički račun, financijske podatke, dokumente i podržane porezne izvještaje iz posljednje potvrđene kopije.
 
-**Važno:** Novi API računi moraju koristiti ispravnu e-adresu, dok se postojeći računi s ranijim korisničkim imenima i dalje mogu prijaviti. Pri unosu pogrešnog lokalnog PIN-a u koraku obnove obrazac ostaje otvoren za ispravak. Android pohranjuje i preuzima **cijele šifrirane kopije** računa, ponuda, klijenata, artikala, uplata i postavki. To omogućuje obnovu potvrđenih podataka na drugim uređajima, ali još nije istodobno uređivanje iste baze na dva uređaja. Web poslovni pregled trenutačno čita potvrđene preslike i **nije puni dvosmjerni web editor**. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
+**Važno:** Novi API računi moraju koristiti ispravnu e-adresu, dok se postojeći računi s ranijim korisničkim imenima i dalje mogu prijaviti. Android pohranjuje i preuzima **cijele šifrirane kopije** računa, ponuda, klijenata, artikala, uplata i postavki. To omogućuje obnovu potvrđenih podataka na drugim uređajima, ali još nije istodobno uređivanje iste baze na dva uređaja. Web poslovni pregled trenutačno čita potvrđene preslike i **nije puni dvosmjerni web editor**. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
 
 ## Stvarni zasloni aplikacije
 
@@ -85,7 +85,7 @@ Svih **20 slika su stvarne snimke pokrenute Android aplikacije na QA emulatoru**
 
 ## Sigurnost podataka i privatnost
 
-Fakturiva šifrira sigurnosne kopije pomoću AES-256-GCM, provjerava integritet podataka i odjeljuje zapise korisničkih računa. Lokalni PIN i snažna poslužiteljska lozinka imaju različite uloge. Neuspjeh mreže ili sukob revizija ne smije automatski prebrisati noviju kopiju.
+Fakturiva šifrira sigurnosne kopije pomoću AES-256-GCM, provjerava integritet podataka i odjeljuje zapise korisničkih računa. Jedinstvena prijavna lozinka na poslužitelju i lokalni zaštićeni verifikator omogućuju autentifikaciju s internetom ili bez njega. Neuspjeh mreže ili sukob revizija ne smije automatski prebrisati noviju kopiju.
 
 Sigurnosni mehanizmi ne zamjenjuju potrebu za **provjerenim HTTPS hostingom, sigurnim čuvanjem poslužiteljskog ključa, offsite backupom i testom povrata podataka**. [Saznajte više o web postavljanju](web/README.md).
 

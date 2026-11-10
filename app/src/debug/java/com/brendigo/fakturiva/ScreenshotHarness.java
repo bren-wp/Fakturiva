@@ -72,6 +72,25 @@ public final class ScreenshotHarness {
                 Arrays.asList(previous));
             store.confirm(september);
             store.pay(september,746500,"2026-09-20");
+            // Earlier months are populated through actual Store payment writes
+            // in an isolated debug emulator, not a mock chart or production
+            // balance. The report graph shows six real receipt buckets.
+            long[] earlierGross={300000,420000,360000,500000};
+            for(int i=0;i<earlierGross.length;i++){
+                Store.Item prior=new Store.Item();
+                prior.name="Usluge prethodnog razdoblja";
+                prior.qtyMilli=1000;
+                prior.unitCents=earlierGross[i]*4/5;
+                prior.taxRate=25;
+                String paidAt=String.format(java.util.Locale.ROOT,
+                    "2026-%02d-15",5+i);
+                long earlier=store.createDraft(Store.INVOICE,
+                    fixtureClient(people,"Obrt Primjer"),paidAt,
+                    "2026-12-20","Primjer ranijih uplata",
+                    Arrays.asList(prior));
+                store.confirm(earlier);
+                store.pay(earlier,earlierGross[i],paidAt);
+            }
             // Fifteen earlier October records + eight visible reference rows
             // produce 24 invoices, and confirmed October receipts total
             // €8,420 (rather than hardcoding a KPI into the native UI).

@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify PHP runtime and crypto extensions
         run: |
           php -v
@@ -55,7 +55,7 @@ jobs:
         run: git archive --format=zip --output=/tmp/fakturiva-web-qa.zip HEAD web/
       - name: Upload web source bundle for screenshot comparison
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Fakturiva-web-source-qa
           path: /tmp/fakturiva-web-qa.zip
