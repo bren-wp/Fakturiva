@@ -471,15 +471,10 @@ function requireSensitiveWebPin(array &$account,string $pin):void {
     $account['web_block_until']=0;
 }
 /**
- * Sensitive actions require the credential actually configured on this
- * account: an existing web PIN or the current strong login password.
- * Never silently bypass reauthentication for newly registered accounts.
+ * All account-sensitive actions reauthenticate using the same web password,
+ * including accounts migrated from an older authentication scheme.
  */
 function requireSensitiveWebCredential(array &$account,string $credential): void {
-    if(isset($account['web_pin_hash'])){
-        requireSensitiveWebPin($account,$credential);
-        return;
-    }
     $hash=$account['password_hash']??null;
     if(!is_string($hash)||strlen($credential)<12||
        !password_verify($credential,$hash)){
@@ -576,6 +571,9 @@ function webLoginPassword(string $username,string $passphrase,string $address): 
             fail(401,'Korisničko ime ili lozinka nisu ispravni');
         }
         if(!empty($account['suspended']))fail(403,'Račun je privremeno onemogućen.');
+        // Remove obsolete web PIN verifier after successful strong password
+        // authentication. Existing account ID and encrypted backup stay intact.
+        unset($account['web_pin_hash'],$account['web_attempts'],$account['web_block_until']);
         $token=issueWebSession($account);
         writeRecord(accountPath($account['id']),$account);
         return ['id'=>$account['id'],'token'=>$token,'username'=>$account['username']];
