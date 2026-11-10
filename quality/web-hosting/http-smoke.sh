@@ -17,8 +17,13 @@ if [ "$ready" != true ]; then
   echo "Local PHP server did not start" >&2
   exit 1
 fi
-name="qa_http_$(date +%s)_$RANDOM"
+name="qa_http_$(date +%s)_$RANDOM@example.test"
 password='A private hosting passphrase with 16+ chars'
+invalid_status="$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+  -H 'Content-Type: application/json' \
+  --data '{"action":"register","username":"not-an-email","passphrase":"a-long-valid-test-password"}' \
+  "http://127.0.0.1:$port/api.php")"
+test "$invalid_status" = "422" || { echo "API accepted a non-email registration" >&2; exit 1; }
 body="$(printf '{"action":"register","username":"%s","passphrase":"%s"}' "$name" "$password")"
 response="$(curl -fsS -X POST -H 'Content-Type: application/json' --data "$body"   "http://127.0.0.1:$port/api.php")"
 token="$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["token"])')"
