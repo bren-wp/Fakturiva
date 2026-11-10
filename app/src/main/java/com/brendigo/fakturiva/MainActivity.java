@@ -1076,9 +1076,9 @@ public final class MainActivity extends Activity {
         gap(body,22);
         secondary(body,"Trajno izbriši ovaj lokalni račun",()->{
             if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
-            EditText secret=field("PIN za potvrdu brisanja","");
-            secret.setInputType(InputType.TYPE_CLASS_NUMBER|
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            EditText secret=field("Lozinka za potvrdu brisanja","");
+            secret.setInputType(InputType.TYPE_CLASS_TEXT|
+                InputType.TYPE_TEXT_VARIATION_PASSWORD);
             new AlertDialog.Builder(this).setTitle("Brisanje lokalnog računa")
                 .setMessage("Ovo trajno briše lokalnu bazu i lokalne sigurnosne "+
                     "kopije trenutačnog profila. Prethodno izvezite kopiju. "+
@@ -1119,7 +1119,7 @@ public final class MainActivity extends Activity {
 
     /**
      * An optional HTTPS host is NEVER configured by default. The user's local
-     * PIN is never submitted. Strong server credentials are entered per action
+     * Only web passwords are submitted. Credentials are entered per action
      * and never saved in the app or included in Android backup.
      */
     private void selfHostedSettings(){
@@ -1131,7 +1131,7 @@ public final class MainActivity extends Activity {
         place(notice,label("Podatci na serveru glavna su sigurnosna kopija, a "+
             "uređaj čuva radnu kopiju za rad bez interneta. "+
             "Za potpuno siguran oporavak nakon ponovne instalacije unesite "+
-            "HTTPS adresu, korisničko ime i zasebnu lozinku hostinga.",12,sub(),false));
+            "HTTPS adresu, e-adresu i lozinku računa.",12,sub(),false));
         gap(notice,11);
         place(notice,label(CloudMirror.status(this,LocalAccounts.activeId()),
             12,CloudMirror.enabled(this,LocalAccounts.activeId())?TEAL:RED,true));
@@ -1143,7 +1143,7 @@ public final class MainActivity extends Activity {
         EditText user=field("ime@tvrtka.hr",
             prefs.getString("host_user_"+id,LocalAccounts.activeName()));
         fieldLabel(body,"Poslužiteljsko korisničko ime",user);
-        EditText pass=field("Lozinka hostinga (nije PIN)","");
+        EditText pass=field("Lozinka računa","");
         pass.setInputType(InputType.TYPE_CLASS_TEXT|
             InputType.TYPE_TEXT_VARIATION_PASSWORD);
         if(Build.VERSION.SDK_INT>=26)
@@ -1338,7 +1338,7 @@ public final class MainActivity extends Activity {
         pad(guard,15,5);
         place(guard,label("Zaštita pri ponovnom otvaranju",15,NAVY,true));
         gap(guard,7);
-        place(guard,label("Koristi PIN, uzorak ili lozinku koju je postavio Android.",12,MUTED,false));
+        place(guard,label("Koristi sigurnosnu zaštitu postavljenu na uređaju.",12,MUTED,false));
         place(body,guard);
         gap(body,37);
         LinearLayout local=vertical();
@@ -1384,7 +1384,7 @@ public final class MainActivity extends Activity {
             getSystemService(Context.KEYGUARD_SERVICE);
         if(manager==null||!manager.isDeviceSecure()){
             new AlertDialog.Builder(this).setTitle("Uključite zaključavanje uređaja")
-                .setMessage("Najprije postavite PIN, lozinku ili uzorak u Android postavkama.")
+                .setMessage("Najprije postavite zaštitu zaključavanja u Android postavkama.")
                 .setNegativeButton("Odustani",null)
                 .setPositiveButton("Postavke uređaja",(d,w)->
                     startActivity(new Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS)))
@@ -4250,7 +4250,7 @@ public final class MainActivity extends Activity {
             LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
             this::localAccountSettings);
         settingRow(options,"◈","Sigurnost",
-            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"PIN i privatnost",
+            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"Zaštita i privatnost",
             ()->securityScreen(false,true));
         settingRow(options,"♢","Izvoz i sigurnosne kopije",
             "Izvoz i obnova podataka",this::backupScreen);
@@ -5327,8 +5327,7 @@ public final class MainActivity extends Activity {
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                 navigate("home");offerWorkingDraftRecovery();
             }else if(completedAction==4){
-                // OS confirmation is an additional factor. Never open SQLite
-                // until LocalAccounts verifies the user's PIN.
+                // OS confirmation does not replace email/password sign-in.
                 if(!"server_login".equals(screen))return;
                 loginServerScreen();
             }else if(completedAction==3){
