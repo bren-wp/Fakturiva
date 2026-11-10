@@ -11,7 +11,7 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
             throw new FakturivaSelfHost\HttpFailure(422,'Unesite riječ DELETE za potvrdu.');
         if($account!==null){
             FakturivaSelfHost\webDeleteAccount((string)$_SESSION['web_id'],
-                (string)$_SESSION['web_token'],(string)($_POST['pin']??''));
+                (string)$_SESSION['web_token'],(string)($_POST['current_password']??''));
         }else{
             FakturivaSelfHost\deleteAccount((string)($_POST['username']??''),
                 (string)($_POST['passphrase']??''));
@@ -51,19 +51,14 @@ zakonima morate čuvati.</p>
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <?php if($account!==null):?>
 <p>Prijavljeni korisnik: <strong><?=h((string)$account['username'])?></strong></p>
-<?php if(isset($account['web_pin_hash'])):?>
-<label for="pin">PIN za brisanje</label>
-<input type="password" id="pin" name="pin" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" data-numeric-pin required autocomplete="off">
-<?php else:?>
 <label for="current-password">Lozinka računa za potvrdu brisanja</label>
-<input type="password" id="current-password" name="pin" minlength="12" maxlength="256" required autocomplete="current-password">
-<?php endif;?>
+<input type="password" id="current-password" name="current_password" minlength="12" maxlength="256" required autocomplete="current-password">
 <?php else:?>
 <p>Ako nemate otvorenu web sesiju, možete potvrditi brisanje
 svojim korisničkim imenom i <strong>zasebnom lozinkom hostinga</strong>.</p>
 <label for="username">Korisničko ime</label>
 <input id="username" name="username" required minlength="3" maxlength="80" autocomplete="username">
-<label for="passphrase">Lozinka hostinga (nije lokalni Android PIN)</label>
+<label for="passphrase">Lozinka računa</label>
 <input type="password" id="passphrase" name="passphrase" required autocomplete="current-password">
 <?php endif;?>
 <label for="confirm">Upišite DELETE za potvrdu</label>
