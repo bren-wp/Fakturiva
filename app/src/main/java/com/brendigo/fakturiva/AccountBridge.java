@@ -31,14 +31,12 @@ public final class AccountBridge {
         void complete(String error, String profileId);
     }
 
-    private static void validate(String username, char[] pass, char[] pin) {
+    private static void validate(String username, char[] pass) {
         if (username == null || !username.trim().matches(
                 "[A-Za-z0-9][A-Za-z0-9._+@-]{2,79}"))
             throw new IllegalArgumentException("Unesite ispravnu e-adresu ili korisničko ime.");
         if (pass == null || pass.length < 12 || pass.length > 256)
             throw new IllegalArgumentException("Lozinka mora imati 12–256 znakova.");
-        if (pin == null || !new String(pin).matches("[0-9]{4,6}"))
-            throw new IllegalArgumentException("Lokalni PIN mora imati 4–6 znamenki.");
     }
 
     private static void ensureNewLocalProfile(Context app, String username) throws Exception {
@@ -67,7 +65,7 @@ public final class AccountBridge {
         final String username = name == null ? "" : name.trim();
         final char[] secret = password == null ? new char[0] : password.clone();
         new Thread(() -> {
-            String error = null, token = null, url = null;
+            String error = null, token = null, url = null, verifiedId = null;
             try {
                 if (!username.matches("[A-Za-z0-9][A-Za-z0-9._+@-]{2,79}") ||
                     secret.length < 12 || secret.length > 256)
@@ -77,6 +75,10 @@ public final class AccountBridge {
                     new String(secret));
                 token = SelfHostedSyncClient.request(url, auth, null)
                     .getString("token");
+                // Preserve local user data; replace only legacy credentials
+                // after the server has positively authenticated this identity.
+                verifiedId = LocalAccounts.rekeyAfterVerifiedServerLogin(
+                    activity.getApplicationContext(),username,secret);
             } catch(Exception failure) {
                 error = failure.getMessage() == null ?
                     "Web prijava nije uspjela." : failure.getMessage();
@@ -88,37 +90,36 @@ public final class AccountBridge {
                 }
                 Arrays.fill(secret, '\0');
             }
-            final String result = error;
+            final String result = error, profileId = error == null ? verifiedId : null;
             UI.post(() -> {
                 if (!activity.isFinishing() && !activity.isDestroyed())
-                    callback.complete(result, null);
+                    callback.complete(result, profileId);
             });
         }, "FakturivaVerifyWebPassword").start();
     }
 
     /** Starts registration on the server before creating the offline cache. */
-    public static void register(Activity activity, String username, char[] passphrase,
-                                char[] pin, Callback callback) {
-        execute(activity, username, passphrase, pin, true, callback);
+    public static void register(Activity activity, String username,
+                                char[] passphrase, Callback callback) {
+        execute(activity, username, passphrase, true, callback);
     }
 
     /** Restores a verified encrypted remote backup to a new local PIN profile. */
-    public static void restoreLogin(Activity activity, String username, char[] passphrase,
-                                    char[] pin, Callback callback) {
-        execute(activity, username, passphrase, pin, false, callback);
+    public static void restoreLogin(Activity activity, String username,
+                                    char[] passphrase, Callback callback) {
+        execute(activity, username, passphrase, false, callback);
     }
 
     private static void execute(Activity activity, String name, char[] password,
-                                char[] localPin, boolean create, Callback callback) {
+                                boolean create, Callback callback) {
         final Context app = activity.getApplicationContext();
         final char[] secret = password == null ? new char[0] : password.clone();
-        final char[] digits = localPin == null ? new char[0] : localPin.clone();
         final String username = name == null ? "" : name.trim();
         new Thread(() -> {
             String error = null, id = null, token = null, url = null;
             Store store = null;
             try {
-                validate(username, secret, digits);
+                validate(username, secret);
                 if (create && !android.util.Patterns.EMAIL_ADDRESS
                         .matcher(username).matches())
                     throw new IllegalArgumentException("Unesite valjanu e-adresu.");
@@ -200,7 +201,7 @@ public final class AccountBridge {
                 // leave NO newly registered local account behind. The web
                 // account can be recovered by ordinary email/password login.
                 ensureNewLocalProfile(app, username);
-                id = LocalAccounts.register(app, username, digits);
+                id = LocalAccounts.register(app, username, secret);
                 store = new Store(app, id);
                 if (snapshot != null) {
                     // Store.restore validates schema/relations/amounts and
@@ -224,7 +225,6 @@ public final class AccountBridge {
                     }
                 }
                 Arrays.fill(secret, '\0');
-                Arrays.fill(digits, '\0');
             }
             final String resultError = error, resultId = error == null ? id : null;
             UI.post(() -> {
