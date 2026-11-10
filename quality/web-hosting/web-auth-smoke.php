@@ -32,7 +32,7 @@ $noPinSuffix=bin2hex(random_bytes(7));
 $noPinUser='mobile_'.$noPinSuffix.'@example.test';
 $noPinPassword='Brendigo-cross-platform-test-'.$noPinSuffix;
 $noPinIp='192.0.2.141';
-$noPinAccount=webRegister($noPinUser,'',$noPinIp,$noPinPassword);
+$noPinAccount=webRegister($noPinUser,$noPinIp,$noPinPassword);
 assertWeb(webAuthorized($noPinAccount['id'],$noPinAccount['token'])
     ['username']===$noPinUser,'Password-only account creation failed');
 $noPinApi=signIn($noPinUser,$noPinPassword,$noPinIp);
@@ -61,8 +61,8 @@ $pinA='123456';$pinB='456789';
 $serverPassA='Different-long-server-passphrase-'.$suffix;
 $serverPassB='Another-long-server-passphrase-'.$suffix;
 
-$a=webRegister($userA,'',$ip,$serverPassA);
-$b=webRegister($userB,'',$ip,$serverPassB);
+$a=webRegister($userA,$ip,$serverPassA);
+$b=webRegister($userB,$ip,$serverPassB);
 assertWeb($a['id']!==$b['id'],'Profiles share an ID');
 $passwordLogin=webLoginPassword($userA,$serverPassA,$ip);
 assertWeb($passwordLogin['id']===$a['id'],
@@ -106,11 +106,19 @@ $apiWeb=webLoginPassword($apiUser,$serverPassB,$ip);
 assertWeb($apiWeb['id']===explode('.',$api['token'])[0],
     'Same password must resolve the existing Android account');
 webDeleteAccount($apiWeb['id'],$apiWeb['token'],$serverPassB);
+// An older stored PIN verifier is never an alternative authentication path.
+// Password login keeps the same account ID and clears the obsolete verifier.
 $nativeUser='native_'.$suffix;
-$native=signUp($nativeUser,$serverPassB,$ip,$pinB);
+$native=signUp($nativeUser,$serverPassB,$ip);
+$legacyId=explode('.',$native['token'])[0];
+$legacyRecord=FakturivaSelfHost\readRecord(
+    FakturivaSelfHost\accountPath($legacyId));
+$legacyRecord['web_pin_hash']='retired-legacy-verifier';
+FakturivaSelfHost\writeRecord(
+    FakturivaSelfHost\accountPath($legacyId),$legacyRecord);
 $nativeWeb=webLoginPassword($nativeUser,$serverPassB,$ip);
-assertWeb($nativeWeb['id']===explode('.',$native['token'])[0],
-    'Android and web registration created different tenants');
+assertWeb($nativeWeb['id']===$legacyId,
+    'Password login created a new tenant for migrated data');
 assertWeb(!isset(webAuthorized($nativeWeb['id'],$nativeWeb['token'])['web_pin_hash']),
     'Legacy PIN verifier was not retired after verified password login');
 webDeleteAccount($nativeWeb['id'],$nativeWeb['token'],$serverPassB);
