@@ -23,8 +23,9 @@ public final class CroatianTaxReportsTest extends FakturivaTestCase {
     @Test public void cashBasisPdfAndTaxTotals() throws Exception{
         Context context=getContext();
         String unique=UUID.randomUUID().toString().replace("-","");
-        String id=LocalAccounts.register(context,"tax_"+unique.substring(0,16),
-            "123456".toCharArray());
+        String username="tax_"+unique.substring(0,16)+"@example.test";
+        char[] password="Fakturiva-tax-test-2026".toCharArray();
+        String id=LocalAccounts.register(context,username,password);
         LocalAccounts.unlock(context,id);
         Store store=new Store(context,id);
         try{
@@ -102,8 +103,8 @@ public final class CroatianTaxReportsTest extends FakturivaTestCase {
             }catch(IllegalStateException expected){/* correct */}
         }finally{
             store.close();
-            LocalAccounts.delete(context,"tax_"+unique.substring(0,16),
-                "123456".toCharArray());
+            LocalAccounts.delete(context,username,password);
+            java.util.Arrays.fill(password,'\0');
             LocalAccounts.lock();
         }
     }
