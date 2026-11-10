@@ -119,6 +119,9 @@ public final class AccountBridge {
             Store store = null;
             try {
                 validate(username, secret, digits);
+                if (create && !android.util.Patterns.EMAIL_ADDRESS
+                        .matcher(username).matches())
+                    throw new IllegalArgumentException("Unesite valjanu e-adresu.");
                 // Existing on-device records are never silently overwritten by
                 // a remote sign-in. Use the existing local PIN and explicit sync.
                 ensureNewLocalProfile(app, username);
