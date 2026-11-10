@@ -29,20 +29,18 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 
 /**
- * Local-only profiles. Neither usernames nor PINs are sent to a server.
- *
- * The account registry is sealed by a non-exportable Android Keystore AES key.
- * PIN verifiers are salted PBKDF2 values (no plaintext PIN storage), and
- * attempts are throttled and persisted across app restarts. A 4-digit PIN is
- * intrinsically weak; the Keystore and Android device screen lock remain
- * important defenses against offline extraction.
+ * Local profiles are keyed by the same email/password as the web account.
+ * The registry is AES-GCM sealed with a non-exportable Android Keystore key.
+ * Local passphrase verifiers are salted PBKDF2 and attempts are throttled.
+ * Legacy v1 PIN verifiers are retained ONLY for online, authenticated migration
+ * to password-based access; they are never an allowed login path in v2.
  */
 public final class LocalAccounts {
     private static final String KEY_ALIAS = "fakturiva-local-accounts-v1";
     private static final byte[] HEADER = {'F','A','C','1'};
     private static final Pattern USERNAME =
         Pattern.compile("[A-Za-z0-9][A-Za-z0-9._+@-]{2,79}");
-    private static final Pattern PIN = Pattern.compile("[0-9]{4,6}");
+    private static final int MIN_PASSWORD_LENGTH = 12;
     private static final int KDF_ROUNDS = 210000;
     private static final int MAX_REGISTRY = 1024 * 1024;
     private static volatile String sessionId = null;
@@ -72,9 +70,10 @@ public final class LocalAccounts {
         return name.toLowerCase(Locale.ROOT);
     }
 
-    private static void checkPin(char[] pin) {
-        if (pin == null || !PIN.matcher(new String(pin)).matches())
-            throw new IllegalArgumentException("PIN mora imati 4–6 znamenki");
+    private static void checkPassword(char[] password) {
+        if (password == null || password.length < MIN_PASSWORD_LENGTH ||
+                password.length > 256)
+            throw new IllegalArgumentException("Lozinka mora imati 12–256 znakova.");
     }
 
     private static SecretKey key() throws Exception {
@@ -94,9 +93,9 @@ public final class LocalAccounts {
         return generator.generateKey();
     }
 
-    private static byte[] passwordHash(char[] pin, byte[] salt) throws Exception {
+    private static byte[] passwordHash(char[] password, byte[] salt) throws Exception {
         // PBKDF2-HMAC-SHA1 is supported on the app's minimum Android API 24.
-        PBEKeySpec spec = new PBEKeySpec(pin, salt, KDF_ROUNDS, 256);
+        PBEKeySpec spec = new PBEKeySpec(password, salt, KDF_ROUNDS, 256);
         try {
             return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
                 .generateSecret(spec).getEncoded();
@@ -201,10 +200,10 @@ public final class LocalAccounts {
         return null;
     }
 
-    public static synchronized String register(Context context, String username, char[] pin)
+    public static synchronized String register(Context context, String username, char[] password)
             throws Exception {
         String normalized = normalized(username);
-        checkPin(pin);
+        checkPassword(password);
         JSONObject registry = read(context);
         JSONArray accounts = registry.getJSONArray("accounts");
         if (accounts.length() >= 25)
@@ -213,12 +212,13 @@ public final class LocalAccounts {
             throw new IllegalArgumentException("Korisničko ime već postoji na ovom uređaju");
         byte[] salt = new byte[16];
         new SecureRandom().nextBytes(salt);
-        byte[] hash = passwordHash(pin,salt);
+        byte[] hash = passwordHash(password,salt);
         String id = java.util.UUID.randomUUID().toString().replace("-","");
         JSONObject entry = new JSONObject()
             .put("id",id).put("username",username.trim())
             .put("normalized",normalized)
             .put("salt",b64(salt)).put("verifier",b64(hash))
+            .put("credential_version",2)
             .put("attempts",0).put("blockedUntil",0L);
         Arrays.fill(hash,(byte)0);
         accounts.put(entry);
@@ -227,16 +227,19 @@ public final class LocalAccounts {
     }
 
     /**
-     * Returns a profile id only after successful PIN verification.
-     * Invalid credentials never activate another user's database.
+     * Offline unlock is supported only for migrated password-based profiles.
+     * A legacy PIN is never accepted; the user must verify their web password
+     * online once to upgrade the local verifier without touching SQLite data.
      */
-    public static synchronized String verify(Context context, String username, char[] pin)
+    public static synchronized String verify(Context context, String username, char[] password)
             throws Exception {
         String normal = normalized(username);
         JSONObject registry = read(context);
         JSONObject entry = find(registry.getJSONArray("accounts"),normal);
         if (entry == null)
-            throw new SecurityException("Korisničko ime ili PIN nisu ispravni");
+            throw new SecurityException("E-adresa ili lozinka nisu ispravne.");
+        if (entry.optInt("credential_version",1) != 2)
+            throw new SecurityException("Za prijelaz na lozinku prvi put se prijavite putem interneta.");
         long now = System.currentTimeMillis();
         long blockedUntil = entry.optLong("blockedUntil",0L);
         if (blockedUntil > now) {
@@ -244,10 +247,11 @@ public final class LocalAccounts {
             throw new SecurityException("Previše pokušaja. Pokušajte ponovno za " +
                 seconds + " sekundi.");
         }
-        // Work is bounded even for an invalid PIN; no plaintext PINs are stored.
+        // No plaintext passwords are kept; all comparisons are constant time.
         boolean matched = false;
-        if (pin != null && PIN.matcher(new String(pin)).matches()) {
-            byte[] actual = passwordHash(pin,unb64(entry.getString("salt")));
+        if (password != null && password.length >= MIN_PASSWORD_LENGTH &&
+                password.length <= 256) {
+            byte[] actual = passwordHash(password,unb64(entry.getString("salt")));
             byte[] expected = unb64(entry.getString("verifier"));
             matched = MessageDigest.isEqual(actual,expected);
             Arrays.fill(actual,(byte)0);
@@ -260,14 +264,43 @@ public final class LocalAccounts {
                 entry.put("blockedUntil",now + Math.min(3600_000L,
                     30_000L * (1L << Math.min(7,attempts-5))));
             write(context,registry);
-            throw new SecurityException("Korisničko ime ili PIN nisu ispravni");
+            throw new SecurityException("E-adresa ili lozinka nisu ispravne.");
         }
         entry.put("attempts",0).put("blockedUntil",0L);
         write(context,registry);
         return entry.getString("id");
     }
 
-    /** Must be called only with an id returned by register() or verify(). */
+    /**
+     * Called only AFTER a successful HTTPS login for this username by
+     * AccountBridge. The server verifies identity, then the existing SQLite
+     * profile ID, recovery vault, and documents are preserved in place.
+     */
+    static synchronized String rekeyAfterVerifiedServerLogin(
+            Context context, String username, char[] password) throws Exception {
+        checkPassword(password);
+        JSONObject registry = read(context);
+        JSONObject entry = find(registry.getJSONArray("accounts"), normalized(username));
+        if (entry == null)
+            throw new SecurityException("Korisnički profil nije pronađen na uređaju.");
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        byte[] hash = passwordHash(password,salt);
+        try {
+            entry.put("salt",b64(salt))
+                 .put("verifier",b64(hash))
+                 .put("credential_version",2)
+                 .put("attempts",0)
+                 .put("blockedUntil",0L);
+            write(context,registry);
+        } finally {
+            Arrays.fill(salt,(byte)0);
+            Arrays.fill(hash,(byte)0);
+        }
+        return entry.getString("id");
+    }
+
+    /** Must be called only with an id returned by register(), verify() or verified web login. */
     static synchronized void unlock(Context context, String verifiedId) throws Exception {
         if (!validProfileId(verifiedId))
             throw new SecurityException("Neispravan identifikator profila");
@@ -284,9 +317,9 @@ public final class LocalAccounts {
     }
 
     /** Delete an authenticated local profile. Caller must close its SQLite DB first. */
-    public static synchronized void delete(Context context,String username,char[] pin)
+    public static synchronized void delete(Context context,String username,char[] password)
             throws Exception {
-        String verified = verify(context,username,pin);
+        String verified = verify(context,username,password);
         if (!verified.equals(sessionId))
             throw new SecurityException("Ovaj korisnički račun nije trenutno otvoren");
         // Remove the registry entry only after its database and recovery files.
