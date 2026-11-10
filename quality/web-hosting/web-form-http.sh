@@ -18,7 +18,6 @@ extract_csrf(){
   grep -o 'name="csrf" value="[a-f0-9]\{64\}"' "$1" | head -1 | cut -d '"' -f 4
 }
 username="ci_web_$(date +%s)_$RANDOM@example.test"
-pin=654321
 passphrase="Fakturiva-ci-registration-$RANDOM-example"
 curl -fsS -b "$jar" -c "$jar" "$base/register.php" > "$temp/register.html"
 grep -Fq 'Kreirajte novi račun i započnite s poslovanjem.' "$temp/register.html"
@@ -113,7 +112,7 @@ grep -Fq 'Lozinka računa za potvrdu brisanja' "$temp/delete.html"
 csrf="$(extract_csrf "$temp/delete.html")"
 status="$(curl -sS -o "$temp/delete-result.html" -w '%{http_code}' \
   -b "$jar" -c "$jar" -X POST "$base/delete-account.php" \
-  --data-urlencode "csrf=$csrf" --data-urlencode "pin=$passphrase" \
+  --data-urlencode "csrf=$csrf" --data-urlencode "current_password=$passphrase" \
   --data-urlencode "confirm=DELETE")"
 test "$status" = 200
 grep -Fq 'trajno su uklonjeni' "$temp/delete-result.html"
