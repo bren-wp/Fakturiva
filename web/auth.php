@@ -9,23 +9,16 @@ if((int)($_SERVER['CONTENT_LENGTH']??0)>4096){
 }
 $mode=(string)($_POST['action']??'');
 $redirect=match($mode){
-    'register'=>'register.php','login'=>'login-pin.php',
-    'login-password'=>'login.php',
-    'link'=>'link.php','set-sync'=>'dashboard.php','identify'=>'identify.php',
-    'logout'=>'login.php',default=>'login.php'
+    'register'=>'register.php','login-password'=>'login.php',
+    'set-sync'=>'dashboard.php','logout'=>'login.php',default=>'login.php'
 };
 $username='';
 try{
     checkCsrf();
     $username=trim((string)($_POST['username']??''));
-    $pin=(string)($_POST['pin']??'');
+    $currentPassword=(string)($_POST['current_password']??'');
     $passphrase=(string)($_POST['passphrase']??'');
     $ip=(string)($_SERVER['REMOTE_ADDR']??'');
-    if($mode==='identify'){
-        FakturivaSelfHost\normalizeName($username);
-        $_SESSION['last_username']=$username;
-        gotoPage('login-pin.php');
-    }
     if($mode==='register'){
         // Only new browser registrations require an actual email address.
         // Legacy username-based accounts remain able to sign in.
@@ -35,7 +28,7 @@ try{
         if($confirm==='' || !hash_equals($passphrase,$confirm))
             throw new FakturivaSelfHost\HttpFailure(422,
                 'Lozinke se ne podudaraju.');
-        $result=FakturivaSelfHost\webRegister($username,$pin,$ip,$passphrase);
+        $result=FakturivaSelfHost\webRegister($username,"",$ip,$passphrase);
         adoptWebLogin($result);
         flash('Račun je uspješno registriran.');
         gotoPage('dashboard.php');
@@ -54,25 +47,12 @@ try{
             'path'=>'/','secure'=>!$testHttp,'httponly'=>true,'samesite'=>'Lax']);
         gotoPage('dashboard.php');
     }
-    if($mode==='login'){
-        $result=FakturivaSelfHost\webLogin($username,$pin,$ip);
-        adoptWebLogin($result);
-        gotoPage('dashboard.php');
-    }
-    if($mode==='link'){
-        $newPin=(string)($_POST['new_pin']??'');
-        $result=FakturivaSelfHost\webLinkAndroidAccount(
-            $username,$passphrase,$newPin,$ip);
-        adoptWebLogin($result);
-        flash('Web PIN je postavljen za postojeći račun.');
-        gotoPage('dashboard.php');
-    }
     if($mode==='set-sync'){
         $account=requireWeb();
         $webId=(string)$_SESSION['web_id'];
         $webToken=(string)$_SESSION['web_token'];
         FakturivaSelfHost\webChangeAndroidPassphrase(
-            $webId,$webToken,$pin,$passphrase);
+            $webId,$webToken,$currentPassword,$passphrase);
         flash('Lozinka za Android sinkronizaciju je ažurirana.');
         gotoPage('dashboard.php');
     }
@@ -94,6 +74,6 @@ try{
     error_log('Fakturiva web auth: '.get_class($error));
     flash('Zahtjev nije uspio. Pokušajte ponovno.');
 }
-if(in_array($mode,['login','login-password'],true)&&$username!==''&&strlen($username)<81)
+if($mode==='login-password'&&$username!==''&&strlen($username)<81)
     $_SESSION['last_username']=$username;
 gotoPage($redirect);
