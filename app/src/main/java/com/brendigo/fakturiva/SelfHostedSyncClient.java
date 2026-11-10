@@ -15,8 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
- * Opt-in, user-supplied HTTPS endpoint. Never uses the local 4–6 digit PIN
- * for remote authentication. All financial backup bytes are encrypted with
+ * User-supplied HTTPS endpoint. All financial backup bytes are encrypted with
  * SecureBackup on the Android device before being sent.
  *
  * No session/password is persisted. Every operation explicitly logs in,
