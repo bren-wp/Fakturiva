@@ -519,12 +519,12 @@ function webLogout(string $id,string $token): void {
         writeRecord(accountPath($id),$account);
     });
 }
-function webChangeAndroidPassphrase(string $id,string $token,string $pin,
+function webChangeAndroidPassphrase(string $id,string $token,string $currentPassword,
                                     string $newPassphrase):void {
     requirePassphrase($newPassphrase);
-    transaction(function()use($id,$token,$pin,$newPassphrase):void{
+    transaction(function()use($id,$token,$currentPassword,$newPassphrase):void{
         $account=webAuthorized($id,$token);
-        requireSensitiveWebCredential($account,$pin);
+        requireSensitiveWebCredential($account,$currentPassword);
         // Changing only the authentication hash would orphan all FAK1
         // archives encrypted with the old passphrase. Fail closed.
         if(is_string($account['backup']??null) && $account['backup']!=='')
@@ -537,10 +537,10 @@ function webChangeAndroidPassphrase(string $id,string $token,string $pin,
         writeRecord(accountPath($id),$account);
     });
 }
-function webDeleteAccount(string $id,string $token,string $pin):void {
-    transaction(function()use($id,$token,$pin):void{
+function webDeleteAccount(string $id,string $token,string $currentPassword):void {
+    transaction(function()use($id,$token,$currentPassword):void{
         $account=webAuthorized($id,$token);
-        requireSensitiveWebCredential($account,$pin);
+        requireSensitiveWebCredential($account,$currentPassword);
         // Clear credentials before file deletion, so interruption
         // cannot leave a valid session for a half-removed profile.
         $account['sessions']=[];
