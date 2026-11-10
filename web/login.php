@@ -23,7 +23,7 @@ if(!is_string($remembered)||strlen($remembered)>80)$remembered='';
 <form class="auth-form" method="post" action="auth.php" data-auth-form>
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <input type="hidden" name="action" value="login-password">
-<label class="input-label" for="email">E-adresa ili korisničko ime</label>
+<label class="input-label" for="email">E-adresa</label>
 <div class="field-wrap">
 <input id="email" name="username" type="text" minlength="3" maxlength="80"
  autocomplete="username" autocapitalize="none" spellcheck="false" required
@@ -51,6 +51,5 @@ Prijavi se</button>
 </form>
 <nav class="auth-switch"><span>Nemate račun?</span>
 <a href="register.php">Registrirajte se</a></nav>
-<p class="legacy-login">Već imate PIN? <a href="identify.php">Prijavite se PIN-om</a></p>
 <?=footerMarkup()?>
 </main></body></html>
