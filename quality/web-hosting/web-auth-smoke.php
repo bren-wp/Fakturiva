@@ -3,13 +3,11 @@ declare(strict_types=1);
 require_once __DIR__.'/../../web/lib.php';
 
 use function FakturivaSelfHost\webRegister;
-use function FakturivaSelfHost\webLogin;
 use function FakturivaSelfHost\webLoginPassword;
 use function FakturivaSelfHost\webAuthorized;
 use function FakturivaSelfHost\webLogout;
 use function FakturivaSelfHost\webDeleteAccount;
 use function FakturivaSelfHost\webChangeAndroidPassphrase;
-use function FakturivaSelfHost\webLinkAndroidAccount;
 use function FakturivaSelfHost\signUp;
 use function FakturivaSelfHost\signIn;
 use function FakturivaSelfHost\loadBackup;
@@ -40,8 +38,8 @@ assertWeb(webAuthorized($noPinAccount['id'],$noPinAccount['token'])
 $noPinApi=signIn($noPinUser,$noPinPassword,$noPinIp);
 assertWeb(explode('.',$noPinApi['token'])[0]===$noPinAccount['id'],
     'Web and Android created distinct accounts for one email');
-mustDeny(fn()=>webLogin($noPinUser,'123456',$noPinIp),401,
-    'Password-only account unexpectedly acquired a PIN');
+mustDeny(fn()=>webLoginPassword($noPinUser,'incorrect-password-2026',$noPinIp),401,
+    'Incorrect password must never open a user account');
 mustDeny(fn()=>webDeleteAccount($noPinAccount['id'],$noPinAccount['token'],
     'wrong-password-2026'),401,'Deletion accepted incorrect password');
 $newNoPinPassword='Brendigo-rotated-test-'.$noPinSuffix;
