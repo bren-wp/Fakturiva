@@ -5,7 +5,6 @@ $account=requireWeb();
 $flash=takeFlash();
 $canSync=is_string($account['password_hash']??null) &&
           (string)$account['password_hash']!=='';
-$usesLegacyPin=isset($account['web_pin_hash']);
 ?><!doctype html>
 <html lang="hr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -31,7 +30,7 @@ Android sinkronizaciju. Poslovni podaci ostaju odvojeni po korisničkim računim
 <strong><?=h((string)($account['saved_at']??'Još nema potvrđenog prijenosa'))?></strong></p>
 <p>Zadržane verzije:
 <strong><?=count(is_array($account['backup_history']??null)?$account['backup_history']:[]) + (empty($account['backup'])?0:1)?></strong></p>
-<p>Android sinkronizacija: <strong><?=$canSync?'Postavljena zasebna lozinka':'Nije aktivirana'?></strong></p>
+<p>Android sinkronizacija: <strong><?=$canSync?'Aktivna':'Nije aktivirana'?></strong></p>
 <small>Poslužitelj ne prikazuje sadržaj šifrirane preslike. Izvoz/uvoz pokrećete u Android aplikaciji.</small>
 </section>
 <section class="panel">
@@ -53,16 +52,9 @@ kako postojeći računi ne bi postali nedostupni.</p>
 <form method="post" action="auth.php" data-auth-form autocomplete="off">
 <input type="hidden" name="csrf" value="<?=h(csrf())?>">
 <input type="hidden" name="action" value="set-sync">
-<?php if($usesLegacyPin):?>
-<label for="current-pin">Potvrdite svoj postojeći web PIN</label>
-<input id="current-pin" name="pin" type="password" inputmode="numeric"
-pattern="[0-9]{4,6}" maxlength="6" minlength="4" autocomplete="off"
-data-numeric-pin required>
-<?php else:?>
-<label for="current-password">Trenutačna lozinka</label>
-<input id="current-password" name="pin" type="password"
+<label for="current-password">Trenutačna lozinka računa</label>
+<input id="current-password" name="current_password" type="password"
 minlength="12" maxlength="256" autocomplete="current-password" required>
-<?php endif;?>
 <label for="sync-password">Nova zasebna lozinka hostinga</label>
 <input id="sync-password" name="passphrase" type="password"
 minlength="12" maxlength="256" autocomplete="new-password" required>
