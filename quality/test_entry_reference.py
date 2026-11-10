@@ -24,14 +24,13 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('account.addView(label("Već imate račun? "',MAIN)
         self.assertIn('TextView signIn=label("Prijavite se"',MAIN)
         self.assertIn('account.setOnClickListener(v->openExistingLocalAccess())',MAIN)
-        # Remote email/password login is the default entry path; verified
-        # local PIN remains an offline fallback for existing profiles.
+        # The default and offline paths both use email and password.
         self.assertIn('if(LocalAccounts.hasAccounts(this))loginServerScreen()', MAIN)
         self.assertIn('AccountBridge.restoreLogin(', MAIN)
         self.assertIn('AccountBridge.register(', MAIN)
-        self.assertIn('secondary(body,"Prijava lokalnim PIN-om (bez interneta)"', MAIN)
+        self.assertIn('secondary(body,"Rad bez interneta — e-adresa i lozinka"', MAIN)
         self.assertIn('call(a,"loginServerScreen")', HARNESS)
-        self.assertIn('String id=LocalAccounts.verify(this,loginUsername,digits)', MAIN)
+        self.assertIn('String id=LocalAccounts.verify(this,email,localSecret)', MAIN)
         self.assertIn('openLocalSession(id)', MAIN)
         self.assertIn('if(prefs.getBoolean("device_lock",false))', MAIN)
         self.assertIn('securityScreen(true,false)', MAIN)
@@ -42,20 +41,20 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('https://fakturiva.eu/',bridge)
         self.assertIn('SelfHostedSyncClient.request(url, auth, null)',bridge)
         self.assertIn('SecureBackup.decrypt(sealed, secret)',bridge)
-        self.assertIn('LocalAccounts.register(app, username, digits)',bridge)
+        self.assertIn('LocalAccounts.register(app, username, secret)',bridge)
         self.assertIn('CloudMirror.connectAcknowledged(app, id, url, username',bridge)
         self.assertIn('.putBoolean("dirty", false)',mirror)
         self.assertIn('.putInt("revision", revision)',mirror)
         self.assertIn('if (!sha256(sealed).equals(remote.getString("sha256")))',bridge)
         self.assertIn('ensureNewLocalProfile(app, username)',bridge)
 
-    def test_reference_login_has_real_device_credential_then_pin_flow(self):
-        self.assertIn('action("◎  Prijava biometrijom",BLUE,false,',MAIN)
-        self.assertIn('this::deviceVerifiedLocalAccess',MAIN)
-        self.assertIn('confirmDeviceCredential(4)',MAIN)
-        self.assertIn('completedAction==4',MAIN)
-        self.assertIn('loginPinScreen()',MAIN)
-        self.assertIn('String id=LocalAccounts.verify(this,loginUsername,digits)',MAIN)
+    def test_email_password_is_only_public_app_login(self):
+        self.assertIn('AccountBridge.verifyCredentials(this,name,secret',MAIN)
+        self.assertIn('AccountBridge.restoreLogin(this,name,secret',MAIN)
+        self.assertIn('LocalAccounts.verify(this,email,localSecret)',MAIN)
+        self.assertNotIn('loginPinScreen()',MAIN)
+        self.assertNotIn('Prijava PIN-om',MAIN)
+        self.assertNotIn('Prijava biometrijom',MAIN)
 
     def test_dark_reference_background_and_eracun_surface_match_palette(self):
         self.assertIn('dark?0xff0d1728:BG',MAIN)
@@ -63,20 +62,15 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('dark?0xff263853:0xfff1f5ff',MAIN)
         self.assertIn('"eracun".equals(screen)',MAIN)
 
-    def test_android_email_registration_requires_matching_password_before_pin(self):
+    def test_registration_uses_email_password_and_confirmation_only(self):
         registration=MAIN.split("private void registrationScreen(){",1)[1].split(
             "private void localBrand(){",1)[0]
         self.assertIn('place(body,label("E-adresa"',registration)
         self.assertIn('place(body,label("Lozinka"',registration)
         self.assertIn('place(body,label("Ponovite lozinku"',registration)
-        self.assertIn('firstPassword.equals(confirm.getText().toString())',registration)
-        self.assertIn('AlertDialog dialog=new AlertDialog.Builder(this)',registration)
-        self.assertIn('AccountBridge.register(this,username,secret,digits',registration)
-        self.assertIn('restoreDialog.setOnShowListener',MAIN)
-        self.assertIn('localPin.setError("PIN mora imati 4–6 znamenki.")',MAIN)
-        # PIN belongs exclusively to the modal, not the initial form.
-        self.assertLess(registration.index('place(body,label("Lozinka"'),
-                        registration.index('EditText pin=field('))
+        self.assertIn('password.getText().toString().equals(confirm.getText().toString())',registration)
+        self.assertIn('AccountBridge.register(this,username,secret',registration)
+        self.assertNotIn('EditText pin=field(',registration)
         self.assertIn('https://fakturiva.eu/uvjeti-koristenja/',registration)
 
     def test_failed_first_cloud_upload_never_leaves_an_unlinked_local_profile(self):
@@ -86,7 +80,7 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('app.deleteDatabase(Store.databaseName(stagedId))',bridge)
         self.assertIn('if (remoteRevision != 1)',bridge)
         self.assertLess(bridge.index('JSONObject ack = SelfHostedSyncClient.request('),
-                        bridge.index('id = LocalAccounts.register(app, username, digits)'))
+                        bridge.index('id = LocalAccounts.register(app, username, secret)'))
         self.assertLess(bridge.index('ensureNewLocalProfile(app, username);\n                id ='),
                         bridge.index('CloudMirror.connectAcknowledged(app, id'))
 
