@@ -13,12 +13,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
       - name: Install Android platform
@@ -35,7 +35,7 @@ jobs:
         run: |
           javac -d build/smoke app/src/main/java/com/brendigo/fakturiva/EscPosChunkedOutputStream.java quality/UsbPrinterChunkSmoke.java
           java -cp build/smoke com.brendigo.fakturiva.UsbPrinterChunkSmoke
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Verify visual auditor arithmetic (not app parity)
@@ -46,14 +46,14 @@ jobs:
         run: python3 quality/code_security_audit.py
       - name: Save static code audit for manual review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Fakturiva-static-security-dead-code-audit
           path: build/code-security-audit.json
           if-no-files-found: warn
       - name: Compile app and lint
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --stacktrace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: success()
         with:
           name: Fakturiva-debug-apk
