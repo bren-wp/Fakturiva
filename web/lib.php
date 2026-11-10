@@ -450,26 +450,6 @@ function pinHash(string $pin): string {
     return password_hash(webPinDigest($pin),
         defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT);
 }
-function pinMatches(array $account,string $pin): bool {
-    $hash=$account['web_pin_hash']??null;
-    return is_string($hash) && preg_match('/^[0-9]{4,6}$/D',$pin)===1 &&
-        password_verify(webPinDigest($pin),$hash);
-}
-/** PIN-confirmed destructive and credential-changing operations are throttled too. */
-function requireSensitiveWebPin(array &$account,string $pin):void {
-    if((int)($account['web_block_until']??0)>time())
-        fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
-    if(!pinMatches($account,$pin)){
-        $n=min(20,1+(int)($account['web_attempts']??0));
-        $account['web_attempts']=$n;
-        if($n>=5)$account['web_block_until']=time()+min(3600,
-            60*(1 << min($n-5,6)));
-        writeRecord(accountPath($account['id']),$account);
-        fail(401,'Neispravan PIN');
-    }
-    $account['web_attempts']=0;
-    $account['web_block_until']=0;
-}
 /**
  * All account-sensitive actions reauthenticate using the same web password,
  * including accounts migrated from an older authentication scheme.
@@ -489,11 +469,10 @@ function issueWebSession(array &$account): string {
     return $token;
 }
 function webRegister(string $username,string $pin,string $address,string $passphrase): array {
-    // New browser accounts use email + password only. PIN remains optional for
-    // legacy programmatic registrations and prior PIN-enabled accounts.
-    if($pin!=='')checkWebPin($pin);
+    // PIN is rejected even for direct PHP callers, not just browser forms.
+    if($pin!=='')fail(422,'Dodatni kod za prijavu više nije podržan.');
     requirePassphrase($passphrase);
-    return transaction(function()use($username,$pin,$address,$passphrase):array{
+    return transaction(function()use($username,$address,$passphrase):array{
         rateLimit($address,true);
         $index=indexPath($username);
         if(is_file($index)) {
@@ -519,7 +498,6 @@ function webRegister(string $username,string $pin,string $address,string $passph
             'sessions'=>[],
             'created_at'=>gmdate('c')
         ];
-        if($pin!=='')$account['web_pin_hash']=pinHash($pin);
         $token=issueWebSession($account);
         writeRecord(accountPath($id),$account);
         try{writeRecord($index,['id'=>$id]);}
@@ -527,39 +505,7 @@ function webRegister(string $username,string $pin,string $address,string $passph
         return ['id'=>$id,'token'=>$token,'username'=>$account['username']];
     });
 }
-function webLogin(string $username,string $pin,string $address): array {
-    return transaction(function()use($username,$pin,$address):array{
-        rateLimit($address,false);
-        $account=accountByName($username);
-        if($account===null || !isset($account['web_pin_hash'])) {
-            rateLimit($address,true);
-            fail(401,'Korisničko ime ili PIN nisu ispravni');
-        }
-        if(!empty($account['suspended']))fail(403,'Račun je privremeno onemogućen.');
-        if((int)($account['web_block_until']??0)>time())
-            fail(429,'Previše pokušaja. Pokušajte ponovno kasnije.');
-        if(!pinMatches($account,$pin)){
-            $n=min(20,1+(int)($account['web_attempts']??0));
-            $account['web_attempts']=$n;
-            if($n>=5) {
-                $seconds=min(3600,60*(1 << min($n-5,6)));
-                $account['web_block_until']=time()+$seconds;
-            }
-            writeRecord(accountPath($account['id']),$account);
-            rateLimit($address,true);
-            fail(401,'Korisničko ime ili PIN nisu ispravni');
-        }
-        $account['web_attempts']=0;
-        $account['web_block_until']=0;
-        $token=issueWebSession($account);
-        writeRecord(accountPath($account['id']),$account);
-        return ['id'=>$account['id'],'token'=>$token,
-            'username'=>$account['username']];
-    });
-}
-/** Password-based web sign-in uses the same server identity as Android.
- * Legacy PIN sign-in stays available separately for existing accounts.
- */
+/** Password-based web sign-in uses the same server identity as Android. */
 function webLoginPassword(string $username,string $passphrase,string $address): array {
     return transaction(function()use($username,$passphrase,$address):array{
         rateLimit($address,false);
@@ -596,27 +542,6 @@ function webLogout(string $id,string $token): void {
         $account=webAuthorized($id,$token);
         unset($account['web_token_hash'],$account['web_token_until']);
         writeRecord(accountPath($id),$account);
-    });
-}
-function webLinkAndroidAccount(string $username,string $passphrase,
-                               string $newPin,string $address):array {
-    requirePassphrase($passphrase);checkWebPin($newPin);
-    return transaction(function()use($username,$passphrase,$newPin,$address):array{
-        rateLimit($address,false);
-        $account=accountByName($username);
-        if($account===null ||
-           !is_string($account['password_hash']??null) ||
-           !password_verify($passphrase,$account['password_hash'])){
-            rateLimit($address,true);
-            fail(401,'Neispravno korisničko ime ili lozinka hostinga');
-        }
-        if(!empty($account['suspended']))fail(403,'Račun je onemogućen');
-        $account['web_pin_hash']=pinHash($newPin);
-        $account['web_attempts']=0;
-        $account['web_block_until']=0;
-        $token=issueWebSession($account);
-        writeRecord(accountPath($account['id']),$account);
-        return ['id'=>$account['id'],'username'=>$account['username'],'token'=>$token];
     });
 }
 function webChangeAndroidPassphrase(string $id,string $token,string $pin,
