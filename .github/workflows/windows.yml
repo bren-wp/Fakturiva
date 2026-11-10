@@ -16,8 +16,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Publish Windows x64 portable package
@@ -45,7 +45,7 @@ jobs:
             $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash
             "$hash *$file" | Out-File -Append -Encoding utf8 win/SHA256SUMS.txt
           }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Fakturiva-Windows-UNSIGNED-preview
           path: |
