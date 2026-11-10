@@ -28,7 +28,7 @@ try{
         if($confirm==='' || !hash_equals($passphrase,$confirm))
             throw new FakturivaSelfHost\HttpFailure(422,
                 'Lozinke se ne podudaraju.');
-        $result=FakturivaSelfHost\webRegister($username,"",$ip,$passphrase);
+        $result=FakturivaSelfHost\webRegister($username,$ip,$passphrase);
         adoptWebLogin($result);
         flash('Račun je uspješno registriran.');
         gotoPage('dashboard.php');
