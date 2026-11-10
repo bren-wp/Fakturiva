@@ -6,13 +6,14 @@
 kopije izdvojene su po korisniku. Osnovna pohrana koristi šifrirani
 JSON, bez SQL baze.
 
-**Status:** aktualna Android aplikacija još uvijek podržava lokalnu
-registraciju i dopušta korisniku da hosting poveže naknadno. To je
-razvojni nedostatak u odnosu na cilj da server uvijek bude glavni
-izvor podataka. **Ne smije se obećati oporavak nakon deinstalacije
-dok na serveru nema uspješno potvrđene, dostupne kopije.**
-Server također zahtijeva nezavisne izvanlokacijske sigurnosne
-kopije i redovite provjere povrata.
+**Trenutačni način rada:** novi web i Android računi koriste e-adresu i
+lozinku. Android za zaštitu offline podataka dodatno koristi lokalni PIN.
+Server čuva revizijski potvrđene šifrirane kopije, a web prikazuje
+financijske podatke iz kopije; **još nije puni dvosmjerni editor**.
+Postojeći računi s korisničkim imenom i PIN-om ostaju kompatibilni.
+**Oporavak nakon deinstalacije moguć je samo za zadnju uspješno
+potvrđenu i dostupnu poslužiteljsku kopiju.** Hosting mora imati
+nezavisne izvanlokacijske sigurnosne kopije i redovite provjere povrata.
 
 ## Brzi pregled
 
@@ -77,7 +78,11 @@ Google Play Data safety mora točno prikazati činjenicu
 poslužiteljske obrade poslovnih i identifikacijskih podataka.
 
 ---
-## Izvorni tehnički opis (ranije razvojne faze)
+## Arhivski tehnički opis (stariji tijekovi)
+
+Napomene u nastavku opisuju starije modele registracije s web PIN-om i ručno
+povezivanje. Za nove račune vrijede gornji opis e-adrese/lozinke i trenutni
+`web/register.php`, `web/login.php` te Androidova registracija.
 
 **Izbor, a ne obveza:** Android Fakturiva radi offline. Ovaj modul služi
 samo za ručni izvoz/uvoz šifrirane sigurnosne kopije korisnika koji

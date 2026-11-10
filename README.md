@@ -42,7 +42,7 @@ Android aplikacija • Web pristup poslovnom pregledu • Windows klijent
 4. U aplikaciji otvorite **Postavke → Korisnički računi → Preuzmi novije podatke s weba** za sigurnu obnovu podataka promijenjenih na drugom uređaju. Lokalna kopija prvo se zaštićuje, a nepotvrđene offline promjene ne prepisuju se.
 5. Na webu pregledajte korisnički račun, financijske podatke, dokumente i podržane porezne izvještaje iz posljednje potvrđene kopije.
 
-**Važno:** Android pohranjuje i preuzima **cijele šifrirane kopije** računa, ponuda, klijenata, artikala, uplata i postavki. To omogućuje obnovu potvrđenih podataka na drugim uređajima, ali još nije istodobno uređivanje iste baze na dva uređaja. Web poslovni pregled trenutačno čita potvrđene preslike i **nije puni dvosmjerni web editor**. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
+**Važno:** Novi API računi moraju koristiti ispravnu e-adresu, dok se postojeći računi s ranijim korisničkim imenima i dalje mogu prijaviti. Pri unosu pogrešnog lokalnog PIN-a u koraku obnove obrazac ostaje otvoren za ispravak. Android pohranjuje i preuzima **cijele šifrirane kopije** računa, ponuda, klijenata, artikala, uplata i postavki. To omogućuje obnovu potvrđenih podataka na drugim uređajima, ali još nije istodobno uređivanje iste baze na dva uređaja. Web poslovni pregled trenutačno čita potvrđene preslike i **nije puni dvosmjerni web editor**. Nepotvrđene promjene na telefonu mogu se izgubiti ako se aplikacija ukloni prije uspješne sinkronizacije. **Ne deinstalirajte aplikaciju bez provjere zadnje pohrane i izvoza vlastite kopije.**
 
 ## Stvarni zasloni aplikacije
 

@@ -72,6 +72,8 @@ class EntryReferenceTest(unittest.TestCase):
         self.assertIn('firstPassword.equals(confirm.getText().toString())',registration)
         self.assertIn('AlertDialog dialog=new AlertDialog.Builder(this)',registration)
         self.assertIn('AccountBridge.register(this,username,secret,digits',registration)
+        self.assertIn('restoreDialog.setOnShowListener',MAIN)
+        self.assertIn('localPin.setError("PIN mora imati 4–6 znamenki.")',MAIN)
         # PIN belongs exclusively to the modal, not the initial form.
         self.assertLess(registration.index('place(body,label("Lozinka"'),
                         registration.index('EditText pin=field('))

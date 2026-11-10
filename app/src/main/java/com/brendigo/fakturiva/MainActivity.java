@@ -819,20 +819,27 @@ public final class MainActivity extends Activity {
             localPin.setFilters(new android.text.InputFilter[]{
                 new android.text.InputFilter.LengthFilter(6)});
             localPin.setSaveEnabled(false);
-            new AlertDialog.Builder(this)
+            AlertDialog restoreDialog=new AlertDialog.Builder(this)
                 .setTitle("Zaštitite račun na ovom uređaju")
                 .setMessage("Nakon provjere web računa preuzet ćemo šifriranu "+
                     "sigurnosnu kopiju. Odaberite lokalni PIN za rad bez interneta.")
                 .setView(localPin)
                 .setNegativeButton("Odustani",null)
-                .setPositiveButton("Prijava i obnova",(dialog,which)->{
+                .setPositiveButton("Prijava i obnova",null).create();
+            // Keep the dialog open when the PIN is invalid. Android's default
+            // positive-button listener closes it before validation finishes.
+            restoreDialog.setOnShowListener(v->
+                restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(w->{
                     char[] digits=localPin.getText().toString().toCharArray();
                     char[] secret=pass.getText().toString().toCharArray();
                     try{
                         if(!new String(digits).matches("[0-9]{4,6}")){
-                            toast("PIN mora imati 4–6 znamenki");return;
+                            localPin.setError("PIN mora imati 4–6 znamenki.");
+                            return;
                         }
                         selfHostedBusy=true;
+                        restoreDialog.dismiss();
                         AccountBridge.restoreLogin(this,name,secret,digits,
                             (error,id)->{
                                 selfHostedBusy=false;
@@ -848,7 +855,8 @@ public final class MainActivity extends Activity {
                         Arrays.fill(digits,'\0');
                         Arrays.fill(secret,'\0');
                     }
-                }).show();
+                }));
+            restoreDialog.show();
         });
         authPrimaryStyle(submit);place(body,submit);gap(body,20);
         TextView separator=label("ili",11,MUTED,false);

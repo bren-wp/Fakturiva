@@ -67,6 +67,8 @@ jobs:
           test -n "$VERSION"
           case "$VERSION" in *preview*) ;; *) echo "::error::Only preview packages may be released by this workflow"; exit 1;; esac
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          NOTES="docs/V${VERSION%%-preview.*}_RELEASE_NOTES.md"
+          test -s "$NOTES" || { echo "::error::Release notes missing: $NOTES"; exit 1; }
       - name: Verify money, OIB, dates, crypto and backup guards
         run: |
           mkdir -p build/smoke
@@ -165,7 +167,7 @@ jobs:
           if gh release create "v${VERSION}" build/publish/* \
             --target "$RELEASE_TARGET" \
             --title "Fakturiva v${VERSION} — Android, Windows i web pretpregled" \
-            --notes-file docs/V0.18.2_RELEASE_NOTES.md \
+            --notes-file "docs/V${VERSION%%-preview.*}_RELEASE_NOTES.md" \
             --prerelease; then
             echo "Published verified preview release"
           else
