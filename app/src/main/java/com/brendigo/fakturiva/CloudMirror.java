@@ -118,6 +118,24 @@ public final class CloudMirror {
         state(ctx,id).edit().clear().commit();
     }
     /**
+     * Refresh only the Keystore-sealed cloud credential after the same
+     * account was positively authenticated by the canonical HTTPS server.
+     * Never change revisions, dirty markers or stored business data here.
+     */
+    static void rebindVerifiedPassword(Context ctx,String id,String endpoint,
+                                       String username,char[] password) throws Exception {
+        SharedPreferences prefs=state(ctx,id);
+        if(!prefs.getBoolean("enabled",false))return;
+        String url=SelfHostedSyncClient.apiUrl(endpoint);
+        if(!url.equals(prefs.getString("api","")) ||
+           !username.trim().equalsIgnoreCase(prefs.getString("username","")))
+            return; // Custom hosting is a different identity provider.
+        if(password==null || password.length<12)throw new SecurityException("Lozinka nedostaje");
+        String sealed=seal(password);
+        if(!prefs.edit().putString("sealed_password",sealed).commit())
+            throw new IllegalStateException("Nova vjerodajnica nije spremljena.");
+    }
+    /**
      * Called only after the user has explicitly uploaded a verified first
      * snapshot or restored the existing remote data. No silent first-write
      * overwrites, including when the server already has another device.
