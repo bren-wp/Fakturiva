@@ -26,7 +26,7 @@ import javax.crypto.spec.GCMParameterSpec;
  * A mutation is "saved" on the server ONLY after a matching authenticated
  * response and its SHA-256 have been verified. Conflicts are NEVER overwritten.
  * A fresh installation must reauthenticate with the user's server passphrase
- * and explicitly restore; an old device-only PIN cannot reconstruct a key.
+ * and explicitly restore; credentials alone cannot restore unsynced data.
  */
 public final class CloudMirror {
     private static final String KEY_ALIAS="fakturiva-cloud-credentials-v1";
