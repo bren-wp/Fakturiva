@@ -79,6 +79,8 @@ public final class AccountBridge {
                 // after the server has positively authenticated this identity.
                 verifiedId = LocalAccounts.rekeyAfterVerifiedServerLogin(
                     activity.getApplicationContext(),username,secret);
+                CloudMirror.rebindVerifiedPassword(activity.getApplicationContext(),
+                    verifiedId,HOST,username,secret);
             } catch(Exception failure) {
                 error = failure.getMessage() == null ?
                     "Web prijava nije uspjela." : failure.getMessage();
