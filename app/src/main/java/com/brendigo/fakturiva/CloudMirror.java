@@ -202,6 +202,123 @@ public final class CloudMirror {
             throw new IllegalStateException("Povezivanje s hostingom nije potvrđeno");
     }
 
+    public interface PullCallback {
+        /** UI-thread completion. updated=true only after the SQLite transaction
+         *  AND revision marker have both been durably acknowledged. */
+        void completed(String error, boolean updated);
+    }
+
+    /**
+     * Explicit, conflict-aware Android pull of a newer web/other-device
+     * encrypted snapshot. The user must confirm before calling this method.
+     * A dirty offline profile is never overwritten. The local recovery vault
+     * is taken by Store.restore BEFORE the replacement SQLite transaction.
+     */
+    public static void pullNewer(Context ctx,String id,PullCallback callback){
+        final Context app=ctx.getApplicationContext();
+        WORK.execute(()->{
+            String error=null;
+            boolean updated=false;
+            char[] pass=null;
+            Store store=null;
+            String token=null,url=null;
+            boolean originallyPaused=false,pausedForRestore=false;
+            try{
+                if(!enabled(app,id) || !id.equals(LocalAccounts.activeId()))
+                    throw new SecurityException("Prijavite se u povezani račun.");
+                SharedPreferences p=state(app,id);
+                if(p.getBoolean("dirty",false))
+                    throw new IllegalStateException(
+                        "Lokalne promjene nisu prenesene. Prvo provjerite pohranu ili izvezite kopiju.");
+                if(p.getInt("revision",-1)<1)
+                    throw new SecurityException("Nije potvrđena prethodna server revizija.");
+                final String marker=p.getString("pending_change","");
+                url=SelfHostedSyncClient.apiUrl(p.getString("api",""));
+                pass=unseal(p.getString("sealed_password",""));
+                JSONObject login=SelfHostedSyncClient.request(url,
+                    SelfHostedSyncClient.command("login",
+                        p.getString("username",""),new String(pass)),null);
+                token=login.getString("token");
+                JSONObject remote=SelfHostedSyncClient.request(url,
+                    new JSONObject().put("action","load"),token);
+                int actual=remote.getInt("revision");
+                int known=p.getInt("revision",-1);
+                if(actual<known)
+                    throw new SecurityException(
+                        "Server ima stariju reviziju; lokalni podatci nisu promijenjeni.");
+                if(actual>known){
+                    String encoded=remote.getString("backup_b64");
+                    if(encoded.isEmpty())
+                        throw new SecurityException("Nedostaje šifrirana kopija na serveru.");
+                    byte[] ciphertext=Base64.decode(encoded,Base64.DEFAULT);
+                    JSONObject snapshot;
+                    try{
+                        if(!sha(ciphertext).equals(remote.getString("sha256")))
+                            throw new SecurityException("Kontrolni zbroj servera nije valjan.");
+                        byte[] plain=SecureBackup.decrypt(ciphertext,pass);
+                        try{
+                            snapshot=new JSONObject(new String(plain,
+                                StandardCharsets.UTF_8));
+                        }finally{Arrays.fill(plain,(byte)0);}
+                    }finally{Arrays.fill(ciphertext,(byte)0);}
+                    if(!"fakturiva-backup-v1".equals(snapshot.optString("format")))
+                        throw new SecurityException("Neispravna udaljena kopija.");
+                    // The calling Activity holds an uncancellable modal while
+                    // this runs; additionally reject a pending marker changed
+                    // in the meantime. Upload jobs serialize through WORK.
+                    synchronized(STATE_LOCK){
+                        if(p.getBoolean("dirty",false) ||
+                           !marker.equals(p.getString("pending_change","")) ||
+                           !id.equals(LocalAccounts.activeId()))
+                            throw new IllegalStateException(
+                                "Lokalni podatci promijenjeni su tijekom provjere.");
+                        originallyPaused=p.getBoolean("paused",false);
+                        if(!p.edit().putBoolean("paused",true).commit())
+                            throw new IllegalStateException(
+                                "Nije moguće zaustaviti prijenos tijekom obnove.");
+                        pausedForRestore=true;
+                    }
+                    store=new Store(app,id);
+                    // Store.restore is transactional, validates all financial
+                    // totals, and aborts unless a local vault copy is saved.
+                    store.restore(snapshot);
+                    synchronized(STATE_LOCK){
+                        if(!p.edit().putInt("revision",actual)
+                            .putBoolean("dirty",false)
+                            .putBoolean("conflict",false)
+                            .putBoolean("paused",originallyPaused)
+                            .remove("pending_change").remove("last_error")
+                            .putLong("synced_at",System.currentTimeMillis())
+                            .commit())
+                            throw new IllegalStateException(
+                                "Nova revizija nije potvrđena na uređaju.");
+                    }
+                    pausedForRestore=false;
+                    updated=true;
+                }
+            }catch(Exception ex){
+                error=ex.getMessage()==null?"Obnova sa servera nije uspjela":
+                    ex.getMessage();
+            }finally{
+                if(store!=null)store.close();
+                if(pausedForRestore){
+                    try{state(app,id).edit()
+                        .putBoolean("paused",originallyPaused).commit();}
+                    catch(Exception ignored){}
+                }
+                if(url!=null && token!=null){
+                    try{SelfHostedSyncClient.request(url,
+                        new JSONObject().put("action","logout"),token);}
+                    catch(Exception ignored){}
+                }
+                if(pass!=null)Arrays.fill(pass,'\0');
+            }
+            final String result=error;
+            final boolean pulled=updated;
+            if(callback!=null)MAIN.post(()->callback.completed(result,pulled));
+        });
+    }
+
     public static void changed(Context ctx,String id){
         if(!enabled(ctx,id))return;
         SharedPreferences pref=state(ctx,id);

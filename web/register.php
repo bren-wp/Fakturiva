@@ -41,6 +41,12 @@ $error=takeFlash();
  minlength="12" maxlength="256" autocomplete="new-password"
  placeholder="Najmanje 12 znakova" aria-describedby="password-help">
 </div>
+<label class="input-label" for="register-confirm">Potvrdite lozinku</label>
+<div class="field-wrap">
+<input id="register-confirm" name="confirm_passphrase" required type="password"
+ minlength="12" maxlength="256" autocomplete="new-password"
+ placeholder="Ponovite lozinku">
+</div>
 <p class="help-text" id="password-help">Snažna lozinka za web i Android omogućuje pristup
 podacima nakon promjene uređaja. Pohranite je na sigurnom mjestu; Android dodatno koristi lokalni PIN.</p>
 <button class="primary-action" type="submit">

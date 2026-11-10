@@ -155,18 +155,26 @@ public final class AccountBridge {
                         throw new SecurityException("Na serveru nedostaje očekivana kopija.");
                     }
                 }
-                // Check again after network I/O, before local profile mutation.
-                ensureNewLocalProfile(app, username);
-                id = LocalAccounts.register(app, username, digits);
-                store = new Store(app, id);
-                if (snapshot != null) {
-                    // Store.restore validates its schema, transaction and totals.
-                    // A failure leaves the remote account and backup intact.
-                    store.restore(snapshot);
-                } else {
-                    // Initial registration or a remote account whose first
-                    // upload was interrupted. Never overwrite nonzero revisions.
-                    byte[] raw = store.backup().toString().getBytes(StandardCharsets.UTF_8);
+                if (snapshot == null) {
+                    // A new account (or an interrupted first upload) needs an
+                    // initial encrypted backup, but must NOT acquire a durable
+                    // local PIN profile until the server acknowledges it.
+                    // Stage an isolated EMPTY database that has no registry
+                    // entry, never touch an existing user's SQLite file.
+                    if (remoteRevision != 0)
+                        throw new SecurityException("Nedostaje kopija postojeće verzije.");
+                    String stagedId = java.util.UUID.randomUUID().toString()
+                        .replace("-", "");
+                    Store staged = null;
+                    JSONObject firstBackup;
+                    try {
+                        staged = new Store(app, stagedId);
+                        firstBackup = staged.backup();
+                    } finally {
+                        if (staged != null) staged.close();
+                        app.deleteDatabase(Store.databaseName(stagedId));
+                    }
+                    byte[] raw = firstBackup.toString().getBytes(StandardCharsets.UTF_8);
                     byte[] encrypted;
                     try { encrypted = SecureBackup.encrypt(raw, secret); }
                     finally { Arrays.fill(raw, (byte) 0); }
@@ -180,7 +188,21 @@ public final class AccountBridge {
                             throw new SecurityException(
                                 "Potvrda šifrirane kopije nije ispravna.");
                         remoteRevision = ack.getInt("revision");
+                        if (remoteRevision != 1)
+                            throw new SecurityException(
+                                "Neispravna prva revizija sigurnosne kopije.");
                     } finally { Arrays.fill(encrypted, (byte) 0); }
+                }
+                // Network failure, server conflict and decryption rejection
+                // leave NO newly registered local account behind. The web
+                // account can be recovered by ordinary email/password login.
+                ensureNewLocalProfile(app, username);
+                id = LocalAccounts.register(app, username, digits);
+                store = new Store(app, id);
+                if (snapshot != null) {
+                    // Store.restore validates schema/relations/amounts and
+                    // preserves a recovery snapshot before replacement.
+                    store.restore(snapshot);
                 }
                 CloudMirror.connectAcknowledged(app, id, url, username,
                     secret, remoteRevision);
