@@ -209,10 +209,9 @@ function rateLimit(string $address,bool $failed): void {
         writeRecord($path,$item);
     }
 }
-function signUp(string $username,string $password,string $address,?string $webPin=null): array {
+function signUp(string $username,string $password,string $address): array {
     requirePassphrase($password);
-    if($webPin!==null)checkWebPin($webPin);
-    return transaction(function() use($username,$password,$address,$webPin): array {
+    return transaction(function() use($username,$password,$address): array {
         // Account creation also consumes the IP budget to prevent unbounded
         // JSON-file creation on shared hosting from scripted registrations.
         rateLimit($address,true);
@@ -236,12 +235,6 @@ function signUp(string $username,string $password,string $address,?string $webPi
                 defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT),
             'revision'=>0,'backup'=>null,'sessions'=>[],
             'created_at'=>gmdate('c')];
-        // API-created accounts may also sign into the web with their PIN.
-        if($webPin!==null){
-            $account['web_pin_hash']=pinHash($webPin);
-            $account['web_attempts']=0;
-            $account['web_block_until']=0;
-        }
         $token=mintToken($account);
         $path=accountPath($id);
         writeRecord($path,$account);
@@ -435,22 +428,6 @@ function enforceHttps(): void {
 
 
 /**
- * Browser PIN is separate from Android's 12+ character sync passphrase.
- * A 4–6 digit PIN is only acceptable with per-account AND per-IP throttling,
- * encrypted server records, session expiry and HTTPS. It is not strong enough
- * to encrypt synced business backups.
- */
-function checkWebPin(string $pin): void {
-    if(!preg_match('/^[0-9]{4,6}$/D',$pin))fail(422,'PIN mora imati 4–6 znamenki');
-}
-function webPinDigest(string $pin): string {
-    return hash_hmac('sha256',"fakturiva-web-pin-v1\0".$pin,secret());
-}
-function pinHash(string $pin): string {
-    return password_hash(webPinDigest($pin),
-        defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT);
-}
-/**
  * All account-sensitive actions reauthenticate using the same web password,
  * including accounts migrated from an older authentication scheme.
  */
@@ -468,9 +445,7 @@ function issueWebSession(array &$account): string {
     $account['web_token_until']=time()+1800;
     return $token;
 }
-function webRegister(string $username,string $pin,string $address,string $passphrase): array {
-    // PIN is rejected even for direct PHP callers, not just browser forms.
-    if($pin!=='')fail(422,'Dodatni kod za prijavu više nije podržan.');
+function webRegister(string $username,string $address,string $passphrase): array {
     requirePassphrase($passphrase);
     return transaction(function()use($username,$address,$passphrase):array{
         rateLimit($address,true);
