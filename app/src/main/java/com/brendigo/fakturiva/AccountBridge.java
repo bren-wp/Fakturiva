@@ -17,7 +17,7 @@ import java.util.Locale;
  * First-run bridge between the Android working database and the Fakturiva
  * account hosted at fakturiva.eu. This is NOT a second identity provider.
  *
- * Server registration/login is verified before a local PIN profile is created.
+ * Server registration/login is verified before a local password-protected profile is created.
  * Restores never replace an existing local profile and never overwrite an
  * existing remote revision. A local database is an offline working copy.
  */
@@ -43,7 +43,7 @@ public final class AccountBridge {
         for (String existing : LocalAccounts.names(app)) {
             if (existing.equalsIgnoreCase(username.trim()))
                 throw new IllegalStateException("Ovaj račun već postoji na uređaju. " +
-                    "Prijavite se lokalnim PIN-om i provjerite sinkronizaciju.");
+                    "Prijavite se e-adresom i lozinkom te provjerite sinkronizaciju.");
         }
     }
 
@@ -55,10 +55,9 @@ public final class AccountBridge {
     }
 
     /**
-     * Confirm a web password for a profile already present on this device.
-     * A successful server login does NOT bypass the device's local PIN;
-     * unlocking the offline database remains the responsibility of LocalAccounts.
-     * Offline users can still select the independent PIN-only login action.
+     * Confirm a web password for an existing on-device profile and migrate its
+     * legacy verifier only after HTTPS server confirmation. The local database
+     * stays closed until MainActivity opens the same verified profile ID.
      */
     public static void verifyCredentials(Activity activity, String name,
                                          char[] password, Callback callback) {
@@ -106,7 +105,7 @@ public final class AccountBridge {
         execute(activity, username, passphrase, true, callback);
     }
 
-    /** Restores a verified encrypted remote backup to a new local PIN profile. */
+    /** Restores a verified encrypted remote backup to a password-protected profile. */
     public static void restoreLogin(Activity activity, String username,
                                     char[] passphrase, Callback callback) {
         execute(activity, username, passphrase, false, callback);
@@ -126,7 +125,7 @@ public final class AccountBridge {
                         .matcher(username).matches())
                     throw new IllegalArgumentException("Unesite valjanu e-adresu.");
                 // Existing on-device records are never silently overwritten by
-                // a remote sign-in. Use the existing local PIN and explicit sync.
+                // a remote sign-in. Use the existing password and explicit sync.
                 ensureNewLocalProfile(app, username);
                 url = SelfHostedSyncClient.apiUrl(HOST);
                 JSONObject auth = SelfHostedSyncClient.command(
@@ -164,7 +163,7 @@ public final class AccountBridge {
                 if (snapshot == null) {
                     // A new account (or an interrupted first upload) needs an
                     // initial encrypted backup, but must NOT acquire a durable
-                    // local PIN profile until the server acknowledges it.
+                    // local account profile until the server acknowledges it.
                     // Stage an isolated EMPTY database that has no registry
                     // entry, never touch an existing user's SQLite file.
                     if (remoteRevision != 0)
