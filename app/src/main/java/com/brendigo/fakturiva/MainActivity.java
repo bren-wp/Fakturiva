@@ -1006,16 +1006,30 @@ public final class MainActivity extends Activity {
         login.setMinimumHeight(dp(48));
         login.setOnClickListener(v->loginServerScreen());
         place(body,login);gap(body,30);
-        TextView terms=label("Uvjeti korištenja · Politika privatnosti",
-            11,MUTED,false);
+        LinearLayout legal=horizontal();
+        legal.setGravity(Gravity.CENTER);
+        TextView terms=label("Uvjeti korištenja",11,BLUE,true);
         terms.setGravity(Gravity.CENTER);
         terms.setMinimumHeight(dp(48));
         terms.setOnClickListener(v->{
             try{startActivity(new Intent(Intent.ACTION_VIEW,
                 Uri.parse("https://fakturiva.eu/uvjeti-koristenja/")));}
-            catch(Exception e){toast("Pravna stranica nije dostupna.");}
+            catch(Exception e){toast("Uvjeti korištenja nisu dostupni.");}
         });
-        place(body,terms);gap(body,16);
+        legal.addView(terms);
+        TextView divider=label("   ·   ",12,MUTED,false);
+        divider.setGravity(Gravity.CENTER);
+        legal.addView(divider);
+        TextView privacy=label("Politika privatnosti",11,BLUE,true);
+        privacy.setGravity(Gravity.CENTER);
+        privacy.setMinimumHeight(dp(48));
+        privacy.setOnClickListener(v->{
+            try{startActivity(new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://fakturiva.eu/politika-privatnosti/")));}
+            catch(Exception e){toast("Politika privatnosti nije dostupna.");}
+        });
+        legal.addView(privacy);
+        place(body,legal);gap(body,16);
         localPrivacyFooter();
     }
 
