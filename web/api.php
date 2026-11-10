@@ -36,8 +36,7 @@ try {
     $password=(string)($payload['passphrase']??'');
     $address=(string)($_SERVER['REMOTE_ADDR']??'');
     $response=match($action) {
-        'register'=>FakturivaSelfHost\signUp($username,$password,$address,
-            isset($payload['web_pin'])?(string)$payload['web_pin']:null),
+        'register'=>registerEmailAccount($username,$password,$address),
         'login'=>FakturivaSelfHost\signIn($username,$password,$address),
         'load'=>FakturivaSelfHost\loadBackup(authToken()),
         'save'=>FakturivaSelfHost\saveBackup(
@@ -80,4 +79,15 @@ function authToken(): string {
 function deleteAuthenticated(string $passphrase): array {
     FakturivaSelfHost\deleteAuthorized(authToken(),$passphrase);
     return ['deleted'=>true];
+}
+
+/** New public API identities must be email addresses. Existing legacy usernames
+ * remain valid for login and account recovery, never for a new registration. */
+function registerEmailAccount(string $username,string $password,string $address): array {
+    if ($username!==trim($username) || strlen($username)>80 ||
+        filter_var($username,FILTER_VALIDATE_EMAIL)===false ||
+        !preg_match('/^[A-Za-z0-9][A-Za-z0-9._+@-]{2,79}$/D',$username)) {
+        fail(422,'Unesite valjanu e-adresu.');
+    }
+    return FakturivaSelfHost\signUp($username,$password,$address);
 }
