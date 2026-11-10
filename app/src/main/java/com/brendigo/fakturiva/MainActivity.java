@@ -1303,7 +1303,7 @@ public final class MainActivity extends Activity {
 
     /**
      * Screen 03 is real offline protection, never fake cloud authentication.
-     * The operating system verifies credentials: we store no PIN or biometrics.
+     * Device credential protection is optional and separate from the Fakturiva password.
      */
     private void securityScreen(boolean locked,boolean fromSettings){
         securityFromSettings=fromSettings;
@@ -3822,10 +3822,6 @@ public final class MainActivity extends Activity {
         String month=new SimpleDateFormat("LLLL yyyy.",selectedLocale())
             .format(reportMonth.getTime());
         if(!month.isEmpty())month=Character.toUpperCase(month.charAt(0))+month.substring(1);
-        Calendar previous=(Calendar)reportMonth.clone();
-        previous.add(Calendar.MONTH,-1);
-        String previousKey=new SimpleDateFormat("yyyy-MM",Locale.ROOT)
-            .format(previous.getTime());
         Calendar now=Calendar.getInstance();
         boolean currentMonth=reportMonth.get(Calendar.YEAR)==now.get(Calendar.YEAR) &&
             reportMonth.get(Calendar.MONTH)==now.get(Calendar.MONTH);
@@ -5502,7 +5498,6 @@ public final class MainActivity extends Activity {
             cursor.add(Calendar.MONTH,-5);
             String[] names={"Sij","Velj","Ožu","Tra","Svi","Lip","Srp","Kol","Ruj","Lis","Stu","Pro"};
             String[] labels=new String[6];
-            SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM",Locale.ROOT);
             long max=1;
             long[] twelve=db.monthlyReceipts(selectedCurrency(),ending);
             for(int i=0;i<6;i++){
