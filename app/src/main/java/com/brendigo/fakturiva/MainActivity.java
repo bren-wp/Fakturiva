@@ -3899,11 +3899,12 @@ public final class MainActivity extends Activity {
         place(body,period);gap(body,12);
 
         LinearLayout revenue=card();pad(revenue,18,16);
-        revenue.addView(label("Ukupno fakturirano",12,sub(),false));gap(revenue,9);
-        revenue.addView(label(money(totals[0]),30,ink(),true));gap(revenue,9);
-        long previousCents=db.invoicedCentsMonth(previousKey,selectedCurrency());
+        revenue.addView(label("Ukupni prihod",12,sub(),false));gap(revenue,9);
+        revenue.addView(label(money(totals[3]),30,ink(),true));gap(revenue,9);
+        long[] sixMonthContext=db.monthlyReceipts(selectedCurrency(),reportMonth);
+        long previousCents=sixMonthContext[10];
         if(previousCents>0){
-            double pct=(totals[0]-previousCents)*100d/previousCents;
+            double pct=(totals[3]-previousCents)*100d/previousCents;
             String trend=String.format(selectedLocale(),
                 "%s%.1f %%",pct>0?"+":"",pct);
             revenue.addView(label(trend+"  u odnosu na prethodni mjesec",11,
@@ -3921,7 +3922,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout chart=card();pad(chart,17,17);
         LinearLayout chartHeader=horizontal();
-        TextView chartName=label("Kretanje fakturiranja",16,ink(),true);
+        TextView chartName=label("Kretanje prihoda",16,ink(),true);
         chartName.setMaxLines(2);
         chartHeader.addView(chartName,new LinearLayout.LayoutParams(0,-2,1));
         TextView interval=label("Posljednjih 6 mj.",10,sub(),false);
@@ -5506,8 +5507,9 @@ public final class MainActivity extends Activity {
             String[] labels=new String[6];
             SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM",Locale.ROOT);
             long max=1;
+            long[] twelve=db.monthlyReceipts(selectedCurrency(),ending);
             for(int i=0;i<6;i++){
-                values[i]=db.invoicedCentsMonth(fmt.format(cursor.getTime()),selectedCurrency());
+                values[i]=twelve[i+6]; // actual dated receipts, never unpaid invoices
                 max=Math.max(max,values[i]);
                 labels[i]=names[cursor.get(Calendar.MONTH)];
                 cursor.add(Calendar.MONTH,1);
