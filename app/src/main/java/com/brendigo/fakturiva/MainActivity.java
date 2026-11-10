@@ -63,9 +63,7 @@ public final class MainActivity extends Activity {
     private CroatianTaxReports.Business pendingHrBusiness;
     private String pendingHrProfile;
     private Store db; private SharedPreferences prefs;
-    private String loginUsername="";
     private boolean selfHostedBusy=false;
-    private final StringBuilder enteredLocalPin=new StringBuilder();
     private android.window.OnBackInvokedCallback systemBackCallback;
     private LinearLayout root,body; private ScrollView scroller; private FrameLayout contentFrame;
     private FrameLayout adaptiveNavContainer;
@@ -142,7 +140,6 @@ public final class MainActivity extends Activity {
     @Override protected void onStop(){
         if(db!=null&&("new_doc".equals(screen)||"edit_items".equals(screen)||
             "review".equals(screen)))saveWorkingDraft();
-        if("local_login".equals(screen))enteredLocalPin.setLength(0);
         super.onStop();
     }
     /** Allows debug-only emulator screenshots without introducing preview screens in release builds. */
@@ -179,7 +176,6 @@ public final class MainActivity extends Activity {
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBackCallback);
         if(pendingPassword!=null)Arrays.fill(pendingPassword,'\0');
         if(db!=null)db.close();
-        enteredLocalPin.setLength(0);
         super.onDestroy();
     }
     private String selectedCurrency(){return BillingCurrency.canonical(db.setting("currency"));}
@@ -490,7 +486,7 @@ public final class MainActivity extends Activity {
             navigate("home");
         }catch(Exception e){error(e);damagedDatabase(e);}
     }
-    /** Only the debug emulator's screenshot harness may navigate without a PIN. */
+    /** Only the debug emulator's screenshot harness may navigate without login. */
     private boolean runScreenshotModeOnly(){
         return db!=null &&
             (getApplicationInfo().flags &
@@ -790,120 +786,60 @@ public final class MainActivity extends Activity {
             if(remember.isChecked())
                 prefs.edit().putString("remember_web_user",name).apply();
             else prefs.edit().remove("remember_web_user").apply();
+            char[] secret=pass.getText().toString().toCharArray();
             try{
-                for(String saved:LocalAccounts.names(this)){
-                    if(saved.equalsIgnoreCase(name)){
-                        // The reference email/password form must verify web
-                        // credentials even if an offline profile already exists.
-                        // Local PIN remains a second, device-only unlock step.
-                        char[] secret=pass.getText().toString().toCharArray();
-                        selfHostedBusy=true;
-                        AccountBridge.verifyCredentials(this,name,secret,
-                            (error,id)->{
-                                selfHostedBusy=false;
-                                pass.setText("");
-                                if(error!=null)toast(error);
-                                else{
-                                    toast("Web račun potvrđen. Unesite lokalni PIN.");
-                                    loginPinScreen();
-                                }
-                            });
-                        Arrays.fill(secret,'\0');
-                        return;
-                    }
-                }
-            }catch(Exception e){accountStorageError(e);return;}
-            EditText localPin=field("PIN 4–6 znamenki","");
-            localPin.setInputType(InputType.TYPE_CLASS_NUMBER|
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-            localPin.setFilters(new android.text.InputFilter[]{
-                new android.text.InputFilter.LengthFilter(6)});
-            localPin.setSaveEnabled(false);
-            AlertDialog restoreDialog=new AlertDialog.Builder(this)
-                .setTitle("Zaštitite račun na ovom uređaju")
-                .setMessage("Nakon provjere web računa preuzet ćemo šifriranu "+
-                    "sigurnosnu kopiju. Odaberite lokalni PIN za rad bez interneta.")
-                .setView(localPin)
-                .setNegativeButton("Odustani",null)
-                .setPositiveButton("Prijava i obnova",null).create();
-            // Keep the dialog open when the PIN is invalid. Android's default
-            // positive-button listener closes it before validation finishes.
-            restoreDialog.setOnShowListener(v->
-                restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                    .setOnClickListener(w->{
-                    char[] digits=localPin.getText().toString().toCharArray();
-                    char[] secret=pass.getText().toString().toCharArray();
-                    try{
-                        if(!new String(digits).matches("[0-9]{4,6}")){
-                            localPin.setError("PIN mora imati 4–6 znamenki.");
-                            return;
-                        }
-                        selfHostedBusy=true;
-                        restoreDialog.dismiss();
-                        AccountBridge.restoreLogin(this,name,secret,digits,
-                            (error,id)->{
-                                selfHostedBusy=false;
-                                pass.setText("");localPin.setText("");
-                                if(error!=null)toast(error);
-                                else openLocalSession(id);
-                            });
-                    }catch(Exception error){
+                boolean onDevice=false;
+                for(String saved:LocalAccounts.names(this))
+                    if(saved.equalsIgnoreCase(name)){onDevice=true;break;}
+                selfHostedBusy=true;
+                if(onDevice){
+                    AccountBridge.verifyCredentials(this,name,secret,(error,id)->{
                         selfHostedBusy=false;
-                        toast(error.getMessage()==null?
-                            "Povezivanje nije uspjelo":error.getMessage());
-                    }finally{
-                        Arrays.fill(digits,'\0');
-                        Arrays.fill(secret,'\0');
-                    }
-                }));
-            restoreDialog.show();
+                        pass.setText("");
+                        if(error!=null)toast(error);
+                        else openLocalSession(id);
+                    });
+                }else{
+                    AccountBridge.restoreLogin(this,name,secret,(error,id)->{
+                        selfHostedBusy=false;
+                        pass.setText("");
+                        if(error!=null)toast(error);
+                        else openLocalSession(id);
+                    });
+                }
+            }catch(Exception error){
+                selfHostedBusy=false;
+                toast(error.getMessage()==null?"Prijava nije uspjela":error.getMessage());
+            }finally{Arrays.fill(secret,'\0');}
         });
         authPrimaryStyle(submit);place(body,submit);gap(body,20);
-        TextView separator=label("ili",11,MUTED,false);
-        separator.setGravity(Gravity.CENTER);
-        place(body,separator);gap(body,16);
-        TextView biometric=action("◎  Prijava biometrijom",BLUE,false,
-            this::deviceVerifiedLocalAccess);
-        biometric.setContentDescription(
-            "Provjerite identitet uređajem, zatim unesite lokalni PIN računa");
-        place(body,biometric);gap(body,15);
+        // Email/password is the only application login identity.
         TextView create=label("Nemate račun?  Registrirajte se",14,BLUE,true);
         create.setGravity(Gravity.CENTER);create.setMinimumHeight(dp(44));
         create.setOnClickListener(v->registrationScreen());place(body,create);
         try{
             if(LocalAccounts.hasAccounts(this)){
                 gap(body,10);
-                secondary(body,"Prijava lokalnim PIN-om (bez interneta)",
-                    this::loginPinScreen);
+                secondary(body,"Rad bez interneta — e-adresa i lozinka",()->{
+                    String email=username.getText().toString().trim();
+                    char[] localSecret=pass.getText().toString().toCharArray();
+                    try{
+                        String id=LocalAccounts.verify(this,email,localSecret);
+                        pass.setText("");
+                        openLocalSession(id);
+                    }catch(Exception failure){
+                        toast(failure.getMessage()==null?
+                            "Neuspješna lokalna prijava":failure.getMessage());
+                    }finally{Arrays.fill(localSecret,'\0');}
+                });
             }
         }catch(Exception e){accountStorageError(e);}
         gap(body,22);localPrivacyFooter();
     }
 
-    /** Android's device identity check never bypasses the encrypted local
-     *  account PIN. No reusable biometric or PIN secret is stored.
-     */
-    private void deviceVerifiedLocalAccess(){
-        try{
-            if(!LocalAccounts.hasAccounts(this)){
-                new AlertDialog.Builder(this)
-                    .setTitle("Biometrijska prijava")
-                    .setMessage("Najprije se prijavite e-adresom i lozinkom te "+
-                        "postavite lokalni PIN. Nakon toga možete provjeriti "+
-                        "identitet zaključavanjem uređaja.")
-                    .setPositiveButton("U redu",null).show();
-                return;
-            }
-            confirmDeviceCredential(4);
-        }catch(Exception e){accountStorageError(e);}
-    }
-
-    /** Email/password is the shared web and Android identity. A PIN is an
-     *  optional second, device-local setup step shown only after validation.
-     */
+    /** One account identity: email address and web password on both platforms. */
     private void registrationScreen(){
         if(selfHostedBusy){toast("Povezivanje s računom je u tijeku");return;}
-        enteredLocalPin.setLength(0);
         setup("local_register",false);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
@@ -945,65 +881,29 @@ public final class MainActivity extends Activity {
                 .matcher(username).matches()){
                 email.setError("Unesite valjanu e-adresu.");return;
             }
-            String firstPassword=password.getText().toString();
-            if(firstPassword.length()<12 || firstPassword.length()>256){
+            if(password.length()<12 || password.length()>256){
                 password.setError("Lozinka mora imati 12–256 znakova.");return;
             }
-            if(!firstPassword.equals(confirm.getText().toString())){
+            if(!password.getText().toString().equals(confirm.getText().toString())){
                 confirm.setError("Lozinke se ne podudaraju.");return;
             }
-            // The web identity has now been validated. A private PIN only
-            // unlocks the offline SQLite database on THIS device.
-            EditText pin=field("Lokalni PIN (4–6 znamenki)","");
-            pin.setInputType(InputType.TYPE_CLASS_NUMBER|
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-            pin.setFilters(new android.text.InputFilter[]{
-                new android.text.InputFilter.LengthFilter(6)});
-            pin.setSaveEnabled(false);
-            LinearLayout prompt=vertical();pad(prompt,18,10);
-            place(prompt,label("PIN je potreban samo za pristup podacima "+
-                "na ovom uređaju. Ne šalje se na fakturiva.eu.",
-                12,sub(),false));gap(prompt,12);
-            place(prompt,pin);
-            AlertDialog dialog=new AlertDialog.Builder(this)
-                .setTitle("Zaštitite lokalnu kopiju")
-                .setView(prompt)
-                .setNegativeButton("Odustani",null)
-                .setPositiveButton("Registriraj i poveži",null).create();
-            dialog.setOnShowListener(v->dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
-                char[] digits=pin.getText().toString().toCharArray();
-                char[] secret=password.getText().toString().toCharArray();
-                try{
-                    if(!new String(digits).matches("[0-9]{4,6}")){
-                        pin.setError("PIN mora imati 4–6 znamenki.");return;
-                    }
-                    boolean first=!LocalAccounts.hasAccounts(this);
-                    selfHostedBusy=true;
-                    dialog.dismiss();
-                    AccountBridge.register(this,username,secret,digits,
-                        (error,id)->{
-                            selfHostedBusy=false;
-                            if(error!=null){
-                                toast(error);
-                                return;
-                            }
-                            password.setText("");confirm.setText("");
-                            if(first&&getDatabasePath("fakturiva.db").isFile()){
-                                prefs.edit().putString("legacy_owner",id).commit();
-                            }
-                            openLocalSession(id);
-                        });
-                }catch(Exception problem){
+            char[] secret=password.getText().toString().toCharArray();
+            try{
+                boolean first=!LocalAccounts.hasAccounts(this);
+                selfHostedBusy=true;
+                AccountBridge.register(this,username,secret,(error,id)->{
                     selfHostedBusy=false;
-                    toast(problem.getMessage()==null?
-                        "Registracija nije uspjela":problem.getMessage());
-                }finally{
-                    Arrays.fill(digits,'\0');
-                    Arrays.fill(secret,'\0');
-                }
-            }));
-            dialog.show();
+                    password.setText("");confirm.setText("");
+                    if(error!=null){toast(error);return;}
+                    if(first&&getDatabasePath("fakturiva.db").isFile())
+                        prefs.edit().putString("legacy_owner",id).commit();
+                    openLocalSession(id);
+                });
+            }catch(Exception problem){
+                selfHostedBusy=false;
+                toast(problem.getMessage()==null?
+                    "Registracija nije uspjela":problem.getMessage());
+            }finally{Arrays.fill(secret,'\0');}
         });
         authPrimaryStyle(submit);
         submit.setContentDescription(
@@ -1053,123 +953,6 @@ public final class MainActivity extends Activity {
             0xff7b8ba5,false);
         footer.setGravity(Gravity.CENTER);
         place(body,footer);gap(body,16);
-    }
-
-    private void loginPinScreen(){
-        try{
-            String[] names=LocalAccounts.names(this);
-            if(names.length==0){registrationScreen();return;}
-            String last=prefs.getString("local_last_user",names[0]);
-            boolean found=false;
-            for(String n:names)if(n.equals(last))found=true;
-            if(!found)last=names[0];
-            loginUsername=last;
-            enteredLocalPin.setLength(0);
-            setup("local_login",false);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-            root.setBackgroundColor(WHITE);body.setBackgroundColor(WHITE);
-            pad(body,25,59);
-            localBrand();gap(body,26);
-            place(body,label("Prijava PIN-om",30,NAVY,true));gap(body,9);
-            place(body,label("Unesite svoj sigurnosni PIN za pristup računu.",
-                14,MUTED,false));gap(body,44);
-            if("demo".equals(BuildConfig.BUILD_TYPE)){
-                place(body,label("DEMO: demo@fakturiva.test · PIN 123456",
-                    12,TEAL,true));gap(body,12);
-            }
-            TextView chosen=label("Korisnik: "+loginUsername+(names.length>1?"  ▾":""),
-                12,0xff63718a,false);
-            chosen.setMinimumHeight(dp(40));
-            if(names.length>1){
-                chosen.setContentDescription("Odaberite korisnički račun");
-                chosen.setOnClickListener(v->
-                    new AlertDialog.Builder(this).setTitle("Korisnički račun")
-                        .setItems(names,(dialog,which)->{
-                            loginUsername=names[which];
-                            chosen.setText("Korisnik: "+loginUsername+"  ▾");
-                            enteredLocalPin.setLength(0);
-                            loginPinScreen();
-                        }).show());
-            }
-            if(names.length>1){
-                place(body,chosen);gap(body,18);
-            }else{
-                // Single-profile login stays visually aligned with the owner's
-                // PIN reference; profile switching remains in Settings.
-                gap(body,31);
-            }
-            place(body,label("PIN",14,0xff65748d,true));gap(body,9);
-            LinearLayout masked=horizontal();
-            masked.setBackground(outlined(WHITE));pad(masked,19,10);
-            TextView dots=label("",24,NAVY,true);
-            dots.setGravity(Gravity.CENTER_VERTICAL);
-            masked.addView(dots,new LinearLayout.LayoutParams(0,dp(44),1));
-            TextView lock=label("♙",22,0xff7e8fa7,true);
-            masked.addView(lock);
-            masked.setContentDescription("Sigurnosni PIN, skriveni unos");
-            place(body,masked);gap(body,28);
-            int[][] keys={{1,2,3},{4,5,6},{7,8,9},{-1,0,-2}};
-            for(int[] row:keys){
-                LinearLayout line=horizontal();
-                for(int number:row){
-                    TextView key=label(number==-1?"⌫":number==-2?"":String.valueOf(number),
-                        27,NAVY,true);
-                    key.setGravity(Gravity.CENTER);
-                    key.setBackground(shape(0xffedf1f9,14));
-                    key.setFocusable(number!=-2);
-                    key.setClickable(number!=-2);
-                    key.setContentDescription(number==-1?"Obriši PIN znamenku":
-                        number==-2?"":("Znamenka "+number));
-                    if(number==-1)key.setOnClickListener(v->{
-                        if(enteredLocalPin.length()>0)
-                            enteredLocalPin.deleteCharAt(enteredLocalPin.length()-1);
-                        updatePinDots(dots);
-                    });
-                    else if(number>=0)key.setOnClickListener(v->{
-                        if(enteredLocalPin.length()<6)
-                            enteredLocalPin.append((char)('0'+number));
-                        updatePinDots(dots);
-                    });
-                    LinearLayout.LayoutParams keyParams=new LinearLayout.LayoutParams(0,dp(53),1);
-                    keyParams.leftMargin=dp(3);keyParams.rightMargin=dp(3);
-                    line.addView(key,keyParams);
-                    if(number==-2)key.setVisibility(View.INVISIBLE);
-                }
-                place(body,line);gap(body,7);
-            }
-            gap(body,26);
-            TextView submit=action("›   Prijavi se",BLUE,true,()->{
-                char[] digits=enteredLocalPin.toString().toCharArray();
-                try{
-                    String id=LocalAccounts.verify(this,loginUsername,digits);
-                    enteredLocalPin.setLength(0);
-                    openLocalSession(id);
-                }catch(Exception error){
-                    enteredLocalPin.setLength(0);
-                    updatePinDots(dots);
-                    toast(error.getMessage()==null?
-                        "Neuspješna provjera sigurnosnog PIN-a":error.getMessage());
-                }finally{Arrays.fill(digits,'\0');}
-            });
-            authPrimaryStyle(submit);
-            submit.setContentDescription("Prijavite se s lokalnim sigurnosnim PIN-om");
-            place(body,submit);gap(body,37);
-            localPrivacyFooter();
-            gap(body,10);
-            secondary(body,"Prijava web računom",this::loginServerScreen);
-            if(names.length>1){
-                TextView next=label("Dodajte drugi lokalni račun",12,BLUE,true);
-                next.setGravity(Gravity.CENTER);next.setMinimumHeight(dp(44));
-                next.setOnClickListener(v->registrationScreen());
-                place(body,next);
-            }
-        }catch(Exception e){accountStorageError(e);}
-    }
-
-    private void updatePinDots(TextView dots){
-        StringBuilder masked=new StringBuilder();
-        for(int i=0;i<enteredLocalPin.length();i++)masked.append("● ");
-        dots.setText(masked.toString());
     }
 
     /** Prevent opening any business table before local authorization. */
@@ -1228,7 +1011,7 @@ public final class MainActivity extends Activity {
     }
 
     private void localAccountSettings(){
-        if(LocalAccounts.activeId()==null){loginPinScreen();return;}
+        if(LocalAccounts.activeId()==null){loginServerScreen();return;}
         setup("local_accounts",true);
         toolbar("Korisnički računi","Vaši profili i sigurnosne kopije",true);
         LinearLayout info=card();
@@ -1317,7 +1100,7 @@ public final class MainActivity extends Activity {
                             prefs.edit().remove("legacy_owner").putBoolean(
                                 "legacy_imported",true).apply();
                         }
-                        loginPinScreen();
+                        loginServerScreen();
                     }catch(Exception e){
                         if(LocalAccounts.activeId()!=null && db==null)
                             db=new Store(this,id);
@@ -1329,10 +1112,9 @@ public final class MainActivity extends Activity {
 
     private void signOutLocal(){
         if(selfHostedBusy){toast("Prijenos podataka je u tijeku");return;}
-        enteredLocalPin.setLength(0);
         if(db!=null){db.close();db=null;}
         LocalAccounts.lock();
-        loginPinScreen();
+        loginServerScreen();
     }
 
     /**
@@ -1341,7 +1123,7 @@ public final class MainActivity extends Activity {
      * and never saved in the app or included in Android backup.
      */
     private void selfHostedSettings(){
-        if(LocalAccounts.activeId()==null||db==null){loginPinScreen();return;}
+        if(LocalAccounts.activeId()==null||db==null){loginServerScreen();return;}
         setup("self_host",true);
         toolbar("Korisnički račun i sigurnosne kopije","Pohrana na vlastitom serveru",true);
         LinearLayout notice=card();
@@ -3813,7 +3595,7 @@ public final class MainActivity extends Activity {
             form.equals("OTHER");
     }
     private void croatianTaxScreen(){
-        if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
+        if(db==null||LocalAccounts.activeId()==null){loginServerScreen();return;}
         setup("hr_tax",true);
         pad(body,17,16);
         toolbar("Knjiga prometa i PO-SD","Hrvatska · stvarne naplate",true);
@@ -4876,7 +4658,7 @@ public final class MainActivity extends Activity {
     }
     /** Invoice typography and branding only, never fiscalization or amounts. */
     private void invoiceAppearance(){
-        if(db==null||LocalAccounts.activeId()==null){loginPinScreen();return;}
+        if(db==null||LocalAccounts.activeId()==null){loginServerScreen();return;}
         setup("invoice_appearance",true);
         pad(body,17,17);
         toolbar("Dizajn računa","Predložak, boja i logotip",true);
@@ -5548,7 +5330,7 @@ public final class MainActivity extends Activity {
                 // OS confirmation is an additional factor. Never open SQLite
                 // until LocalAccounts verifies the user's PIN.
                 if(!"server_login".equals(screen))return;
-                loginPinScreen();
+                loginServerScreen();
             }else if(completedAction==3){
                 prefs.edit().putBoolean("device_lock",false).apply();
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
@@ -5691,7 +5473,6 @@ public final class MainActivity extends Activity {
         if("splash".equals(screen)){finish();return;}
         if("server_login".equals(screen)){welcome();}
         else if("local_login".equals(screen)||"local_register".equals(screen)){
-            enteredLocalPin.setLength(0);
             if("local_register".equals(screen))welcome();else finish();
         }
         else if("security_unlock".equals(screen))finish();
