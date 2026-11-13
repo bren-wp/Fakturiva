@@ -1498,7 +1498,7 @@ public final class MainActivity extends Activity {
         // The reference dashboard uses a 22 dp gutter on 393 dp phones.
         // Keep all dashboard figures sourced from the local SQLite database.
         // Reference Home gutter is 18dp at 393dp; rows remain width-adaptive.
-        pad(body,18,16);
+        pad(body,18,22);
         backupAlert();
         LinearLayout bar=horizontal();
         LinearLayout brand=vertical();
@@ -1518,7 +1518,7 @@ public final class MainActivity extends Activity {
         // In dark mode, the reference greets lower without shifting its hero.
         // The original 393dp home reference positions the greeting closer
         // to the masthead than the former 41/25dp gaps.
-        place(body,bar);gap(body,dark?35:19);
+        place(body,bar);gap(body,dark?36:24);
 
         if(RecoveryVault.hasWorkingDraft(this)){
             LinearLayout resume=card();
@@ -1552,9 +1552,9 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,dark?4:19);
+        place(body,welcome);gap(body,dark?14:24);
 
-        LinearLayout hero=vertical();pad(hero,19,dark?13:16);
+        LinearLayout hero=vertical();pad(hero,19,dark?16:20);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
@@ -1577,8 +1577,8 @@ public final class MainActivity extends Activity {
         hero.addView(label(money(monthly[11]),31,WHITE,true));gap(hero,5);
         hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
-        hero.addView(new RevenueLine(this,displayClock),lp(-1,43));
-        place(body,hero);gap(body,dark?10:16);
+        hero.addView(new RevenueLine(this,displayClock),lp(-1,50));
+        place(body,hero);gap(body,dark?13:18);
 
         LinearLayout stats=horizontal();
         String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(displayClock.getTime());
@@ -1666,7 +1666,7 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();pad(c,14,8);
+        LinearLayout c=card();pad(c,14,11);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
         // Reference uses readable pastel icon tiles on both themes.
@@ -5531,39 +5531,52 @@ public final class MainActivity extends Activity {
     }
     private final class RevenueLine extends View{
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
-        private final long[] cumulative;
+        // Each bucket contains real payments from a disjoint day range.
+        // Unlike cumulative totals, this trend can truthfully rise and fall.
+        private final long[] receipts;
         RevenueLine(android.content.Context context,Calendar selectedMonth){
             super(context);
             Calendar calendar=(Calendar)selectedMonth.clone();
             String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(calendar.getTime());
-            cumulative=ReceiptsChart.cumulative(
+            receipts=ReceiptsChart.intervals(
                 paymentsForCurrency(db.payments(),selectedCurrency()),month,
                 calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+            setContentDescription("Kretanje evidentiranih uplata tijekom mjeseca");
+            setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         }
         @Override protected void onDraw(android.graphics.Canvas canvas){
             super.onDraw(canvas);
             float width=getWidth(),height=getHeight();
             if(width<=0||height<=0)return;
-            long maximum=Math.max(1,cumulative[cumulative.length-1]);
-            float[] y=new float[cumulative.length];
-            float[] x=new float[cumulative.length];
-            for(int n=0;n<cumulative.length;n++){
-                x[n]=width*n/(cumulative.length-1);
-                y[n]=height*(0.88f-0.73f*cumulative[n]/maximum);
+            float[] smooth=new float[receipts.length];
+            float maximum=1f;
+            for(int n=0;n<receipts.length;n++){
+                // A three-point display-only moving average avoids sharp
+                // rendering spikes; all underlying numbers remain unchanged.
+                double before=receipts[Math.max(0,n-1)];
+                double after=receipts[Math.min(receipts.length-1,n+1)];
+                smooth[n]=(float)(.25d*before+.5d*receipts[n]+.25d*after);
+                maximum=Math.max(maximum,smooth[n]);
+            }
+            float[] y=new float[smooth.length];
+            float[] x=new float[smooth.length];
+            for(int n=0;n<smooth.length;n++){
+                x[n]=width*n/(smooth.length-1);
+                y[n]=height*(0.84f-0.60f*smooth[n]/maximum);
             }
             android.graphics.Path line=new android.graphics.Path();
             line.moveTo(x[0],y[0]);
             for(int n=1;n<x.length;n++){
-                float midX=(x[n-1]+x[n])/2;
-                float midY=(y[n-1]+y[n])/2;
-                line.quadTo(x[n-1],y[n-1],midX,midY);
+                // Horizontal cubic tangents preserve all sampled values while
+                // following the reference's continuous, softly curved wave.
+                float middle=(x[n-1]+x[n])/2f;
+                line.cubicTo(middle,y[n-1],middle,y[n],x[n],y[n]);
             }
-            line.lineTo(x[x.length-1],y[y.length-1]);
             android.graphics.Path area=new android.graphics.Path(line);
             area.lineTo(width,height);area.lineTo(0,height);area.close();
             paint.setStyle(android.graphics.Paint.Style.FILL);
             paint.setShader(new android.graphics.LinearGradient(0,0,0,height,
-                0x6082d9e7,0x0082d9e7,android.graphics.Shader.TileMode.CLAMP));
+                0x6689dbef,0x0089dbef,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawPath(area,paint);paint.setShader(null);
             paint.setColor(0xff86dfdf);paint.setStrokeWidth(dp(2.2f));
             paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
