@@ -5455,8 +5455,16 @@ public final class MainActivity extends Activity {
             for(int i=0;i<6;i++){
                 float cell=width/6f,barWidth=cell*.72f,x=i*cell+cell*.14f;
                 float barHeight=values[i]==0?dp(2):(base-dp(14))*values[i]/(float)max;
-                paint.setColor(i==5?TEAL:0xff7385f2);
+                // Original reference uses blue/violet or teal/blue gradients,
+                // not a flat solid bar. Values and scaled heights remain based
+                // on confirmed SQLite receipts for the selected month.
+                paint.setShader(new android.graphics.LinearGradient(
+                    x,base-barHeight,x,base,
+                    i==5?0xff62d9cd:0xffa4affb,
+                    i==5?0xff2669dd:0xff5b70f2,
+                    android.graphics.Shader.TileMode.CLAMP));
                 canvas.drawRoundRect(x,base-barHeight,x+barWidth,base,dp(7),dp(7),paint);
+                paint.setShader(null);
                 paint.setColor(sub());
                 canvas.drawText(labels[i],i*cell+cell/2f,height-dp(3),paint);
             }
