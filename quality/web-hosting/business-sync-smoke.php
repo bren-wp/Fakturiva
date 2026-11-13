@@ -130,9 +130,34 @@ try{
     checkSync(FakturivaSelfHost\webAuthorized($other['id'],$other['token'])['backup']===null,
         'Other tenant was modified');
 
+    // Product/service catalog is shared through the same sealed snapshot.
+    $addedItem=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,4,'catalog_add',[
+            'name'=>'Web usluga','price'=>'125,50',
+            'tax_rate'=>'25','kind'=>'SERVICE','unit'=>'sat']);
+    checkSync($addedItem['revision']===5,'New catalog item not versioned');
+    $changedItem=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,5,'catalog_edit',[
+            'id'=>1,'name'=>'Poboljšana usluga','price'=>'129.95',
+            'tax_rate'=>'25','kind'=>'SERVICE','unit'=>'sat']);
+    checkSync($changedItem['revision']===6,'Catalog update not versioned');
+    $afterProduct=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync(count($afterProduct['catalog'])===1 &&
+        $afterProduct['catalog'][0]['id']===1 &&
+        $afterProduct['catalog'][0]['price_cents']===12995 &&
+        $afterProduct['catalog'][0]['name']==='Poboljšana usluga' &&
+        $afterProduct['documents']===$root['documents'],
+        'Catalog update modified existing invoice or lost exact cents');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,6,'catalog_add',[
+            'name'=>'Bad price','price'=>'2.999',
+            'tax_rate'=>'25','kind'=>'SERVICE','unit'=>'sat']),422,
+        'Fractional-cent price accepted');
+
     $history=FakturivaSelfHost\loadBackup($api['token'])['history'];
-    checkSync(count($history)>=2 && $history[0]['revision']===4 &&
-        $history[1]['revision']===3,'Encrypted revision history was not preserved');
+    checkSync(count($history)>=2 && $history[0]['revision']===6 &&
+        $history[1]['revision']===5,'Encrypted revision history was not preserved');
     echo "Web and Android FAK1 sync, CAS, history, isolation and immutable invoices: OK\n";
 }finally{
     removeFixture($temporary);
