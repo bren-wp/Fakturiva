@@ -1,9 +1,11 @@
 # Fakturiva Windows (početna implementacija)
 
-Windows klijent trenutno koristi WebView2 za HTTPS korisnički panel
-`https://fakturiva.com`, a ne odvojenu bazu niti zasebnu prijavu.
+Windows klijent koristi WebView2 za HTTPS korisnički panel
+`https://fakturiva.eu`, a ne odvojenu bazu niti zasebnu prijavu.
 Ovo **nije** 1:1 port svih 20 Android ekrana; njihova izrada i
 poređenje screenshotova s referencama ostaju zasebna obveza.
+
+Struktura: `Program.cs` pokreće aplikaciju, `FakturivaWindow.cs` upravlja WebView2 prozorom, a `WebViewSecurityPolicy.cs` provjerava točno dopušteni HTTPS origin. Time se ne dodaje zasebna Windows baza niti novi login.
 
 Za razvojni build koristite .NET 10 SDK na Windowsu i
 Microsoft.Web.WebView2 1.0.4314.35.
