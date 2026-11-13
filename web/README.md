@@ -8,7 +8,9 @@
 - Prijava je na `/login.php` pomoću iste e-adrese i lozinke. Korisnik može otvoriti `/dashboard.php`, `/finance.php` i `/tax-reports.php`.
 - `/api.php` koristi iste poslužiteljske račune za Android autentifikaciju i prijenos AES-GCM šifriranih preslika. Lokalne promjene moraju dobiti potvrdu revizije.
 - Stare adrese za dodatne oblike prijave preusmjeravaju na `/login.php` i više ne prikazuju obrasce. Za ranije korisničko ime koje nije e-adresa, postojeći račun može se prijaviti istom poslužiteljskom lozinkom; novi račun mora imati e-adresu.
-- Android zadržava postojeći profil i dokumente prilikom migracije vjerodajnice poslije uspješne server autentifikacije. Izmjene nisu potpuno dvosmjerni CRUD: web čita posljednju potvrđenu šifriranu presliku, a Android radi offline i sinkronizira po revizijama.
+- Android zadržava postojeći profil i dokumente prilikom migracije vjerodajnice poslije uspješne server autentifikacije. Novi web poslovni uređivač na `/business.php` može **sigurno uređivati tvrtku, klijente i katalog**, pri čemu stvara novu FAK1 reviziju iste baze koju Android koristi. Android pri prijavi automatski provjerava server i preuzima novije podatke samo ako je lokalna kopija čista i nema otvorenog radnog nacrta ili aktivnog konflikta. Windows je WebView2 omotač ovog portala.
+- `POST /api.php` s `{"action":"status"}` i valjanim Bearer tokenom vraća samo `revision`, `has_backup` i `saved_at`, bez prijenosa pune preslike. Odvojeni `load` preuzima šifrirane bajtove samo kad je potreban. Starije verzije servera ostaju dostupne preko kontroliranog `load` fallbacka.
+- Web i Android ne rade istovremeno spajanje pojedinačnih poslovnih zapisa. Web izdaje novu verziju samo ako se `expected_revision` podudara, a sukob se mora ručno riješiti uz očuvanje lokalne i povijesne kopije.
 
 ## Arhitektura pohrane
 
@@ -31,11 +33,19 @@ Prije produkcije provjerite:
 find web -name '*.php' -print0 | xargs -0 -n1 php -l
 php quality/web-hosting/smoke.php
 php quality/web-hosting/web-auth-smoke.php
+php quality/web-hosting/business-sync-smoke.php
 bash quality/web-hosting/http-smoke.sh
 bash quality/web-hosting/web-form-http.sh
 ```
 
 ## Sigurnosne i funkcionalne granice
+
+Web `business.php` otključava FAK1 podatke u PHP RAM-u samo za
+vrijeme jednog HTTPS zahtjeva; ovo nije „zero knowledge” u odnosu na
+server operatora. Dokumente nije dopušteno spremati u web session,
+logove ni nešifrirane temp datoteke. Stvarnu HTTPS produkcijsku
+instalaciju zasebno treba potvrditi; promjene GitHub repozitorija same
+ne postavljaju datoteke na `fakturiva.eu`.
 
 Nema automatskog spajanja paralelnih izmjena između dva uređaja. Konflikt
 revizije zaustavlja prepisivanje, a nepotvrđena lokalna promjena može se izgubiti
