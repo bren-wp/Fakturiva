@@ -2,6 +2,12 @@
 
 Windows klijent koristi WebView2 za HTTPS korisnički panel
 `https://fakturiva.eu`, a ne odvojenu bazu niti zasebnu prijavu.
+Novi portal `https://fakturiva.eu/business.php` uređuje tvrtku, klijente
+i katalog kroz **istu šifriranu server reviziju** koju Android učitava.
+Prijava je ista e-adresa i lozinka; potvrđena novija revizija mora biti
+dostupna Androidu pri sljedećem sigurnom otvaranju povezanog profila.
+Web/Windows ne smiju pohranjivati otključane poslovne podatke u lokalnu
+datoteku, sesiju ili trajni cache.
 Ovo **nije** 1:1 port svih 20 Android ekrana; njihova izrada i
 poređenje screenshotova s referencama ostaju zasebna obveza.
 
