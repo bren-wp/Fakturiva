@@ -27,6 +27,9 @@ export QA_FONT_SCALE="$font"
 export QA_OUTPUT_DIR="$root/screenshots"
 export QA_ERROR_LOG="$root/screenshot-errors.log"
 export QA_CAPTURE_ACCESSIBILITY=1
+# CI's dedicated test emulator may discard fixture data between screens;
+# on a real device the capture script refuses to wipe application accounts.
+export QA_ALLOW_DATA_RESET=1
 
 # Capture continuous logcat before the first screen to distinguish renderer,
 # system_server and low-memory crashes from UI layout failures.
