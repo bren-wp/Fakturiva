@@ -4,10 +4,12 @@ on:
     paths:
       - 'win/**'
       - '.github/workflows/windows.yml'
+      - '.github/workflows/preview-release.yml'
   pull_request:
     paths:
       - 'win/**'
       - '.github/workflows/windows.yml'
+      - '.github/workflows/preview-release.yml'
   workflow_dispatch:
 permissions:
   contents: read
