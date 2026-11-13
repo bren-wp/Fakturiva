@@ -45,8 +45,23 @@ capture_failure(){
   timeout 8s adb logcat -d -v time -t 500 > "$QA_ERROR_LOG" || true
   exit 1
 }
+# Reset only disposable CI emulators. Never erase any real device's local
+# accounts or the developer's regular application data.
+if [ "${QA_ALLOW_DATA_RESET:-0}" != "1" ] ||
+   [ "$(timeout 8s adb shell getprop ro.kernel.qemu 2>/dev/null | tr -d '\r')" != "1" ]; then
+  capture_failure "Screenshot dataset reset requires explicit opt-in on a disposable Android emulator"
+fi
 for index in "${!names[@]}"; do
   number=$(printf '%02d' $((index+1)))
+  # 08 creates a temporary invoice and 11 a quote for the genuine document
+  # previews. Re-seed the next screenshot from a clean app database so those
+  # previews cannot increase later Home/Reports/Dark KPI counts (e.g. 12→13).
+  # 01 establishes a clean baseline from the start. All records remain actual
+  # Store writes in the isolated QA APK; no fake screenshot overlays.
+  if [ "$number" = "01" ] || [ "$number" = "09" ] || [ "$number" = "12" ]; then
+    timeout 30s adb shell pm clear "$APP" >/dev/null ||
+      capture_failure "Cannot reset isolated emulator fixture before screen $number"
+  fi
   timeout 8s adb shell run-as "$APP" rm -f files/qa-screen-ready.txt ||
     capture_failure "Cannot reset screen-ready marker $number"
   timeout 12s adb shell am force-stop "$APP" ||
