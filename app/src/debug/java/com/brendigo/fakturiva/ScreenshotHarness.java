@@ -298,7 +298,20 @@ public final class ScreenshotHarness {
             case "16":call(a,"payments");break;
             case "17":call(a,"eracunScreen");break;
             case "18":call(a,"settings");break;
-            case "19":call(a,"company");break;
+            case "19":
+                // A realistic business record, written through Store only on
+                // the disposable QA emulator. The reference's company fields
+                // must be visible; an unset "OTHER" country hides the OIB.
+                db.setting("name","Primjer tvrtke d.o.o.");
+                db.setting("country","HR");
+                db.setting("legal_form","HR_DOO");
+                db.setting("company_number","12345678");
+                db.setting("address","Rijeka, Hrvatska");
+                db.setting("city","Rijeka");
+                db.setting("email","info@primjer.hr");
+                db.setting("phone","+385 91 000 0000");
+                call(a,"company");
+                break;
             case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }
