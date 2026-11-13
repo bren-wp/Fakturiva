@@ -8,11 +8,13 @@ on:
       - 'quality/**'
       - '.github/workflows/screenshots.yml'
       - '.github/workflows/responsive.yml'
+      - '.github/workflows/preview-release.yml'
   pull_request:
     paths:
       - 'app/**'
       - 'ci/**'
       - '.github/workflows/responsive.yml'
+      - '.github/workflows/preview-release.yml'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
