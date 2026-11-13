@@ -57,6 +57,13 @@ try{
     $first=FakturivaSelfHost\saveBackup(
         $api['token'],base64_encode($backup),0);
     checkSync($first['revision']===1,'Initial Android-compatible snapshot missing');
+    $probe=FakturivaSelfHost\backupStatus($api['token']);
+    checkSync($probe['revision']===1 &&
+        $probe['has_backup']===true &&
+        !array_key_exists('backup_b64',$probe),
+        'Lightweight authenticated status leaked ciphertext or wrong revision');
+    deniedSync(fn()=>FakturivaSelfHost\backupStatus('invalid-token'),401,
+        'Unauthenticated status disclosure');
     $fromWeb=FakturivaWebFinance\openSnapshot(
         FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
     checkSync($fromWeb===$root,'Android-style payload failed PHP decrypt');
@@ -69,6 +76,8 @@ try{
             'phone'=>'+385 51 111 111']);
     checkSync($updated['revision']===2,'Profile did not increment revision');
     $server=FakturivaSelfHost\loadBackup($api['token']);
+    checkSync(FakturivaSelfHost\backupStatus($api['token'])['revision']===2,
+        'Android revision probe did not reflect web-side edit');
     checkSync($server['revision']===2 &&
         hash('sha256',base64_decode($server['backup_b64'],true))===$server['sha256'],
         'Android API did not expose correctly hashed web revision');
