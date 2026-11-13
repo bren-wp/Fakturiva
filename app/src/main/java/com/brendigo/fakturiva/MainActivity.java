@@ -1575,7 +1575,10 @@ public final class MainActivity extends Activity {
         }
         place(hero,heading);gap(hero,13);
         hero.addView(label(money(monthly[11]),31,WHITE,true));gap(hero,5);
-        hero.addView(label("Prema evidentiranim uplatama",11,0xffb8d2e7,false));
+        // Only describe a month-on-month comparison when both months have
+        // a defined base; otherwise explain the source of this true amount.
+        hero.addView(label(monthly[10]>0?"U odnosu na prethodni mjesec":
+            "Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
         hero.addView(new RevenueLine(this,displayClock),lp(-1,50));
         place(body,hero);gap(body,dark?13:18);
