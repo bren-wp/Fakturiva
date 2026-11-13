@@ -174,6 +174,12 @@ public final class ScreenshotHarness {
             }
         }
     }
+    /** Keep screenshot-only draft dates identical across days and devices. */
+    private static void fixedReferenceInvoiceDates(MainActivity a)throws Exception{
+        set(a,"draftIssue","2026-10-27");
+        set(a,"draftDue","2026-11-10");
+        set(a,"draftSupply","2026-10-27");
+    }
     @SuppressWarnings("unchecked")
     public static void show(MainActivity a,String screen)throws Exception{
         Store db=(Store)get(a,"db");
@@ -200,9 +206,14 @@ public final class ScreenshotHarness {
                 break;
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
-            case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
+            case "06":
+                call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
+                fixedReferenceInvoiceDates(a);
+                call(a,"editDocumentScreen");
+                break;
             case "07":{
                 call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
+                fixedReferenceInvoiceDates(a);
                 ArrayList<Store.Item> lines=(ArrayList<Store.Item>)get(a,"draftItems");
                 Store.Item web=new Store.Item();
                 web.name="Izrada web stranice";
