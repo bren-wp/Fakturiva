@@ -7,6 +7,10 @@ $account=requireWeb();
 $error='';$success='';$snapshot=null;
 $revision=(int)($account['revision']??0);
 $mode=(string)($_POST['mode']??'');
+$clientSearch=trim((string)($_POST['client_search']??''));
+$catalogSearch=trim((string)($_POST['catalog_search']??''));
+if(strlen($clientSearch)>120)$clientSearch=substr($clientSearch,0,120);
+if(strlen($catalogSearch)>120)$catalogSearch=substr($catalogSearch,0,120);
 if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
     try{
         checkCsrf();
@@ -65,6 +69,11 @@ if(is_array($snapshot)){
         if(is_array($row)&&isset($row['id'],$row['name']))$catalog[]=$row;
     usort($catalog,static fn($a,$b)=>strcasecmp(
         (string)($a['name']??''),(string)($b['name']??'')));
+    if($clientSearch!=='')$clients=array_values(array_filter($clients,
+        static fn($item)=>stripos((string)($item['name']??''),$clientSearch)!==false ||
+            stripos((string)($item['email']??''),$clientSearch)!==false));
+    if($catalogSearch!=='')$catalog=array_values(array_filter($catalog,
+        static fn($item)=>stripos((string)($item['name']??''),$catalogSearch)!==false));
 }
 function syncField(string $name,string $label,string $value='',bool $required=false):void {
     $id='sync-'.preg_replace('/[^a-z0-9_-]/','',strtolower($name)).'-'.
@@ -128,6 +137,12 @@ unesite je ponovno; stranica ne pohranjuje otključane poslovne podatke.</p>
 <label for="unlock-secret">Lozinka računa</label>
 <input id="unlock-secret" type="password" name="passphrase"
 minlength="12" maxlength="256" autocomplete="off" required>
+<label for="client-search">Traži klijenta (naziv ili e-adresa)</label>
+<input id="client-search" name="client_search" type="search"
+maxlength="120" value="<?=h($clientSearch)?>" autocomplete="off">
+<label for="catalog-search">Traži artikl ili uslugu</label>
+<input id="catalog-search" name="catalog_search" type="search"
+maxlength="120" value="<?=h($catalogSearch)?>" autocomplete="off">
 <button class="primary-action" type="submit">Prikaži moje poslovne podatke</button>
 </form>
 </section>
@@ -160,7 +175,8 @@ syncField($key,$label,'',$key==='name'); ?>
 </section>
 <section class="panel">
 <h2>Uređivanje klijenata</h2>
-<p>Prikazano je prvih 30 klijenata po nazivu.
+<p>Prikazano do 30 <?= $clientSearch!==''?'pronađenih ':'' ?>klijenata po nazivu.
+Za dodatne klijente upotrijebite pretragu pri otključavanju.
 Podatci se spremaju po zasebnom ID-u bez mijenjanja povezanih dokumenata.</p>
 <?php foreach(array_slice($clients,0,30) as $client):?>
 <details class="sync-client">
@@ -178,8 +194,8 @@ syncField($key,$label,(string)($client[$key]??''),$key==='name'); ?>
 </details>
 <?php endforeach;?>
 <?php if(count($clients)>30):?>
-<p>Preostali klijenti dostupni su u Android aplikaciji.
-Izmjene postojećih podataka ne zahtijevaju ponovno numeriranje računa.</p>
+<p>Za preostale klijente koristite polje za pretraživanje pri otključavanju
+ili Android aplikaciju. Dokumenti zadržavaju postojeće identifikatore.</p>
 <?php endif;?>
 </section>
 <section class="panel">
@@ -207,8 +223,8 @@ zaokruživanja preko floating-point izračuna.</p>
 </details>
 <?php endforeach;?>
 <?php if(count($catalog)>30):?>
-<p>Prikazano je prvih 30 proizvoda po nazivu.
-Ostale možete urediti u Android aplikaciji.</p>
+<p>Za preostale stavke kataloga koristite pretragu pri otključavanju
+ili Android aplikaciju.</p>
 <?php endif;?>
 </section>
 <?php endif;?>
