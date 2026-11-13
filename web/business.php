@@ -15,15 +15,16 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
         $password=(string)($_POST['passphrase']??'');
         if(strlen($password)<12 || strlen($password)>256)
             throw new FakturivaSelfHost\HttpFailure(422,'Unesite lozinku poslovnih podataka.');
-        if($mode==='profile'||$mode==='client_add'||$mode==='client_edit'){
+        if(in_array($mode,['profile','client_add','client_edit',
+                       'catalog_add','catalog_edit'],true)){
             $expected=filter_var($_POST['revision']??null,FILTER_VALIDATE_INT);
             if($expected===false||$expected===null)
                 throw new FakturivaSelfHost\HttpFailure(422,'Nevaljana revizija.');
             $fields=[];
             foreach(['name','oib','address','city','postal_code','email',
-                     'phone','vat_id'] as $key)
+                     'phone','vat_id','price','tax_rate','kind','unit'] as $key)
                 if(array_key_exists($key,$_POST))$fields[$key]=$_POST[$key];
-            if($mode==='client_edit'){
+            if($mode==='client_edit'||$mode==='catalog_edit'){
                 $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
                 if($id===false||$id===null)
                     throw new FakturivaSelfHost\HttpFailure(422,'Nevaljan klijent.');
@@ -51,7 +52,7 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
         unset($password);
     }
 }
-$company=[];$clients=[];
+$company=[];$clients=[];$catalog=[];
 if(is_array($snapshot)){
     foreach($snapshot['company'] as $row)
         if(is_array($row)&&is_string($row['key']??null))
@@ -59,6 +60,10 @@ if(is_array($snapshot)){
     foreach($snapshot['clients'] as $row)
         if(is_array($row)&&isset($row['id'],$row['name']))$clients[]=$row;
     usort($clients,static fn($a,$b)=>strcasecmp(
+        (string)($a['name']??''),(string)($b['name']??'')));
+    foreach($snapshot['catalog']??[] as $row)
+        if(is_array($row)&&isset($row['id'],$row['name']))$catalog[]=$row;
+    usort($catalog,static fn($a,$b)=>strcasecmp(
         (string)($a['name']??''),(string)($b['name']??'')));
 }
 function syncField(string $name,string $label,string $value='',bool $required=false):void {
@@ -79,6 +84,21 @@ function syncHidden(string $mode,int $revision):void {
     echo '<input type="hidden" name="csrf" value="'.h(csrf()).'">'.
         '<input type="hidden" name="mode" value="'.h($mode).'">'.
         '<input type="hidden" name="revision" value="'.$revision.'">';
+}
+function syncCatalogFields(array $item=[]):void {
+    syncField('name','Naziv artikla / usluge',(string)($item['name']??''),true);
+    $raw=(int)($item['price_cents']??0);
+    $price=(string)intdiv($raw,100).'.'.str_pad((string)($raw%100),2,'0',STR_PAD_LEFT);
+    syncField('price','Jedinična cijena (decimalno, npr. 125,50)',$price,true);
+    syncField('unit','Mjerna jedinica',(string)($item['unit']??'kom'),true);
+    $kind=(string)($item['kind']??'SERVICE');
+    echo '<label>Vrsta artikla / usluge<select name="kind">';
+    foreach(['SERVICE'=>'Usluga','PRODUCT'=>'Proizvod','UNSPECIFIED'=>'Ostalo'] as $code=>$label)
+        echo '<option value="'.h($code).'"'.
+            ($code===$kind?' selected':'').'>'.h($label).'</option>';
+    echo '</select></label>';
+    syncField('tax_rate','PDV stopa (0–100 % ili postojeći prošireni kod)',
+        (string)($item['tax_rate']??25),true);
 }
 ?><!doctype html>
 <html lang="hr"><head>
@@ -160,6 +180,35 @@ syncField($key,$label,(string)($client[$key]??''),$key==='name'); ?>
 <?php if(count($clients)>30):?>
 <p>Preostali klijenti dostupni su u Android aplikaciji.
 Izmjene postojećih podataka ne zahtijevaju ponovno numeriranje računa.</p>
+<?php endif;?>
+</section>
+<section class="panel">
+<h2>Artikli i usluge — dodavanje</h2>
+<p>Iznosi su pohranjeni u najmanjim novčanim jedinicama bez
+zaokruživanja preko floating-point izračuna.</p>
+<form action="business.php" method="post" autocomplete="off">
+<?php syncHidden('catalog_add',$revision);syncCatalogFields();syncPassword(); ?>
+<button class="primary-action" type="submit">Dodaj artikl ili uslugu</button>
+</form>
+</section>
+<section class="panel">
+<h2>Artikli i usluge — uređivanje</h2>
+<p>Uređivanje kataloga ne mijenja stavke ili cijene već izdanih računa.</p>
+<?php foreach(array_slice($catalog,0,30) as $item):?>
+<details class="sync-client">
+<summary><?=h((string)$item['name'])?>
+<small>· ID <?=(int)$item['id']?></small></summary>
+<form action="business.php" method="post" autocomplete="off">
+<?php syncHidden('catalog_edit',$revision);?>
+<input type="hidden" name="id" value="<?=(int)$item['id']?>">
+<?php syncCatalogFields($item);syncPassword(); ?>
+<button class="primary-action" type="submit">Spremi stavku kataloga</button>
+</form>
+</details>
+<?php endforeach;?>
+<?php if(count($catalog)>30):?>
+<p>Prikazano je prvih 30 proizvoda po nazivu.
+Ostale možete urediti u Android aplikaciji.</p>
 <?php endif;?>
 </section>
 <?php endif;?>
