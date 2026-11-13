@@ -2,14 +2,6 @@ name: Verify native Android screens
 on:
   push:
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'ci/**'
-      - 'quality/**'
-      - '.github/workflows/screenshots.yml'
-      - '.github/workflows/preview-release.yml'
-      - 'docs/screenshots/**'
-      - '.github/workflows/responsive.yml'
   pull_request:
     paths:
       - 'app/**'
