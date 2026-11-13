@@ -1515,7 +1515,7 @@ public final class MainActivity extends Activity {
         alerts.setBackground(shape(panel(),12));alerts.setPadding(dp(9),dp(9),dp(9),dp(9));
         alerts.setContentDescription("Obavijesti o neplaćenim računima");
         bar.addView(alerts,lp(42,42));alerts.setOnClickListener(v->showNotifications());
-        // In dark mode, the reference greets lower without shifting its hero.
+        // Align the greeting and KPI hero with the measured 1179x2556 owner reference.
         // The original 393dp home reference positions the greeting closer
         // to the masthead than the former 41/25dp gaps.
         place(body,bar);gap(body,dark?36:24);
@@ -1552,9 +1552,9 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,dark?14:24);
+        place(body,welcome);gap(body,dark?2:8);
 
-        LinearLayout hero=vertical();pad(hero,19,dark?16:20);
+        LinearLayout hero=vertical();pad(hero,19,dark?13:15);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
@@ -1573,14 +1573,14 @@ public final class MainActivity extends Activity {
                 heading.addView(delta);
             }
         }
-        place(hero,heading);gap(hero,13);
+        place(hero,heading);gap(hero,7);
         hero.addView(label(money(monthly[11]),31,WHITE,true));gap(hero,5);
         // Only describe a month-on-month comparison when both months have
         // a defined base; otherwise explain the source of this true amount.
         hero.addView(label(monthly[10]>0?"U odnosu na prethodni mjesec":
             "Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
-        hero.addView(new RevenueLine(this,displayClock),lp(-1,50));
+        hero.addView(new RevenueLine(this,displayClock),lp(-1,47));
         place(body,hero);gap(body,dark?13:18);
 
         LinearLayout stats=horizontal();
@@ -1669,12 +1669,12 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();pad(c,14,11);
+        LinearLayout c=card();pad(c,14,8);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
         // Reference uses readable pastel icon tiles on both themes.
         image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
-        c.addView(image,lp(37,37));gap(c,6);
+        c.addView(image,lp(37,37));gap(c,4);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
