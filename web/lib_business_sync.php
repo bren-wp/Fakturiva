@@ -21,6 +21,16 @@ function requiredField(array $data,string $name,int $max,bool $required=false):s
     return $value;
 }
 
+/** Strict 2-decimal monetary parser; never store PHP floating point prices. */
+function priceInCents(mixed $value):int {
+    if(!is_string($value)||!preg_match('/^([0-9]{1,10})(?:[.,]([0-9]{1,2}))?$/D',$value,$parts))
+        throw new HttpFailure(422,'Cijena mora imati najviše dvije decimale.');
+    $cents=(int)$parts[1]*100 + (int)str_pad($parts[2]??'0',2,'0');
+    if($cents<0 || $cents>999999999999)
+        throw new HttpFailure(422,'Cijena je izvan dopuštenog raspona.');
+    return $cents;
+}
+
 function modified(array $root,string $operation,array $input):array {
     if(($root['format']??null)!=='fakturiva-backup-v1' ||
        !is_int($root['schema']??null) ||
@@ -87,6 +97,57 @@ function modified(array $root,string $operation,array $input):array {
             if(!is_int($id) || $id<1 || !isset($ids[$id]))
                 throw new HttpFailure(404,'Klijent nije pronađen.');
             foreach($root['clients'] as &$row){
+                if($row['id']===$id){
+                    foreach($fields as $key=>$value)$row[$key]=$value;
+                    break;
+                }
+            }
+            unset($row);
+        }
+    }elseif($operation==='catalog_add'||$operation==='catalog_edit'){
+        if(!is_array($root['catalog']) || !array_is_list($root['catalog']))
+            throw new HttpFailure(422,'Neispravan katalog.');
+        $name=requiredField($input,'name',200,true);
+        $unit=requiredField($input,'unit',20,true);
+        $kind=requiredField($input,'kind',20,true);
+        if(!preg_match('/^[\\p{L}0-9 ._-]{1,20}$/uD',$unit) ||
+           !in_array($kind,['SERVICE','PRODUCT','UNSPECIFIED'],true))
+            throw new HttpFailure(422,'Neispravna vrsta ili mjera artikla.');
+        $price=priceInCents($input['price']??null);
+        $rate=filter_var($input['tax_rate']??null,FILTER_VALIDATE_INT);
+        if($rate===false||$rate===null||
+           !($rate>=0&&$rate<=100) &&
+           !($rate>=10001&&$rate<=20000))
+            throw new HttpFailure(422,'Neispravna stopa PDV-a.');
+        $fields=['name'=>$name,'price_cents'=>$price,
+            'tax_rate'=>$rate,'kind'=>$kind,'unit'=>$unit];
+        $ids=[];$largest=0;
+        foreach($root['catalog'] as $row){
+            if(!is_array($row)||!is_int($row['id']??null)||
+               $row['id']<1||$row['id']>2147483646||isset($ids[$row['id']]))
+                throw new HttpFailure(422,'Neispravni identifikatori kataloga.');
+            $ids[$row['id']]=true;
+            $largest=max($largest,$row['id']);
+        }
+        if($operation==='catalog_add'){
+            if($largest>=2147483646||count($root['catalog'])>=100000)
+                throw new HttpFailure(413,'Katalog je prevelik.');
+            $currency='EUR';
+            foreach($root['company'] as $row)
+                if(is_array($row)&&($row['key']??null)==='currency'&&
+                   is_string($row['value']??null))
+                    $currency=strtoupper(trim($row['value']));
+            if(!in_array($currency,['EUR','USD','GBP','CHF','CAD','AUD','NZD',
+                'SGD','HKD','CNY','INR','BRL','MXN','ZAR','PLN','CZK','SEK',
+                'NOK','DKK','RON','HUF','BGN','TRY','ILS','THB','MYR',
+                'PHP','TWD'],true))$currency='EUR';
+            $root['catalog'][]=['id'=>$largest+1]+$fields+
+                ['currency_code'=>$currency];
+        }else{
+            $id=$input['id']??null;
+            if(!is_int($id)||!isset($ids[$id]))
+                throw new HttpFailure(404,'Artikl ili usluga nisu pronađeni.');
+            foreach($root['catalog'] as &$row){
                 if($row['id']===$id){
                     foreach($fields as $key=>$value)$row[$key]=$value;
                     break;
