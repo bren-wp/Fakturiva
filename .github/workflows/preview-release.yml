@@ -165,12 +165,12 @@ jobs:
                 *) pending=1 ;;
               esac
             done <<'REQUIRED'
-Android verification
-Verify native Android screens
-Responsive Android screen matrix
-Self-hosted Fakturiva JSON API security smoke
-Fakturiva Windows preview build
-REQUIRED
+            Android verification
+            Verify native Android screens
+            Responsive Android screen matrix
+            Self-hosted Fakturiva JSON API security smoke
+            Fakturiva Windows preview build
+            REQUIRED
             if [ "$pending" -eq 0 ]; then exit 0; fi
             sleep 30
           done
