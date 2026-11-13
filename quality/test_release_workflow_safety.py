@@ -29,7 +29,8 @@ class ReleaseWorkflowSafetyTest(unittest.TestCase):
                     source, r"git\s+push\s+(?:origin\s+(?:main|HEAD:main)|[^\n]*refs/heads/main)",
                 )
         self.assertNotRegex(PREVIEW, r"\bgit\s+(?:commit|push)\b")
-        self.assertIn("git diff --exit-code HEAD -- docs/screenshots/", PREVIEW)
+        self.assertIn("git diff --quiet HEAD -- docs/screenshots/", PREVIEW)
+        self.assertIn("Fakturiva-screenshot-gallery-differences.txt", PREVIEW)
 
     def test_release_requires_main_ref_and_immutable_version_tag(self):
         self.assertIn("if: github.ref == 'refs/heads/main'", PREVIEW)
