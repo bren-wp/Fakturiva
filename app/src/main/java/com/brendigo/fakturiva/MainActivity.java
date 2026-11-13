@@ -1555,8 +1555,10 @@ public final class MainActivity extends Activity {
         place(body,welcome);gap(body,dark?2:8);
 
         LinearLayout hero=vertical();pad(hero,19,dark?13:15);
+        // The reference uses the same blue/violet hero in light and dark
+        // themes. A muted middle stop prevents an over-bright upper right.
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
+            new int[]{0xff143354,0xff172a64,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
         long[] monthly=db.monthlyReceipts(selectedCurrency(),displayClock);
         LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
@@ -4003,8 +4005,10 @@ public final class MainActivity extends Activity {
         long monthReceived=db.monthlyReceipts(
             selectedCurrency(),referenceAwareClock())[11];
         LinearLayout hero=vertical();pad(hero,19,22);
+        // Reference payment hero brightens slightly toward the right,
+        // instead of darkening as the previous gradient did.
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            new int[]{0xff173b69,0xff102844});
+            new int[]{0xff19385f,0xff1a426e});
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
         hero.addView(label(money(monthReceived),29,WHITE,true));gap(hero,13);
