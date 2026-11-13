@@ -1,10 +1,10 @@
-name: Fakturiva PR27 preview candidate release
+# Archived PR27 candidate build: manually inspect old artifacts only.
+# Immutable releases are published exclusively by preview-release.yml.
+name: Fakturiva legacy PR27 candidate (manual build only)
 on:
-  push:
-    branches: [feat/server-accounts-admin-compliance-win-2026]
+  workflow_dispatch:
 permissions:
-  contents: write
-  actions: read
+  contents: read
 jobs:
   android:
     if: contains(github.event.head_commit.message, '[release-preview]')
@@ -84,79 +84,3 @@ jobs:
           path: out/*
           if-no-files-found: error
 
-  publish:
-    if: contains(github.event.head_commit.message, '[release-preview]')
-    needs: [android, windows]
-    runs-on: ubuntu-latest
-    # Responsive 20-screen matrix uses an Android emulator and regularly
-    # takes longer than the artifact-producing jobs; do not time out early.
-    timeout-minutes: 70
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
-        with:
-          name: fakturiva-android-candidate
-          path: out/android
-      - uses: actions/download-artifact@v8
-        with:
-          name: fakturiva-windows-candidate
-          path: out/windows
-      - name: Verify latest Android, Web, Windows and responsive CI passed
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 120); do
-            json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=50")"
-            pending=0
-            while IFS= read -r name; do
-              test -n "$name" || continue
-              result="$(jq -r --arg n "$name" --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.name == $n and .head_sha == $sha)] | .[0].conclusion // "pending"' <<< "$json")"
-              echo "$name: $result"
-              case "$result" in
-                success) ;;
-                failure|cancelled|timed_out|action_required) exit 1 ;;
-                *) pending=1 ;;
-              esac
-            done <<'REQUIRED'
-          Android verification
-          Verify native Android screens
-          Responsive Android screen matrix
-          Self-hosted Fakturiva JSON API security smoke
-          Fakturiva Windows preview build
-          REQUIRED
-            if test "$pending" -eq 0; then exit 0; fi
-            sleep 25
-          done
-          echo "::error::At least one required workflow is still pending after 50 minutes. Re-run this publish job after all five pass."
-          exit 1
-      - name: Package all source and preview assets
-        run: |
-          mkdir -p release-assets
-          cp out/android/* release-assets/
-          cp out/windows/* release-assets/
-          git archive --format=zip --output=release-assets/Fakturiva-v0.18.0-preview.1-source.zip HEAD
-          (cd web && zip -q -r ../release-assets/Fakturiva-v0.18.0-preview.1-web.zip . -x '*/secret.php' '*/.env' '*/storage/data/accounts/*' '*/storage/data/sessions/*' '*.log')
-          (cd release-assets && sha256sum *.apk *.aab *.zip *.exe > SHA256SUMS.txt)
-          cat > release-notes.md <<'NOTES'
-          Fakturiva v0.18.0-preview.1 — razvojno izdanje (nije produkcijski certificirano).
-
-          Android: debug-signed QA APK, zasebni DEMO APK (demo@fakturiva.test / PIN 123456, samo sintetički podatci), debug-signed test AAB i nepotpisani release AAB.
-          Windows: setup.exe i portable-complete.zip za probu, te portable.exe koji može zahtijevati WebView2 Runtime i pomoćne datoteke iz kompletnog ZIP-a.
-          Priložen je puni izvorni kod i zasebna PHP/JSON web skripta.
-
-          NEMA produkcijskog Google Play potpisa, potvrđene fiskalizacije 1.0/2.0 ni službenog PO-SD XML uvoza. Zakonski obrasci i pohrana zahtijevaju dodatne provjere i server backup.
-          NOTES
-      - name: Publish immutable preview GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view v0.18.0-preview.1 >/dev/null 2>&1; then
-            echo "::error::Release tag already exists."
-            exit 1
-          fi
-          gh release create v0.18.0-preview.1 release-assets/* \
-            --target "$GITHUB_SHA" --prerelease \
-            --title "Fakturiva v0.18.0 — pregledno izdanje" \
-            --notes-file release-notes.md
