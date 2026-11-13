@@ -2,13 +2,6 @@ name: Self-hosted Fakturiva JSON API security smoke
 on:
   push:
     branches: [main]
-    paths:
-      - 'web/**'
-      - 'quality/web-hosting/**'
-      - '.github/workflows/self-host-json.yml'
-      - '.github/workflows/preview-release.yml'
-      - 'docs/screenshots/**'
-      - 'app/build.gradle'
   pull_request:
     paths:
       - 'web/**'
