@@ -983,16 +983,58 @@ public final class MainActivity extends Activity {
             prefs.edit().putString("local_last_user",LocalAccounts.activeName())
                 .putBoolean("welcomed",true).apply();
             CloudMirror.runPending(this,verifiedId);
-            if(prefs.getBoolean("device_lock",false))
-                securityScreen(true,false);
-            else{
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-                navigate("home");offerWorkingDraftRecovery();
+            // The first frame after verified login is the only safe time to
+            // apply a newer encrypted server snapshot automatically: no form
+            // is open and no editor may mutate the local SQLite database.
+            // Dirty, conflicted, paused and draft-bearing profiles keep their
+            // local data. Those owners must review remote changes explicitly.
+            if(!prefs.getBoolean("device_lock",false) &&
+               !RecoveryVault.hasWorkingDraft(this) &&
+               CloudMirror.canRefreshOnLogin(this,verifiedId)){
+                setup("cloud_refresh",false);
+                pad(body,24,55);
+                place(body,label("Sinkronizacija poslovnih podataka",23,ink(),true));
+                gap(body,13);
+                place(body,label("Sigurno provjeravamo novije promjene s weba. "+
+                    "Ako server nije dostupan, vaši lokalni podatci ostaju sačuvani.",
+                    13,sub(),false));
+                selfHostedBusy=true;
+                CloudMirror.pullNewer(this,verifiedId,(failure,updated)->{
+                    selfHostedBusy=false;
+                    if(isFinishing()||isDestroyed()||
+                       !verifiedId.equals(LocalAccounts.activeId()))return;
+                    try{
+                        if(updated){
+                            if(db!=null)db.close();
+                            db=new Store(this,verifiedId);
+                        }
+                        if(failure!=null)
+                            toast("Povezivanje nije dostupno. Nastavljate s lokalnim podatcima.");
+                        finishLocalSessionUi();
+                    }catch(Exception e){
+                        if(db!=null){db.close();db=null;}
+                        LocalAccounts.lock();
+                        accountStorageError(e);
+                    }
+                });
+                return;
             }
+            finishLocalSessionUi();
         }catch(Exception e){
             if(db!=null){db.close();db=null;}
             LocalAccounts.lock();
             accountStorageError(e);
+        }
+    }
+
+    /** Open the exact same business UI after login or a verified web refresh. */
+    private void finishLocalSessionUi(){
+        if(prefs.getBoolean("device_lock",false))
+            securityScreen(true,false);
+        else{
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            navigate("home");
+            offerWorkingDraftRecovery();
         }
     }
 
@@ -5427,6 +5469,8 @@ public final class MainActivity extends Activity {
     private void error(Exception e){String s=e.getMessage();toast(s==null?"Došlo je do pogreške":s);}
     private void toast(String s){Toast.makeText(this,ui(s),Toast.LENGTH_LONG).show();}
     private void handleBack(){
+        // Do not expose editable screens while an account restore is in flight.
+        if("cloud_refresh".equals(screen) && selfHostedBusy)return;
         // Splash intentionally lasts 4.5s; hardware/system Back must not
         // navigate to a business screen while db is still null.
         if("splash".equals(screen)){finish();return;}
