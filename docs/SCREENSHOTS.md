@@ -12,7 +12,7 @@ Svaka slika `docs/screenshots/NN_naziv.png` nastaje pomoću `ci/capture_screensh
 1. Snima **20 jedinstvenih APK screenshotova** na profilu 1179 × 2556 px.
 2. Provjerava `uiautomator` XML hijerarhiju: zaslon mora biti stvarna aplikacija, bez Android dijaloga preko nje, s pristupačnim kontrolama unutar zaslona.
 3. Izvodi instrumentacijske testove i zaustavlja izdanje ako bilo što padne.
-4. Uspoređuje stvarne PNG-ove s prethodno pregledanim snimkama u `docs/screenshots`. Ako se razlikuju, release se zaustavlja: galerija se ažurira **samo putem posebne razvojne grane i odobrenog PR-a**, ne automatskim zapisivanjem u `main`.
+4. Provjerava svih 20 stvarnih PNG-ova i uspoređuje ih s galerijom u `docs/screenshots`. Ako se binarno razlikuju, razlika se objavljuje kao upozorenje, uz izvještaj, a novi preview uključuje svježe stvarne snimke. Galerija se može ažurirati **samo putem zasebnog PR-a**, nikad izravnim zapisivanjem u `main`. Binarna razlika sama po sebi ne dokazuje vizualnu regresiju jer snimke ovise i o satu emulatora.
 5. Nakon prolaska svih CI provjera objavljuje preview paket, ZIP svih 20 stvarnih snimki i SHA256SUMS uz točan commit.
 
 Ako QA ne uspije, **nema objave novog izdanja niti zamjene galerije**. Osjetljivi produkcijski podaci ne koriste se u testnom emulatoru.
