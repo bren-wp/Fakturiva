@@ -47,6 +47,7 @@ class ReleaseWorkflowSafetyTest(unittest.TestCase):
         self.assertIn("gh api", PREVIEW)
         self.assertIn("actions/runs?head_sha=$GITHUB_SHA", PREVIEW)
         self.assertIn("Main-branch workflow gates did not all pass", PREVIEW)
+        self.assertNotIn("done <<", PREVIEW)
 
     def test_release_captures_real_screenshots_without_publishing_mocks(self):
         self.assertIn("bash ci/run_android_qa.sh", PREVIEW)
@@ -59,8 +60,18 @@ class ReleaseWorkflowSafetyTest(unittest.TestCase):
             with self.subTest(workflow=name):
                 source = (WORKFLOWS / name).read_text(encoding="utf-8")
                 self.assertIn("'.github/workflows/preview-release.yml'", source)
+                self.assertIn("'docs/screenshots/**'", source)
             if name in ("self-host-json.yml", "windows.yml"):
                 self.assertIn("'app/build.gradle'", source)
+
+    def test_real_emulator_invoice_fixtures_have_fixed_dates(self):
+        harness = (
+            ROOT / "app/src/debug/java/com/brendigo/fakturiva/ScreenshotHarness.java"
+        ).read_text(encoding="utf-8")
+        self.assertIn('set(a,"draftIssue","2026-10-27")', harness)
+        self.assertIn('set(a,"draftDue","2026-11-10")', harness)
+        self.assertIn('set(a,"draftSupply","2026-10-27")', harness)
+        self.assertEqual(harness.count("fixedReferenceInvoiceDates(a);"), 2)
 
     def test_legacy_pr27_cannot_publish_historical_release(self):
         self.assertIn("workflow_dispatch:", LEGACY)
