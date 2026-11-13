@@ -91,6 +91,21 @@ public final class CloudMirror {
     static int expectedRevision(Context ctx,String id){
         return enabled(ctx,id)?state(ctx,id).getInt("revision",-1):-1;
     }
+    /**
+     * A safe, clean account may check for newer web/server changes before the
+     * business UI becomes interactive. A dirty, conflicted or paused profile
+     * must keep its local documents and require explicit conflict resolution.
+     * Never fetch remote data into an unlocked editor with pending changes.
+     */
+    public static boolean canRefreshOnLogin(Context ctx,String id){
+        if(!enabled(ctx,id) || !id.equals(LocalAccounts.activeId()))return false;
+        SharedPreferences p=state(ctx,id);
+        return !p.getBoolean("dirty",false) &&
+            !p.getBoolean("conflict",false) &&
+            !p.getBoolean("paused",false) &&
+            p.getInt("revision",-1)>=1;
+    }
+
     public static String status(Context ctx,String id){
         if(!enabled(ctx,id))
             return "Server nije povezan. Za obnovu nakon deinstalacije povežite račun.";
