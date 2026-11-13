@@ -252,7 +252,14 @@ public final class ScreenshotHarness {
                 Store.Item seo=new Store.Item();
                 seo.name="SEO optimizacija";
                 seo.qtyMilli=1000;seo.unitCents=25000;seo.taxRate=25;
-                long invoiceDraft=db.createDraft(Store.INVOICE,db.clients().get(0).id,
+                // Match the reference's fictional issuer and customer via
+                // real Store updates, not by drawing a static PNG overlay.
+                db.setting("name","Primjer izdavatelja d.o.o.");
+                db.setting("address","Rijeka, Hrvatska");
+                long sampleBuyer=fixtureClient(db.clients(),"Studio Sjever d.o.o.");
+                db.updateClient(sampleBuyer,"Studio Sjever d.o.o.","",
+                    "Zagreb, Hrvatska","studio@example.invalid","","");
+                long invoiceDraft=db.createDraft(Store.INVOICE,sampleBuyer,
                     "2026-10-27","2026-11-10","Pregled prije potvrde",
                     Arrays.asList(site,seo));
                 call(a,"showDocument",new Class<?>[]{long.class},invoiceDraft);
@@ -280,8 +287,12 @@ public final class ScreenshotHarness {
                 content.name="Izrada sadržaja";
                 content.unit="kom";content.qtyMilli=1000;
                 content.unitCents=40000;content.taxRate=25;
-                long quote=db.createDraft(Store.QUOTE,
-                    fixtureClient(db.clients(),"Terra Projekt j.d.o.o."),
+                db.setting("name","Primjer izdavatelja d.o.o.");
+                db.setting("address","Rijeka, Hrvatska");
+                long terra=fixtureClient(db.clients(),"Terra Projekt j.d.o.o.");
+                db.updateClient(terra,"Terra Projekt j.d.o.o.","",
+                    "Pula, Hrvatska","terra@example.invalid","","");
+                long quote=db.createDraft(Store.QUOTE,terra,
                     "2026-10-27","2026-11-10","2026-11-15",
                     "Ponuda za usluge","",Arrays.asList(campaign,content));
                 db.confirm(quote);
