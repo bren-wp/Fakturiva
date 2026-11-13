@@ -273,14 +273,22 @@ public final class CloudMirror {
                     SelfHostedSyncClient.command("login",
                         p.getString("username",""),new String(pass)),null);
                 token=login.getString("token");
-                JSONObject remote=SelfHostedSyncClient.request(url,
-                    new JSONObject().put("action","load"),token);
-                int actual=remote.getInt("revision");
+                // Avoid downloading a potentially 25MB ciphertext for
+                // every clean login. A newer revision is checked before load.
+                JSONObject status=SelfHostedSyncClient.revisionStatus(url,token);
+                int advertised=status.getInt("revision");
                 int known=p.getInt("revision",-1);
-                if(actual<known)
+                if(advertised<known)
                     throw new SecurityException(
                         "Server ima stariju reviziju; lokalni podatci nisu promijenjeni.");
-                if(actual>known){
+                if(advertised>known){
+                    JSONObject remote=status.has("backup_b64")?status:
+                        SelfHostedSyncClient.request(url,
+                            new JSONObject().put("action","load"),token);
+                    int actual=remote.getInt("revision");
+                    if(actual<advertised)
+                        throw new SecurityException(
+                            "Udaljena revizija promijenjena je tijekom provjere.");
                     String encoded=remote.getString("backup_b64");
                     if(encoded.isEmpty())
                         throw new SecurityException("Nedostaje šifrirana kopija na serveru.");
@@ -394,8 +402,8 @@ public final class CloudMirror {
                         SelfHostedSyncClient.command("login",username,new String(pass)),null);
                     String token=login.getString("token");
                     try{
-                        JSONObject remote=SelfHostedSyncClient.request(url,
-                            new JSONObject().put("action","load"),token);
+                        JSONObject remote=SelfHostedSyncClient.revisionStatus(
+                            url,token);
                         int savedRevision=p.getInt("revision",-1);
                         int serverRevision=remote.getInt("revision");
                         if(savedRevision!=serverRevision){
