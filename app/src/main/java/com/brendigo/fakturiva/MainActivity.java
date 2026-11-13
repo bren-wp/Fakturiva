@@ -2611,7 +2611,7 @@ public final class MainActivity extends Activity {
         gap(body,10);
 
         if(draft){
-            place(body,action(invoice?"Potvrdi račun":"Potvrdi ponudu",
+            place(body,action(invoice?"Izdaj račun":"Potvrdi ponudu",
                 0xff17b99a,true,()->confirmWarning(()->{
                     try{db.confirm(id);showDocument(id);}
                     catch(Exception e){error(e);}
@@ -2786,7 +2786,14 @@ public final class MainActivity extends Activity {
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
         gap(paper,Store.QUOTE.equals(d.type)?39:28);
-        paperRule(paper);gap(paper,12);
+        paperRule(paper);gap(paper,9);
+        // Real document data is unchanged. Explain clearly that previewing
+        // and issuing in-app is not a certified tax fiscalization operation.
+        place(paper,label(Store.QUOTE.equals(d.type)?
+            "Ponuda nije račun niti dokaz o plaćanju.":
+            "Dokument za pregled · Nije fiskaliziran.",
+            9,0xff9cacc0,false));
+        gap(paper,5);
         return paper;
     }
 
@@ -3988,12 +3995,17 @@ public final class MainActivity extends Activity {
             String latest=lastReceipt.get(invoice.id);
             if(latest!=null && latest.startsWith(month))monthlyCount++;
         }
+        // All-time receipts differ from the monthly paid-invoices context
+        // shown immediately below. Display the same selected-month amount as
+        // the reference Home / Reports screens, calculated from real payments.
+        long monthReceived=db.monthlyReceipts(
+            selectedCurrency(),referenceAwareClock())[11];
         LinearLayout hero=vertical();pad(hero,19,22);
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             new int[]{0xff173b69,0xff102844});
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
-        hero.addView(label(money(db.receivedCents(selectedCurrency())),29,WHITE,true));gap(hero,13);
+        hero.addView(label(money(monthReceived),29,WHITE,true));gap(hero,13);
         hero.addView(label("✓  "+monthlyCount+" plaćenih računa ovaj mjesec",
             11,0xff73dfd0,false));
         place(body,hero);gap(body,15);
@@ -4750,7 +4762,7 @@ public final class MainActivity extends Activity {
         String companyName=db.setting("name").trim();
         heroText.addView(label(companyName.isEmpty()?"Moja tvrtka / obrt":companyName,15,ink(),true));
         gap(heroText,5);
-        heroText.addView(label("Invoice and quote issuer",11,sub(),false));
+        heroText.addView(label("Profil izdavatelja računa",11,sub(),false));
         hero.addView(heroText,new LinearLayout.LayoutParams(0,-2,1));
         // Align the first business form with the reference. Preserve the
         // immutable-issuer disclosure below the editable sections.
@@ -4773,15 +4785,17 @@ public final class MainActivity extends Activity {
         place(legalChoice,label("Prikazat će se polja relevantna za odabranu "+
             "državu i pravni oblik. Posebne porezne obveze i podaci "+
             "poreznog izdavanja provjeravaju se zasebno.",12,sub(),false));
-        place(body,legalChoice);gap(body,14);
+        // The first viewport follows the owner's reference: company identity
+        // first, with the country/form selectors immediately after that card.
+        // All selectors still govern the same fields and persisted keys.
         LinearLayout form=card();
-        place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
+        place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note",
             "legal_form","trading_name","company_number","register_authority","tax_registration",
             "address_2","region","payment_terms","footer_note","contact_person",
             "bank_account_number","bank_routing_number","bank_sort_code",
             "bank_address","invoice_reference"};
-        String[] labels={"Legal business name","Tax ID (optional)","VAT ID (optional)","Street address","Postal code","City","Country","Email","Phone","Website","IBAN (optional)","Bank name","BIC / SWIFT","Register reference (optional)","Business unit","Operator reference","Payment method","Payment reference","Tax or legal note",
+        String[] labels={"Naziv tvrtke","OIB / porezni broj","PDV identifikacijski broj","Adresa","Poštanski broj","Grad","Država","E-adresa","Telefon","Web-stranica","IBAN (optional)","Bank name","BIC / SWIFT","Register reference (optional)","Business unit","Operator reference","Payment method","Payment reference","Tax or legal note",
             "Legal form (Ltd, Inc, LLC, GmbH, d.o.o., sole trader...)","Trading name (optional)",
             "Company registration number","Registering authority","Tax registration details",
             "Additional address line","State / province / region","Payment terms","Invoice footer note",
@@ -4790,10 +4804,10 @@ public final class MainActivity extends Activity {
         EditText[] fields=new EditText[keys.length];
         LinearLayout[] fieldBlocks=new LinearLayout[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
-        int[][] sections={{0,19,20,1,3,24,6,7,8,28},
+        int[][] sections={{0,1,3,7,8,19,20,24,6,28},
             {10,11,12,16,17,26,29,30,31,32},
             {2,4,5,9,13,14,15,18,21,22,23,25,27,33}};
-        String[] sectionNames={"Company and legal identity","Payment and bank details","Additional invoice details"};
+        String[] sectionNames={"Podaci o tvrtki","Podaci za plaćanje","Dodatni podaci računa"};
         for(int group=0;group<sections.length;group++){
             LinearLayout card=group==0?form:card();
             if(group>0){
@@ -4850,9 +4864,12 @@ public final class MainActivity extends Activity {
                 place(fieldBlock,fields[index]);
                 place(card,fieldBlock);
             }
-            if(group==0)place(body,form);
-            else place(body,card);
-            gap(body,14);
+            if(group==0){
+                place(body,form);gap(body,14);
+                place(body,legalChoice);gap(body,14);
+            }else{
+                place(body,card);gap(body,14);
+            }
         }
         EditText nkdCode=field("NKD 2025 — npr. 62.10.0",db.setting("nkd_code"));
         LinearLayout nkdGroup=card();
