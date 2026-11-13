@@ -153,10 +153,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          required=(
+            'Android verification'
+            'Verify native Android screens'
+            'Responsive Android screen matrix'
+            'Self-hosted Fakturiva JSON API security smoke'
+            'Fakturiva Windows preview build'
+          )
           for attempt in $(seq 1 180); do
             json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")"
             pending=0
-            while IFS= read -r workflow; do
+            for workflow in "${required[@]}"; do
               result="$(jq -r --arg n "$workflow" --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.name == $n and .head_sha == $sha and .event == "push")] | .[0].conclusion // "pending"' <<< "$json")"
               echo "$workflow: $result"
               case "$result" in
@@ -164,13 +171,7 @@ jobs:
                 failure|cancelled|timed_out|action_required|stale) echo "::error::Required workflow failed: $workflow"; exit 1 ;;
                 *) pending=1 ;;
               esac
-            done <<'REQUIRED'
-            Android verification
-            Verify native Android screens
-            Responsive Android screen matrix
-            Self-hosted Fakturiva JSON API security smoke
-            Fakturiva Windows preview build
-            REQUIRED
+            done
             if [ "$pending" -eq 0 ]; then exit 0; fi
             sleep 30
           done
