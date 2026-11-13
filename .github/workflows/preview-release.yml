@@ -3,9 +3,42 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: preview-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
+  prepare-preview:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.version.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check version and whether an immutable release already exists
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n "s/^[[:space:]]*versionName '\([^']*\)'.*$/\1/p" app/build.gradle)"
+          test -n "$VERSION"
+          case "$VERSION" in *preview*) ;; *) echo '::error::Not a preview version'; exit 1;; esac
+          NOTES="docs/V${VERSION%%-preview.*}_RELEASE_NOTES.md"
+          test -s "$NOTES" || { echo "::error::Missing release notes: $NOTES"; exit 1; }
+          if gh release view "v${VERSION}" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists. No republishing."
+            echo 'should_release=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'should_release=true' >> "$GITHUB_OUTPUT"
+          fi
   windows-preview:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release-preview]')
+    needs: [prepare-preview]
+    if: needs.prepare-preview.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
@@ -42,11 +75,13 @@ jobs:
           path: build/windows/*
           if-no-files-found: error
   publish-preview:
-    needs: [windows-preview]
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release-preview]')
+    needs: [prepare-preview, windows-preview]
+    if: needs.prepare-preview.outputs.should_release == 'true'
+    timeout-minutes: 180
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -110,19 +145,46 @@ jobs:
             build/instrumentation.log
             app/build/outputs/androidTest-results/connected/**
           if-no-files-found: warn
-      - name: Refresh README gallery from freshly tested Android screenshots
+      - name: Verify all five required main-branch workflows succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
+          set -euo pipefail
+          for attempt in $(seq 1 180); do
+            json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")"
+            pending=0
+            while IFS= read -r workflow; do
+              result="$(jq -r --arg n "$workflow" --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.name == $n and .head_sha == $sha and .event == "push")] | .[0].conclusion // "pending"' <<< "$json")"
+              echo "$workflow: $result"
+              case "$result" in
+                success) ;;
+                failure|cancelled|timed_out|action_required|stale) echo "::error::Required workflow failed: $workflow"; exit 1 ;;
+                *) pending=1 ;;
+              esac
+            done <<'REQUIRED'
+Android verification
+Verify native Android screens
+Responsive Android screen matrix
+Self-hosted Fakturiva JSON API security smoke
+Fakturiva Windows preview build
+REQUIRED
+            if [ "$pending" -eq 0 ]; then exit 0; fi
+            sleep 30
+          done
+          echo '::error::Main-branch workflow gates did not all pass; release blocked.'
+          exit 1
+      - name: Ensure genuine screenshots were reviewed through a Pull Request
+        shell: bash
+        run: |
+          set -euo pipefail
           test "$(find docs/screenshots -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 20
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f docs/screenshots/*.png
-          if git diff --cached --quiet; then
-            echo "Screenshots match committed captures."
-          else
-            git commit -m "docs: refresh 20 authentic Android screenshots for v${VERSION}"
-            git push origin HEAD:main
+          test "$(git ls-files 'docs/screenshots/*.png' | wc -l)" -eq 20
+          if ! git diff --exit-code HEAD -- docs/screenshots/; then
+            echo '::error::Captured screenshots differ from PR-reviewed files. Update screenshots through a Pull Request; release blocked.'
+            exit 1
           fi
-          echo "RELEASE_TARGET=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "RELEASE_TARGET=$GITHUB_SHA" >> "$GITHUB_ENV"
       - name: Verify debug-signing (not a production Google Play signature)
         run: jarsigner -verify app/build/outputs/bundle/debug/app-debug.aab
       - name: Download matching Windows setup and portable artifacts
@@ -142,6 +204,8 @@ jobs:
                "*/secret.php" "*/storage/data/*" "*/storage/secret.php")
           test -s "build/publish/Fakturiva-v${VERSION}-web.zip"
           test -s "build/publish/Fakturiva-v${VERSION}-source.zip"
+          (cd docs && zip -q -r "../build/publish/Fakturiva-v${VERSION}-screenshots.zip" screenshots -i 'screenshots/*.png')
+          test -s "build/publish/Fakturiva-v${VERSION}-screenshots.zip"
       - name: Package and checksum verified artifacts
         run: |
           mkdir -p build/publish
