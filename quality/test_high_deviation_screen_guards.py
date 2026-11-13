@@ -59,7 +59,9 @@ class HighDeviationScreenGuards(unittest.TestCase):
         self.assertIn('invoice?"Izdaj račun":"Potvrdi ponudu"',preview)
         self.assertIn("d.items",paper)
         self.assertIn('"Dokument za pregled · Nije fiskaliziran."',paper)
-        self.assertIn('"Ponuda nije račun niti dokaz o plaćanju."',paper)
+        self.assertIn('if(Store.INVOICE.equals(d.type))',paper)
+        self.assertIn('else gap(paper,12)',paper)
+        self.assertNotIn('"Ponuda nije račun niti dokaz o plaćanju."',paper)
 
 
 if __name__ == "__main__":
