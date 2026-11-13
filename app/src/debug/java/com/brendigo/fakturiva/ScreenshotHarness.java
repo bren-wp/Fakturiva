@@ -91,9 +91,10 @@ public final class ScreenshotHarness {
                 store.confirm(earlier);
                 store.pay(earlier,earlierGross[i],paidAt);
             }
-            // Fifteen earlier October records + eight visible reference rows
-            // produce 24 invoices, and confirmed October receipts total
-            // €8,420 (rather than hardcoding a KPI into the native UI).
+            // Fifteen earlier PAID October records + one unpaid issued record
+            // + eight visible rows produce 24 real persisted October invoices.
+            // Only the actual Store.pay() entries determine €8,420 received.
+            // No invoice counts or financial totals are drawn as fake labels.
             for(int i=0;i<15;i++){
                 long gross=i<14?35000:77000;
                 Store.Item prior=new Store.Item();
@@ -110,6 +111,19 @@ public final class ScreenshotHarness {
                 store.confirm(id);
                 store.pay(id,gross,paidAt);
             }
+            // An additional *unpaid* October invoice preserves the reference's
+            // 24 issued documents while keeping 19 paid and €8,420 actually
+            // received. This is a normal Store record on an isolated emulator.
+            Store.Item outstanding=new Store.Item();
+            outstanding.name="Neplaćeno poslovno savjetovanje";
+            outstanding.qtyMilli=1000;
+            outstanding.unitCents=40000;
+            outstanding.taxRate=25;
+            long pending=store.createDraft(Store.INVOICE,
+                fixtureClient(people,"Obrt Primjer"),
+                "2026-10-01","2026-11-30","Čeka uplatu",
+                Arrays.asList(outstanding));
+            store.confirm(pending);
             // Oldest first; Store.documents renders actual database rows newest
             // first, as in the visual reference, without fake invoice numbering.
             String[] clientAt={"Obrt Primjer","Studio Sjever d.o.o.",
