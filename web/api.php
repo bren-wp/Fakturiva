@@ -38,6 +38,7 @@ try {
     $response=match($action) {
         'register'=>registerEmailAccount($username,$password,$address),
         'login'=>FakturivaSelfHost\signIn($username,$password,$address),
+        'status'=>FakturivaSelfHost\backupStatus(authToken()),
         'load'=>FakturivaSelfHost\loadBackup(authToken()),
         'save'=>FakturivaSelfHost\saveBackup(
             authToken(),(string)($payload['backup_b64']??''),
