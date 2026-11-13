@@ -147,3 +147,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 @media(prefers-reduced-motion:reduce){
 .sync-business *{scroll-behavior:auto!important;transition:none!important}
 }
+
+.sync-business select{display:block;width:100%;min-height:50px;border:1px solid #cbd5e7;border-radius:12px;padding:12px 14px;background:#fff;color:#0c2040;font:inherit}
+.sync-business select:focus-visible{outline:3px solid #3171e8;outline-offset:3px}
+.sync-business input[type=search]{appearance:none}
