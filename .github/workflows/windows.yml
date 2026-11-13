@@ -5,11 +5,13 @@ on:
       - 'win/**'
       - '.github/workflows/windows.yml'
       - '.github/workflows/preview-release.yml'
+      - 'app/build.gradle'
   pull_request:
     paths:
       - 'win/**'
       - '.github/workflows/windows.yml'
       - '.github/workflows/preview-release.yml'
+      - 'app/build.gradle'
   workflow_dispatch:
 permissions:
   contents: read
