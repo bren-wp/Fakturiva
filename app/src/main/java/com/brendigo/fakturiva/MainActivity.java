@@ -2606,9 +2606,9 @@ public final class MainActivity extends Activity {
         right.leftMargin=dp(6);
         actions.addView(share,right);
         place(body,actions);gap(body,10);
-        // Printer options remain available in the document overflow menu.
-        // Do not insert an extra action not present on the source reference.
-        gap(body,10);
+        // The invoice reference has exactly one action-row gap; quote retains
+        // its measured independent layout. The printer lives in overflow.
+        if(!invoice)gap(body,10);
 
         if(draft){
             place(body,action(invoice?"Izdaj račun":"Potvrdi ponudu",
@@ -2786,14 +2786,16 @@ public final class MainActivity extends Activity {
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
         gap(paper,Store.QUOTE.equals(d.type)?39:28);
-        paperRule(paper);gap(paper,9);
-        // Real document data is unchanged. Explain clearly that previewing
-        // and issuing in-app is not a certified tax fiscalization operation.
-        place(paper,label(Store.QUOTE.equals(d.type)?
-            "Ponuda nije račun niti dokaz o plaćanju.":
-            "Dokument za pregled · Nije fiskaliziran.",
-            9,0xff9cacc0,false));
-        gap(paper,5);
+        paperRule(paper);
+        if(Store.INVOICE.equals(d.type)){
+            // The invoice reference has a small informational footer.
+            // Keep quote paper geometry unchanged: adding a new footer to
+            // quotes measurably regressed their 1179x2556 screenshot parity.
+            gap(paper,9);
+            place(paper,label("Dokument za pregled · Nije fiskaliziran.",
+                9,0xff9cacc0,false));
+            gap(paper,5);
+        }else gap(paper,12);
         return paper;
     }
 
@@ -4834,12 +4836,14 @@ public final class MainActivity extends Activity {
                 }
                 // Compact form rows preserve all original fields and their
                 // order. Sensitive value toggles share the label's line.
-                fields[index].setPadding(dp(14),dp(9),dp(14),dp(9));
-                fields[index].setMinimumHeight(dp(47));
-                gap(fieldBlock,index==sections[group][0]?5:10);
+                fields[index].setPadding(dp(14),dp(7),dp(14),dp(7));
+                // Maintain a minimum 44dp tap target while matching the
+                // reference's tighter, readable vertical form rhythm.
+                fields[index].setMinimumHeight(dp(44));
+                gap(fieldBlock,index==sections[group][0]?3:7);
                 LinearLayout fieldHeading=horizontal();
                 fieldHeading.setGravity(Gravity.CENTER_VERTICAL);
-                TextView fieldName=label(labels[index],12,ink(),true);
+                TextView fieldName=label(labels[index],11,ink(),true);
                 fieldHeading.addView(fieldName,new LinearLayout.LayoutParams(0,-2,1));
                 if(index==1||index==8){
                     final int fieldIndex=index;
@@ -4860,7 +4864,7 @@ public final class MainActivity extends Activity {
                     fieldHeading.addView(reveal);
                 }
                 place(fieldBlock,fieldHeading);
-                gap(fieldBlock,5);
+                gap(fieldBlock,4);
                 place(fieldBlock,fields[index]);
                 place(card,fieldBlock);
             }
