@@ -4,7 +4,6 @@ These are static safety guards; successful end-to-end GitHub Actions jobs
 must still be verified before publishing any release.
 """
 from pathlib import Path
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
