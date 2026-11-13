@@ -91,9 +91,10 @@ public final class ScreenshotHarness {
                 store.confirm(earlier);
                 store.pay(earlier,earlierGross[i],paidAt);
             }
-            // Fifteen earlier October records + eight visible reference rows
-            // produce 24 invoices, and confirmed October receipts total
-            // €8,420 (rather than hardcoding a KPI into the native UI).
+            // Fifteen earlier PAID October records + one unpaid issued record
+            // + eight visible rows produce 24 real persisted October invoices.
+            // Only the actual Store.pay() entries determine €8,420 received.
+            // No invoice counts or financial totals are drawn as fake labels.
             for(int i=0;i<15;i++){
                 long gross=i<14?35000:77000;
                 Store.Item prior=new Store.Item();
@@ -110,6 +111,19 @@ public final class ScreenshotHarness {
                 store.confirm(id);
                 store.pay(id,gross,paidAt);
             }
+            // An additional *unpaid* October invoice preserves the reference's
+            // 24 issued documents while keeping 19 paid and €8,420 actually
+            // received. This is a normal Store record on an isolated emulator.
+            Store.Item outstanding=new Store.Item();
+            outstanding.name="Neplaćeno poslovno savjetovanje";
+            outstanding.qtyMilli=1000;
+            outstanding.unitCents=40000;
+            outstanding.taxRate=25;
+            long pending=store.createDraft(Store.INVOICE,
+                fixtureClient(people,"Obrt Primjer"),
+                "2026-10-01","2026-11-30","Čeka uplatu",
+                Arrays.asList(outstanding));
+            store.confirm(pending);
             // Oldest first; Store.documents renders actual database rows newest
             // first, as in the visual reference, without fake invoice numbering.
             String[] clientAt={"Obrt Primjer","Studio Sjever d.o.o.",
@@ -174,6 +188,12 @@ public final class ScreenshotHarness {
             }
         }
     }
+    /** Keep screenshot-only draft dates identical across days and devices. */
+    private static void fixedReferenceInvoiceDates(MainActivity a)throws Exception{
+        set(a,"draftIssue","2026-10-27");
+        set(a,"draftDue","2026-11-10");
+        set(a,"draftSupply","2026-10-27");
+    }
     @SuppressWarnings("unchecked")
     public static void show(MainActivity a,String screen)throws Exception{
         Store db=(Store)get(a,"db");
@@ -200,9 +220,14 @@ public final class ScreenshotHarness {
                 break;
             case "04":call(a,"home");break;
             case "05":call(a,"documents",new Class<?>[]{String.class},Store.INVOICE);break;
-            case "06":call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);break;
+            case "06":
+                call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
+                fixedReferenceInvoiceDates(a);
+                call(a,"editDocumentScreen");
+                break;
             case "07":{
                 call(a,"newDocument",new Class<?>[]{String.class},Store.INVOICE);
+                fixedReferenceInvoiceDates(a);
                 ArrayList<Store.Item> lines=(ArrayList<Store.Item>)get(a,"draftItems");
                 Store.Item web=new Store.Item();
                 web.name="Izrada web stranice";
@@ -227,7 +252,14 @@ public final class ScreenshotHarness {
                 Store.Item seo=new Store.Item();
                 seo.name="SEO optimizacija";
                 seo.qtyMilli=1000;seo.unitCents=25000;seo.taxRate=25;
-                long invoiceDraft=db.createDraft(Store.INVOICE,db.clients().get(0).id,
+                // Match the reference's fictional issuer and customer via
+                // real Store updates, not by drawing a static PNG overlay.
+                db.setting("name","Primjer izdavatelja d.o.o.");
+                db.setting("address","Rijeka, Hrvatska");
+                long sampleBuyer=fixtureClient(db.clients(),"Studio Sjever d.o.o.");
+                db.updateClient(sampleBuyer,"Studio Sjever d.o.o.","",
+                    "Zagreb, Hrvatska","studio@example.invalid","","");
+                long invoiceDraft=db.createDraft(Store.INVOICE,sampleBuyer,
                     "2026-10-27","2026-11-10","Pregled prije potvrde",
                     Arrays.asList(site,seo));
                 call(a,"showDocument",new Class<?>[]{long.class},invoiceDraft);
@@ -255,8 +287,12 @@ public final class ScreenshotHarness {
                 content.name="Izrada sadržaja";
                 content.unit="kom";content.qtyMilli=1000;
                 content.unitCents=40000;content.taxRate=25;
-                long quote=db.createDraft(Store.QUOTE,
-                    fixtureClient(db.clients(),"Terra Projekt j.d.o.o."),
+                db.setting("name","Primjer izdavatelja d.o.o.");
+                db.setting("address","Rijeka, Hrvatska");
+                long terra=fixtureClient(db.clients(),"Terra Projekt j.d.o.o.");
+                db.updateClient(terra,"Terra Projekt j.d.o.o.","",
+                    "Pula, Hrvatska","terra@example.invalid","","");
+                long quote=db.createDraft(Store.QUOTE,terra,
                     "2026-10-27","2026-11-10","2026-11-15",
                     "Ponuda za usluge","",Arrays.asList(campaign,content));
                 db.confirm(quote);
@@ -273,7 +309,20 @@ public final class ScreenshotHarness {
             case "16":call(a,"payments");break;
             case "17":call(a,"eracunScreen");break;
             case "18":call(a,"settings");break;
-            case "19":call(a,"company");break;
+            case "19":
+                // A realistic business record, written through Store only on
+                // the disposable QA emulator. The reference's company fields
+                // must be visible; an unset "OTHER" country hides the OIB.
+                db.setting("name","Primjer tvrtke d.o.o.");
+                db.setting("country","HR");
+                db.setting("legal_form","HR_DOO");
+                db.setting("company_number","12345678");
+                db.setting("address","Rijeka, Hrvatska");
+                db.setting("city","Rijeka");
+                db.setting("email","info@primjer.hr");
+                db.setting("phone","+385 91 000 0000");
+                call(a,"company");
+                break;
             case "20":set(a,"dark",true);call(a,"home");break;
             default:throw new IllegalArgumentException("Unknown preview page: "+page);
         }

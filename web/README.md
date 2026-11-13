@@ -10,6 +10,10 @@
 - Stare adrese za dodatne oblike prijave preusmjeravaju na `/login.php` i više ne prikazuju obrasce. Za ranije korisničko ime koje nije e-adresa, postojeći račun može se prijaviti istom poslužiteljskom lozinkom; novi račun mora imati e-adresu.
 - Android zadržava postojeći profil i dokumente prilikom migracije vjerodajnice poslije uspješne server autentifikacije. Izmjene nisu potpuno dvosmjerni CRUD: web čita posljednju potvrđenu šifriranu presliku, a Android radi offline i sinkronizira po revizijama.
 
+## Arhitektura pohrane
+
+`lib.php` zadržava postojeće korisničke i API funkcije. Enkripcija AES-GCM, lokacija privatne pohrane i atomski zapis izdvojeni su u `storage-engine.php` bez promjene postojećeg formata ili ključeva. Izolirani test `quality/web-hosting/storage-engine-smoke.php` ne pristupa stvarnim korisničkim računima. Nikada ne premještati samo `data/` bez odgovarajućeg `secret.php`.
+
 ## Instalacija
 
 Sadržaj mape `web/` postavite u document root HTTPS domene uz PHP 8.1+,

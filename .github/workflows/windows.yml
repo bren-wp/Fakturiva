@@ -1,13 +1,14 @@
 name: Fakturiva Windows preview build
 on:
   push:
-    paths:
-      - 'win/**'
-      - '.github/workflows/windows.yml'
+    branches: [main]
   pull_request:
     paths:
       - 'win/**'
       - '.github/workflows/windows.yml'
+      - '.github/workflows/preview-release.yml'
+      - 'docs/screenshots/**'
+      - 'app/build.gradle'
   workflow_dispatch:
 permissions:
   contents: read

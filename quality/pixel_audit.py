@@ -30,6 +30,8 @@ def check(reference, capture, diff_file=None):
         if min(ref.shape[:2]) < 7:
             return {"error": "Image too small for 7x7 SSIM window"}
         difference = np.abs(ref.astype(np.int16) - actual.astype(np.int16)).astype(np.uint8)
+        mismatched = np.any(ref != actual, axis=2)
+        mismatch_count = int(np.count_nonzero(mismatched))
         height, width = ref.shape[:2]
         # Secondary diagnostic region. The primary score NEVER omits system bars.
         content = difference[100:height - 150, 25:width - 25]
@@ -47,7 +49,8 @@ def check(reference, capture, diff_file=None):
             "green_mae": round(float(difference[:, :, 1].mean()), 4),
             "blue_mae": round(float(difference[:, :, 2].mean()), 4),
             "mismatched_pixels_pct": round(
-                float(np.any(ref != actual, axis=2).mean() * 100), 3),
+                float(mismatch_count / (height * width) * 100), 3),
+            "mismatched_pixel_count": mismatch_count,
             "reference_sha256": digest(reference),
             "capture_sha256": digest(capture),
         }
@@ -81,7 +84,7 @@ def main():
             rows.append({"screen": reference.name, "error": f"Image read failed: {err}"})
     fields = ["screen", "rgb_mae", "main_content_mae", "ssim", "red_mae",
               "green_mae", "blue_mae", "mismatched_pixels_pct",
-              "reference_sha256", "capture_sha256", "error"]
+              "mismatched_pixel_count", "reference_sha256", "capture_sha256", "error"]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=fields)
@@ -93,6 +96,16 @@ def main():
         "screens_expected": args.expected,
         "screens_compared": len(valid),
         "complete": complete,
+        # Full-resolution integer count: percentages and MAE are rounded and
+        # can conceal a tiny number of unequal pixels.
+        "all_pixels_equal": complete and all(
+            r["mismatched_pixel_count"] == 0 for r in valid),
+        "worst_first": [
+            {"screen": r["screen"], "rgb_mae": r["rgb_mae"],
+             "ssim": r["ssim"], "mismatched_pixel_count": r["mismatched_pixel_count"]}
+            for r in sorted(valid, key=lambda row: (
+                -row["rgb_mae"], -row["mismatched_pixel_count"], row["screen"]))
+        ],
         "average_rgb_mae": round(sum(r["rgb_mae"] for r in valid) / len(valid), 4)
             if valid else None,
         "average_ssim": round(sum(r["ssim"] for r in valid) / len(valid), 6)

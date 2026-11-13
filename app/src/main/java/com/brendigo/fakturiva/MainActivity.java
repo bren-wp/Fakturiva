@@ -1515,7 +1515,7 @@ public final class MainActivity extends Activity {
         alerts.setBackground(shape(panel(),12));alerts.setPadding(dp(9),dp(9),dp(9),dp(9));
         alerts.setContentDescription("Obavijesti o neplaćenim računima");
         bar.addView(alerts,lp(42,42));alerts.setOnClickListener(v->showNotifications());
-        // In dark mode, the reference greets lower without shifting its hero.
+        // Align the greeting and KPI hero with the measured 1179x2556 owner reference.
         // The original 393dp home reference positions the greeting closer
         // to the masthead than the former 41/25dp gaps.
         place(body,bar);gap(body,dark?36:24);
@@ -1552,11 +1552,13 @@ public final class MainActivity extends Activity {
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,dark?14:24);
+        place(body,welcome);gap(body,dark?2:8);
 
-        LinearLayout hero=vertical();pad(hero,19,dark?16:20);
+        LinearLayout hero=vertical();pad(hero,19,dark?13:15);
+        // The reference uses the same blue/violet hero in light and dark
+        // themes. A muted middle stop prevents an over-bright upper right.
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            dark?new int[]{0xff19365d,0xff253b91}:new int[]{0xff143354,0xff243584});
+            new int[]{0xff143354,0xff172a64,0xff243584});
         gradient.setCornerRadius(dp(21));hero.setBackground(gradient);
         long[] monthly=db.monthlyReceipts(selectedCurrency(),displayClock);
         LinearLayout heading=horizontal();heading.setGravity(Gravity.CENTER_VERTICAL);
@@ -1573,14 +1575,14 @@ public final class MainActivity extends Activity {
                 heading.addView(delta);
             }
         }
-        place(hero,heading);gap(hero,13);
+        place(hero,heading);gap(hero,7);
         hero.addView(label(money(monthly[11]),31,WHITE,true));gap(hero,5);
         // Only describe a month-on-month comparison when both months have
         // a defined base; otherwise explain the source of this true amount.
         hero.addView(label(monthly[10]>0?"U odnosu na prethodni mjesec":
             "Prema evidentiranim uplatama",11,0xffb8d2e7,false));
         gap(hero,8);
-        hero.addView(new RevenueLine(this,displayClock),lp(-1,50));
+        hero.addView(new RevenueLine(this,displayClock),lp(-1,47));
         place(body,hero);gap(body,dark?13:18);
 
         LinearLayout stats=horizontal();
@@ -1669,12 +1671,12 @@ public final class MainActivity extends Activity {
         return R.drawable.ic_add;
     }
     private void metric(LinearLayout row,String label,String value,String glyph,int accent){
-        LinearLayout c=card();pad(c,14,11);
+        LinearLayout c=card();pad(c,14,8);
         ImageView image=icon(figureIcon(glyph),accent);
         image.setPadding(dp(8),dp(8),dp(8),dp(8));
         // Reference uses readable pastel icon tiles on both themes.
         image.setBackground(shape(accent==TEAL?0xffdff8f4:0xffe8edff,12));
-        c.addView(image,lp(37,37));gap(c,6);
+        c.addView(image,lp(37,37));gap(c,4);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
@@ -1835,16 +1837,7 @@ public final class MainActivity extends Activity {
 
     /** Returns {count, gross euro cents} of non-expired confirmed quotes. */
     static long[] activeQuoteTotals(List<Store.Document> documents,String today){
-        long count=0,value=0;
-        for(Store.Document quote:documents){
-            if(Store.QUOTE.equals(quote.type) &&
-                (Store.SENT.equals(quote.status)||Store.ACCEPTED.equals(quote.status))
-                && quote.dueDate!=null && quote.dueDate.compareTo(today)>=0){
-                count=Math.addExact(count,1);
-                value=Math.addExact(value,quote.totalCents);
-            }
-        }
-        return new long[]{count,value};
+        return UiBusinessRules.activeQuoteTotals(documents,today);
     }
 
     /** Compact real-value metric cards for the quote list (screen 09). */
@@ -1964,18 +1957,7 @@ public final class MainActivity extends Activity {
     }
 
     static boolean matches(Store.Document d,String f){
-        if("Skice".equals(f))return Store.DRAFT.equals(d.status);
-        if("Plaćeni".equals(f))
-            return Store.INVOICE.equals(d.type) && !Store.DRAFT.equals(d.status)
-                && !Store.VOID.equals(d.status) &&
-                (Store.PAID.equals(d.status) || d.outstanding()==0);
-        if("Neplaćeni".equals(f))
-            return Store.INVOICE.equals(d.type) && !Store.DRAFT.equals(d.status)
-                && !Store.VOID.equals(d.status) && d.outstanding()>0;
-        if("Poslane".equals(f))return Store.QUOTE.equals(d.type) && Store.SENT.equals(d.status);
-        if("Prihvaćene".equals(f))return Store.QUOTE.equals(d.type) && Store.ACCEPTED.equals(d.status);
-        if("Potvrđene".equals(f))return Store.SENT.equals(d.status);
-        return true;
+        return UiBusinessRules.matches(d,f);
     }
     private void documentRow(Store.Document document){
         LinearLayout card=vertical();
@@ -2009,22 +1991,10 @@ public final class MainActivity extends Activity {
         place(target,field);
     }
     static String quoteDateForDisplay(String iso){
-        if(iso==null||!IsoDates.valid(iso))return iso==null?"":iso;
-        return Integer.parseInt(iso.substring(8,10))+". "+
-            Integer.parseInt(iso.substring(5,7))+". "+iso.substring(0,4)+".";
+        return UiBusinessRules.quoteDateForDisplay(iso);
     }
     static String quoteDateToIso(String display){
-        if(display==null)return "";
-        String value=display.trim();
-        java.util.regex.Matcher match=java.util.regex.Pattern.compile(
-            "^(\\d{1,2})\\.\\s*(\\d{1,2})\\.\\s*(\\d{4})\\.?$"
-        ).matcher(value);
-        if(match.matches()){
-            return String.format(Locale.ROOT,"%04d-%02d-%02d",
-                Integer.parseInt(match.group(3)),Integer.parseInt(match.group(2)),
-                Integer.parseInt(match.group(1)));
-        }
-        return value;
+        return UiBusinessRules.quoteDateToIso(display);
     }
     private void dateInput(EditText edit){dateInput(edit,false);}
     private void dateInput(EditText edit,boolean quoteDate){
@@ -2581,7 +2551,7 @@ public final class MainActivity extends Activity {
         setup("detail",true);
         // Keep invoice masthead and actions aligned with the reference.
         // Quote detail remains on its pre-existing independent geometry.
-        pad(body,18,invoice?20:13);
+        pad(body,18,invoice?20:21);
         toolbar(invoice?"Pregled računa":"Pregled ponude",
             draft?(invoice?"Provjerite podatke prije izdavanja":
                 "Provjerite podatke prije potvrde"):
@@ -2619,7 +2589,7 @@ public final class MainActivity extends Activity {
                     else if(which==2)sharePdf(id);
                     else showPrinterDialog(id);
                 }).setNegativeButton("Zatvori",null).show());
-        place(body,statusBar);gap(body,invoice?6:12);
+        place(body,statusBar);gap(body,invoice?6:4);
 
         place(body,documentPaper(d));
         gap(body,13);
@@ -2638,12 +2608,12 @@ public final class MainActivity extends Activity {
         right.leftMargin=dp(6);
         actions.addView(share,right);
         place(body,actions);gap(body,10);
-        // Printer options remain available in the document overflow menu.
-        // Do not insert an extra action not present on the source reference.
-        gap(body,10);
+        // The invoice reference has exactly one action-row gap; quote retains
+        // its measured independent layout. The printer lives in overflow.
+        if(!invoice)gap(body,10);
 
         if(draft){
-            place(body,action(invoice?"Potvrdi račun":"Potvrdi ponudu",
+            place(body,action(invoice?"Izdaj račun":"Potvrdi ponudu",
                 0xff17b99a,true,()->confirmWarning(()->{
                     try{db.confirm(id);showDocument(id);}
                     catch(Exception e){error(e);}
@@ -2690,7 +2660,7 @@ public final class MainActivity extends Activity {
         LinearLayout paper=vertical();
         // Invoice reference requires a slightly taller white paper inset.
         // Quote previews retain their original document geometry.
-        pad(paper,18,Store.INVOICE.equals(d.type)?21:20);
+        pad(paper,18,Store.INVOICE.equals(d.type)?21:21);
         paper.setBackground(outlined(WHITE));
         paper.setMinimumHeight(dp(355));
 
@@ -2793,7 +2763,7 @@ public final class MainActivity extends Activity {
             paperRule(paper);
         }
 
-        gap(paper,offer?12:14);
+        gap(paper,offer?16:14);
         paperAmount(paper,"Osnovica",docMoney(d,d.netCents),false);
         gap(paper,9);
         String paperTaxLabel="PDV";
@@ -2817,8 +2787,17 @@ public final class MainActivity extends Activity {
         }
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
-        gap(paper,Store.QUOTE.equals(d.type)?34:28);
-        paperRule(paper);gap(paper,12);
+        gap(paper,Store.QUOTE.equals(d.type)?39:28);
+        paperRule(paper);
+        if(Store.INVOICE.equals(d.type)){
+            // The invoice reference has a small informational footer.
+            // Keep quote paper geometry unchanged: adding a new footer to
+            // quotes measurably regressed their 1179x2556 screenshot parity.
+            gap(paper,9);
+            place(paper,label("Dokument za pregled · Nije fiskaliziran.",
+                9,0xff9cacc0,false));
+            gap(paper,5);
+        }else gap(paper,12);
         return paper;
     }
 
@@ -3085,40 +3064,17 @@ public final class MainActivity extends Activity {
 
     /** Source-of-truth client filter, independent of duplicate client names. */
     static boolean clientMatches(Store.Client c,String search,String view,boolean hasDocs){
-        String key=(c.name+" "+c.oib+" "+c.address+" "+c.email+" "+c.phone)
-            .toLowerCase(Locale.forLanguageTag("hr-HR"));
-        String term=search==null?"":search.trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
-        return key.contains(term) &&
-            ("Svi".equals(view) || ("S dokumentima".equals(view)&&hasDocs) ||
-                ("Bez dokumenata".equals(view)&&!hasDocs));
+        return UiBusinessRules.clientMatches(c,search,view,hasDocs);
     }
 
     /** Two-letter initials, safe for empty strings and short client names. */
     static String clientInitials(String name){
-        if(name==null||name.trim().isEmpty())return "K";
-        String[] parts=name.trim().split("\\s+");
-        StringBuilder result=new StringBuilder();
-        for(String part:parts){
-            if(part.isEmpty())continue;
-            int cp=part.codePointAt(0);
-            result.appendCodePoint(Character.toUpperCase(cp));
-            if(result.codePointCount(0,result.length())>=2)break;
-        }
-        return result.toString();
+        return UiBusinessRules.clientInitials(name);
     }
 
     /** A city can be shown only when present in the stored address. */
     static String clientCity(String address){
-        if(address==null||address.trim().isEmpty())return "";
-        String[] parts=address.split(",");
-        // A street address without a city separator is not a known locality.
-        if(parts.length==1)
-            return address.matches(".*[0-9].*")?"":address.trim();
-        String last=parts[parts.length-1].trim();
-        if(parts.length>1&&("Hrvatska".equalsIgnoreCase(last)||
-            "Croatia".equalsIgnoreCase(last)))
-            return parts[parts.length-2].trim();
-        return last;
+        return UiBusinessRules.clientCity(address);
     }
 
     /** Screen 13: the real client profile and actual billing history. */
@@ -3527,14 +3483,7 @@ public final class MainActivity extends Activity {
     }
 
     static boolean catalogMatches(Store.Item item,String search,String category){
-        String text=(item.name+" "+item.unit+" "+item.kind)
-            .toLowerCase(Locale.forLanguageTag("hr-HR"));
-        String term=search==null?"":search.trim().toLowerCase(Locale.forLanguageTag("hr-HR"));
-        boolean kind="Sve".equals(category) ||
-            ("Usluge".equals(category)&&"SERVICE".equals(item.kind)) ||
-            ("Proizvodi".equals(category)&&"PRODUCT".equals(item.kind)) ||
-            ("Nerazvrstano".equals(category)&&"UNSPECIFIED".equals(item.kind));
-        return kind&&text.contains(term);
+        return UiBusinessRules.catalogMatches(item,search,category);
     }
 
     private void editProduct(Store.Item current){
@@ -3897,7 +3846,7 @@ public final class MainActivity extends Activity {
         });
         place(body,period);gap(body,12);
 
-        LinearLayout revenue=card();pad(revenue,18,16);
+        LinearLayout revenue=card();pad(revenue,18,12);
         revenue.addView(label("Ukupni prihod",12,sub(),false));gap(revenue,9);
         revenue.addView(label(money(totals[3]),30,ink(),true));gap(revenue,9);
         long[] sixMonthContext=db.monthlyReceipts(selectedCurrency(),reportMonth);
@@ -3917,9 +3866,9 @@ public final class MainActivity extends Activity {
         LinearLayout metrics=horizontal();
         reportMetric(metrics,"Izdani računi",String.valueOf(totals[1]),"▤",BLUE,0);
         reportMetric(metrics,"Plaćeni računi",String.valueOf(totals[2]),"✓",TEAL,1);
-        place(body,metrics);gap(body,12);
+        place(body,metrics);gap(body,10);
 
-        LinearLayout chart=card();pad(chart,17,17);
+        LinearLayout chart=card();pad(chart,17,16);
         LinearLayout chartHeader=horizontal();
         TextView chartName=label("Kretanje prihoda",16,ink(),true);
         chartName.setMaxLines(2);
@@ -3928,8 +3877,8 @@ public final class MainActivity extends Activity {
         interval.setMaxLines(2);
         interval.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         chartHeader.addView(interval,lp(92,-2));
-        place(chart,chartHeader);gap(chart,19);
-        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,185));
+        place(chart,chartHeader);gap(chart,14);
+        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,173));
         place(body,chart);gap(body,14);
 
         LinearLayout payout=card();
@@ -3978,7 +3927,7 @@ public final class MainActivity extends Activity {
     }
 
     private void reportMetric(LinearLayout row,String caption,String value,String glyph,int accent,int index){
-        LinearLayout c=card();
+        LinearLayout c=card();pad(c,16,10);
         TextView symbol=label(glyph,19,accent,true);
         symbol.setGravity(Gravity.CENTER);
         symbol.setBackground(shape(accent==TEAL?(dark?0xff20534b:0xffdcf8f4):
@@ -3987,7 +3936,7 @@ public final class MainActivity extends Activity {
         c.addView(label(caption,11,sub(),false));gap(c,2);
         c.addView(label(value,25,ink(),true));
         // WRAP_CONTENT prevents clipping at Android font scale 1.3–1.5.
-        c.setMinimumHeight(dp(112));
+        c.setMinimumHeight(dp(104));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
@@ -4050,12 +3999,19 @@ public final class MainActivity extends Activity {
             String latest=lastReceipt.get(invoice.id);
             if(latest!=null && latest.startsWith(month))monthlyCount++;
         }
+        // All-time receipts differ from the monthly paid-invoices context
+        // shown immediately below. Display the same selected-month amount as
+        // the reference Home / Reports screens, calculated from real payments.
+        long monthReceived=db.monthlyReceipts(
+            selectedCurrency(),referenceAwareClock())[11];
         LinearLayout hero=vertical();pad(hero,19,22);
+        // Reference payment hero brightens slightly toward the right,
+        // instead of darkening as the previous gradient did.
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            new int[]{0xff173b69,0xff102844});
+            new int[]{0xff19385f,0xff1a426e});
         gradient.setCornerRadius(dp(19));hero.setBackground(gradient);
         hero.addView(label("Ukupno naplaćeno",12,0xffc7d9ec,false));gap(hero,10);
-        hero.addView(label(money(db.receivedCents(selectedCurrency())),29,WHITE,true));gap(hero,13);
+        hero.addView(label(money(monthReceived),29,WHITE,true));gap(hero,13);
         hero.addView(label("✓  "+monthlyCount+" plaćenih računa ovaj mjesec",
             11,0xff73dfd0,false));
         place(body,hero);gap(body,15);
@@ -4812,7 +4768,7 @@ public final class MainActivity extends Activity {
         String companyName=db.setting("name").trim();
         heroText.addView(label(companyName.isEmpty()?"Moja tvrtka / obrt":companyName,15,ink(),true));
         gap(heroText,5);
-        heroText.addView(label("Invoice and quote issuer",11,sub(),false));
+        heroText.addView(label("Profil izdavatelja računa",11,sub(),false));
         hero.addView(heroText,new LinearLayout.LayoutParams(0,-2,1));
         // Align the first business form with the reference. Preserve the
         // immutable-issuer disclosure below the editable sections.
@@ -4835,15 +4791,17 @@ public final class MainActivity extends Activity {
         place(legalChoice,label("Prikazat će se polja relevantna za odabranu "+
             "državu i pravni oblik. Posebne porezne obveze i podaci "+
             "poreznog izdavanja provjeravaju se zasebno.",12,sub(),false));
-        place(body,legalChoice);gap(body,14);
+        // The first viewport follows the owner's reference: company identity
+        // first, with the country/form selectors immediately after that card.
+        // All selectors still govern the same fields and persisted keys.
         LinearLayout form=card();
-        place(form,label("Company and legal identity",17,ink(),true));gap(form,9);
+        place(form,label("Podaci o tvrtki",17,ink(),true));gap(form,9);
         String[] keys={"name","oib","vat_id","address","postal_code","city","country","email","phone","website","iban","bank_name","swift","registry","business_unit","operator","payment_method","payment_reference","tax_note",
             "legal_form","trading_name","company_number","register_authority","tax_registration",
             "address_2","region","payment_terms","footer_note","contact_person",
             "bank_account_number","bank_routing_number","bank_sort_code",
             "bank_address","invoice_reference"};
-        String[] labels={"Legal business name","Tax ID (optional)","VAT ID (optional)","Street address","Postal code","City","Country","Email","Phone","Website","IBAN (optional)","Bank name","BIC / SWIFT","Register reference (optional)","Business unit","Operator reference","Payment method","Payment reference","Tax or legal note",
+        String[] labels={"Naziv tvrtke","OIB / porezni broj","PDV identifikacijski broj","Adresa","Poštanski broj","Grad","Država","E-adresa","Telefon","Web-stranica","IBAN (optional)","Bank name","BIC / SWIFT","Register reference (optional)","Business unit","Operator reference","Payment method","Payment reference","Tax or legal note",
             "Legal form (Ltd, Inc, LLC, GmbH, d.o.o., sole trader...)","Trading name (optional)",
             "Company registration number","Registering authority","Tax registration details",
             "Additional address line","State / province / region","Payment terms","Invoice footer note",
@@ -4852,10 +4810,10 @@ public final class MainActivity extends Activity {
         EditText[] fields=new EditText[keys.length];
         LinearLayout[] fieldBlocks=new LinearLayout[keys.length];
         // Keep all existing keys and persistence indexes; only reorder the UI.
-        int[][] sections={{0,19,20,1,3,24,6,7,8,28},
+        int[][] sections={{0,1,3,7,8,19,20,24,6,28},
             {10,11,12,16,17,26,29,30,31,32},
             {2,4,5,9,13,14,15,18,21,22,23,25,27,33}};
-        String[] sectionNames={"Company and legal identity","Payment and bank details","Additional invoice details"};
+        String[] sectionNames={"Podaci o tvrtki","Podaci za plaćanje","Dodatni podaci računa"};
         for(int group=0;group<sections.length;group++){
             LinearLayout card=group==0?form:card();
             if(group>0){
@@ -4882,12 +4840,14 @@ public final class MainActivity extends Activity {
                 }
                 // Compact form rows preserve all original fields and their
                 // order. Sensitive value toggles share the label's line.
-                fields[index].setPadding(dp(14),dp(9),dp(14),dp(9));
-                fields[index].setMinimumHeight(dp(47));
-                gap(fieldBlock,index==sections[group][0]?5:10);
+                fields[index].setPadding(dp(14),dp(7),dp(14),dp(7));
+                // Maintain a minimum 44dp tap target while matching the
+                // reference's tighter, readable vertical form rhythm.
+                fields[index].setMinimumHeight(dp(44));
+                gap(fieldBlock,index==sections[group][0]?3:7);
                 LinearLayout fieldHeading=horizontal();
                 fieldHeading.setGravity(Gravity.CENTER_VERTICAL);
-                TextView fieldName=label(labels[index],12,ink(),true);
+                TextView fieldName=label(labels[index],11,ink(),true);
                 fieldHeading.addView(fieldName,new LinearLayout.LayoutParams(0,-2,1));
                 if(index==1||index==8){
                     final int fieldIndex=index;
@@ -4908,13 +4868,16 @@ public final class MainActivity extends Activity {
                     fieldHeading.addView(reveal);
                 }
                 place(fieldBlock,fieldHeading);
-                gap(fieldBlock,5);
+                gap(fieldBlock,4);
                 place(fieldBlock,fields[index]);
                 place(card,fieldBlock);
             }
-            if(group==0)place(body,form);
-            else place(body,card);
-            gap(body,14);
+            if(group==0){
+                place(body,form);gap(body,14);
+                place(body,legalChoice);gap(body,14);
+            }else{
+                place(body,card);gap(body,14);
+            }
         }
         EditText nkdCode=field("NKD 2025 — npr. 62.10.0",db.setting("nkd_code"));
         LinearLayout nkdGroup=card();
@@ -5055,7 +5018,7 @@ public final class MainActivity extends Activity {
         navigation.addView(help,lp(42,42));
         help.setOnClickListener(v->eracunRequirements());
         place(body,navigation);
-        gap(body,19);
+        gap(body,22);
         String issuer=db.setting("name").trim();
         String oib=db.setting("oib").trim();
         String address=db.setting("address").trim();
@@ -5064,7 +5027,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout hero=vertical();
         hero.setGravity(Gravity.CENTER);
-        pad(hero,18,18);
+        pad(hero,18,23);
         hero.setBackground(shape(dark?0xff253451:0xffedf0ff,20));
         ImageView symbol=icon(R.drawable.ic_eracun_exchange,BLUE);
         symbol.setPadding(dp(16),dp(16),dp(16),dp(16));
@@ -5102,9 +5065,9 @@ public final class MainActivity extends Activity {
             "Provjera prije stvarnog slanja",false,this::eracunRequirements);
         place(body,section);gap(body,15);
 
-        LinearLayout notice=vertical();pad(notice,17,16);
+        LinearLayout notice=vertical();pad(notice,17,12);
         notice.setBackground(shape(dark?0xff263853:0xfff1f5ff,18));
-        place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,8);
+        place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,6);
         place(notice,label(
             "PDF datoteka nije strukturirani eRačun. Za razmjenu je potrebna "+
             "odgovarajuća integracija.",
@@ -5120,7 +5083,7 @@ public final class MainActivity extends Activity {
             String heading,String subtitle,boolean checked,Runnable onClick){
         LinearLayout row=horizontal();
         row.setGravity(Gravity.CENTER_VERTICAL);
-        pad(row,2,13);
+        pad(row,2,14);
         TextView step=label(indicator,13,
             checked?0xff078a65:sub(),true);
         step.setGravity(Gravity.CENTER);
@@ -5517,8 +5480,16 @@ public final class MainActivity extends Activity {
             for(int i=0;i<6;i++){
                 float cell=width/6f,barWidth=cell*.72f,x=i*cell+cell*.14f;
                 float barHeight=values[i]==0?dp(2):(base-dp(14))*values[i]/(float)max;
-                paint.setColor(i==5?TEAL:0xff7385f2);
+                // Original reference uses blue/violet or teal/blue gradients,
+                // not a flat solid bar. Values and scaled heights remain based
+                // on confirmed SQLite receipts for the selected month.
+                paint.setShader(new android.graphics.LinearGradient(
+                    x,base-barHeight,x,base,
+                    i==5?0xff62d9cd:0xffa4affb,
+                    i==5?0xff2669dd:0xff5b70f2,
+                    android.graphics.Shader.TileMode.CLAMP));
                 canvas.drawRoundRect(x,base-barHeight,x+barWidth,base,dp(7),dp(7),paint);
+                paint.setShader(null);
                 paint.setColor(sub());
                 canvas.drawText(labels[i],i*cell+cell/2f,height-dp(3),paint);
             }

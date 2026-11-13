@@ -136,8 +136,10 @@ public final class SelfHostedSyncClient {
                             .put("backup_b64",android.util.Base64.encodeToString(
                                 encrypted,android.util.Base64.NO_WRAP));
                         JSONObject ack=request(url,save,token);
+                        int confirmed=SyncIntegrity.requireAcknowledgement(
+                            ack,0,encrypted);
                         outcome="Račun registriran i sigurnosna kopija potvrđena "+
-                            "na serveru, revizija "+ack.getInt("revision")+".";
+                            "na serveru, revizija "+confirmed+".";
                     }finally{Arrays.fill(encrypted,(byte)0);}
                 }else{
                     JSONObject login=request(url,command("login",username,password),null);
@@ -170,8 +172,10 @@ public final class SelfHostedSyncClient {
                                 .put("backup_b64",android.util.Base64.encodeToString(
                                     encrypted,android.util.Base64.NO_WRAP));
                             JSONObject written=request(url,save,token);
+                            int confirmed=SyncIntegrity.requireAcknowledgement(
+                                written,revision,encrypted);
                             outcome="Šifrirana preslika poslana. Verzija: "+
-                                written.getInt("revision")+".";
+                                confirmed+".";
                         }finally{Arrays.fill(encrypted,(byte)0);}
                     }else if(action==Action.DOWNLOAD){
                         JSONObject loaded=request(url,new JSONObject().put("action","load"),token);
@@ -182,8 +186,10 @@ public final class SelfHostedSyncClient {
                         byte[] sealed=android.util.Base64.decode(encoded,
                             android.util.Base64.DEFAULT);
                         byte[] raw;
-                        try{raw=SecureBackup.decrypt(sealed,secret);}
-                        finally{Arrays.fill(sealed,(byte)0);}
+                        try{
+                            SyncIntegrity.verifyRemote(loaded,sealed);
+                            raw=SecureBackup.decrypt(sealed,secret);
+                        }finally{Arrays.fill(sealed,(byte)0);}
                         try{
                             JSONObject snapshot=new JSONObject(
                                 new String(raw,StandardCharsets.UTF_8));

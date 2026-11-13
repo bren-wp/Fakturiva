@@ -2,15 +2,14 @@ name: Self-hosted Fakturiva JSON API security smoke
 on:
   push:
     branches: [main]
-    paths:
-      - 'web/**'
-      - 'quality/web-hosting/**'
-      - '.github/workflows/self-host-json.yml'
   pull_request:
     paths:
       - 'web/**'
       - 'quality/web-hosting/**'
       - '.github/workflows/self-host-json.yml'
+      - '.github/workflows/preview-release.yml'
+      - 'docs/screenshots/**'
+      - 'app/build.gradle'
   workflow_dispatch:
 jobs:
   php-json-api:
@@ -29,6 +28,8 @@ jobs:
           find web -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Test tenant isolation, optimistic revisions and deletion
         run: php quality/web-hosting/smoke.php
+      - name: Verify extracted encrypted storage on an isolated fixture
+        run: php quality/web-hosting/storage-engine-smoke.php
       - name: Verify durable encrypted revision history and safe rollback
         run: php quality/web-hosting/history-smoke.php
       - name: Verify account administration and tenant isolation

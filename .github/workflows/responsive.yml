@@ -2,17 +2,13 @@ name: Responsive Android screen matrix
 on:
   push:
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'ci/**'
-      - 'quality/**'
-      - '.github/workflows/screenshots.yml'
-      - '.github/workflows/responsive.yml'
   pull_request:
     paths:
       - 'app/**'
       - 'ci/**'
       - '.github/workflows/responsive.yml'
+      - '.github/workflows/preview-release.yml'
+      - 'docs/screenshots/**'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

@@ -89,7 +89,11 @@ class EntryReferenceTest(unittest.TestCase):
             encoding="utf-8")
         self.assertIn('public static void pullNewer(Context ctx,String id,PullCallback callback)',mirror)
         self.assertIn('if(p.getBoolean("dirty",false))',mirror)
-        self.assertIn('if(!sha(ciphertext).equals(remote.getString("sha256")))',mirror)
+        integrity=(ROOT/"app/src/main/java/com/brendigo/fakturiva/SyncIntegrity.java").read_text(
+            encoding="utf-8")
+        self.assertIn('SyncIntegrity.verifyRemote(remote,ciphertext)',mirror)
+        self.assertIn('if(!expected.equals(actual))',integrity)
+        self.assertIn('throw new SecurityException("Kontrolni zbroj udaljene preslike nije valjan")',integrity)
         self.assertIn('SecureBackup.decrypt(ciphertext,pass)',mirror)
         self.assertIn('store.restore(snapshot)',mirror)
         self.assertIn('.putBoolean("dirty",false)',mirror)

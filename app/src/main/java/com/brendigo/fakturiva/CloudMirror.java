@@ -10,7 +10,6 @@ import android.util.Base64;
 import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -161,8 +160,10 @@ public final class CloudMirror {
                         "Na serveru nema kopije. Najprije spremite postojeće podatke.");
                     byte[] sealed=Base64.decode(current,Base64.DEFAULT);
                     byte[] decrypted;
-                    try{decrypted=SecureBackup.decrypt(sealed,copy);}
-                    finally{Arrays.fill(sealed,(byte)0);}
+                    try{
+                        SyncIntegrity.verifyRemote(remote,sealed);
+                        decrypted=SecureBackup.decrypt(sealed,copy);
+                    }finally{Arrays.fill(sealed,(byte)0);}
                     Arrays.fill(decrypted,(byte)0);
                     // Successful decryption confirms the passphrase belongs
                     // to the backup; there is no client-side SHA guessing.
@@ -271,8 +272,7 @@ public final class CloudMirror {
                     byte[] ciphertext=Base64.decode(encoded,Base64.DEFAULT);
                     JSONObject snapshot;
                     try{
-                        if(!sha(ciphertext).equals(remote.getString("sha256")))
-                            throw new SecurityException("Kontrolni zbroj servera nije valjan.");
+                        SyncIntegrity.verifyRemote(remote,ciphertext);
                         byte[] plain=SecureBackup.decrypt(ciphertext,pass);
                         try{
                             snapshot=new JSONObject(new String(plain,
@@ -375,7 +375,6 @@ public final class CloudMirror {
                 try{cipher=SecureBackup.encrypt(plaintext,pass);}
                 finally{Arrays.fill(plaintext,(byte)0);}
                 try{
-                    String localSha=sha(cipher);
                     JSONObject login=SelfHostedSyncClient.request(url,
                         SelfHostedSyncClient.command("login",username,new String(pass)),null);
                     String token=login.getString("token");
@@ -393,9 +392,8 @@ public final class CloudMirror {
                                 .put("expected_revision",savedRevision)
                                 .put("backup_b64",Base64.encodeToString(cipher,
                                     Base64.NO_WRAP)),token);
-                        if(!localSha.equals(saved.getString("sha256")))
-                            throw new SecurityException("Server checksum mismatch");
-                        int rev=saved.getInt("revision");
+                        int rev=SyncIntegrity.requireAcknowledgement(
+                            saved,savedRevision,cipher);
                         // Exactly this snapshot was acknowledged.
                         // A mutation committed DURING transmission should keep
                         // dirty=true; do not mark its data as uploaded.
@@ -425,11 +423,5 @@ public final class CloudMirror {
                 if(pass!=null)Arrays.fill(pass,'\0');
             }
         });
-    }
-    private static String sha(byte[] value)throws Exception{
-        byte[] digest=MessageDigest.getInstance("SHA-256").digest(value);
-        StringBuilder result=new StringBuilder(64);
-        for(byte b:digest)result.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
-        return result.toString();
     }
 }
