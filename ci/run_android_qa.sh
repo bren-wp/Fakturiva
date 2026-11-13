@@ -13,6 +13,8 @@ rm -f docs/screenshots/*.png
 # matrix. Previously the API 36 workflow could report success while its first
 # PNG contained Android's "Viewing full screen" tutorial over the Splash.
 export QA_CAPTURE_ACCESSIBILITY=1
+# Explicitly permit fixture resets only in this disposable GitHub emulator.
+export QA_ALLOW_DATA_RESET=1
 set +e
 bash ci/capture_screenshots.sh
 capture_status=$?
