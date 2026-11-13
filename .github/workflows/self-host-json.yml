@@ -35,6 +35,8 @@ jobs:
           find web -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Test tenant isolation, optimistic revisions and deletion
         run: php quality/web-hosting/smoke.php
+      - name: Verify extracted encrypted storage on an isolated fixture
+        run: php quality/web-hosting/storage-engine-smoke.php
       - name: Verify durable encrypted revision history and safe rollback
         run: php quality/web-hosting/history-smoke.php
       - name: Verify account administration and tenant isolation
