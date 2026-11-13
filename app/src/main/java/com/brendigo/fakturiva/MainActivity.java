@@ -2549,7 +2549,7 @@ public final class MainActivity extends Activity {
         setup("detail",true);
         // Keep invoice masthead and actions aligned with the reference.
         // Quote detail remains on its pre-existing independent geometry.
-        pad(body,18,invoice?20:13);
+        pad(body,18,invoice?20:21);
         toolbar(invoice?"Pregled računa":"Pregled ponude",
             draft?(invoice?"Provjerite podatke prije izdavanja":
                 "Provjerite podatke prije potvrde"):
@@ -2587,7 +2587,7 @@ public final class MainActivity extends Activity {
                     else if(which==2)sharePdf(id);
                     else showPrinterDialog(id);
                 }).setNegativeButton("Zatvori",null).show());
-        place(body,statusBar);gap(body,invoice?6:12);
+        place(body,statusBar);gap(body,invoice?6:4);
 
         place(body,documentPaper(d));
         gap(body,13);
@@ -2658,7 +2658,7 @@ public final class MainActivity extends Activity {
         LinearLayout paper=vertical();
         // Invoice reference requires a slightly taller white paper inset.
         // Quote previews retain their original document geometry.
-        pad(paper,18,Store.INVOICE.equals(d.type)?21:20);
+        pad(paper,18,Store.INVOICE.equals(d.type)?21:21);
         paper.setBackground(outlined(WHITE));
         paper.setMinimumHeight(dp(355));
 
@@ -2761,7 +2761,7 @@ public final class MainActivity extends Activity {
             paperRule(paper);
         }
 
-        gap(paper,offer?12:14);
+        gap(paper,offer?16:14);
         paperAmount(paper,"Osnovica",docMoney(d,d.netCents),false);
         gap(paper,9);
         String paperTaxLabel="PDV";
@@ -2785,7 +2785,7 @@ public final class MainActivity extends Activity {
         }
         // Keep the white paper's footer level stable while aligning issuer,
         // customer and item rows with the invoice reference geometry.
-        gap(paper,Store.QUOTE.equals(d.type)?34:28);
+        gap(paper,Store.QUOTE.equals(d.type)?39:28);
         paperRule(paper);gap(paper,12);
         return paper;
     }
@@ -3835,7 +3835,7 @@ public final class MainActivity extends Activity {
         });
         place(body,period);gap(body,12);
 
-        LinearLayout revenue=card();pad(revenue,18,16);
+        LinearLayout revenue=card();pad(revenue,18,12);
         revenue.addView(label("Ukupni prihod",12,sub(),false));gap(revenue,9);
         revenue.addView(label(money(totals[3]),30,ink(),true));gap(revenue,9);
         long[] sixMonthContext=db.monthlyReceipts(selectedCurrency(),reportMonth);
@@ -3855,9 +3855,9 @@ public final class MainActivity extends Activity {
         LinearLayout metrics=horizontal();
         reportMetric(metrics,"Izdani računi",String.valueOf(totals[1]),"▤",BLUE,0);
         reportMetric(metrics,"Plaćeni računi",String.valueOf(totals[2]),"✓",TEAL,1);
-        place(body,metrics);gap(body,12);
+        place(body,metrics);gap(body,10);
 
-        LinearLayout chart=card();pad(chart,17,17);
+        LinearLayout chart=card();pad(chart,17,16);
         LinearLayout chartHeader=horizontal();
         TextView chartName=label("Kretanje prihoda",16,ink(),true);
         chartName.setMaxLines(2);
@@ -3866,8 +3866,8 @@ public final class MainActivity extends Activity {
         interval.setMaxLines(2);
         interval.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         chartHeader.addView(interval,lp(92,-2));
-        place(chart,chartHeader);gap(chart,19);
-        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,185));
+        place(chart,chartHeader);gap(chart,14);
+        chart.addView(new RevenueBars(this,(Calendar)reportMonth.clone()),lp(-1,173));
         place(body,chart);gap(body,14);
 
         LinearLayout payout=card();
@@ -3916,7 +3916,7 @@ public final class MainActivity extends Activity {
     }
 
     private void reportMetric(LinearLayout row,String caption,String value,String glyph,int accent,int index){
-        LinearLayout c=card();
+        LinearLayout c=card();pad(c,16,10);
         TextView symbol=label(glyph,19,accent,true);
         symbol.setGravity(Gravity.CENTER);
         symbol.setBackground(shape(accent==TEAL?(dark?0xff20534b:0xffdcf8f4):
@@ -3925,7 +3925,7 @@ public final class MainActivity extends Activity {
         c.addView(label(caption,11,sub(),false));gap(c,2);
         c.addView(label(value,25,ink(),true));
         // WRAP_CONTENT prevents clipping at Android font scale 1.3–1.5.
-        c.setMinimumHeight(dp(112));
+        c.setMinimumHeight(dp(104));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(index==0)lp.rightMargin=dp(6);else lp.leftMargin=dp(6);
         row.addView(c,lp);
@@ -4993,7 +4993,7 @@ public final class MainActivity extends Activity {
         navigation.addView(help,lp(42,42));
         help.setOnClickListener(v->eracunRequirements());
         place(body,navigation);
-        gap(body,19);
+        gap(body,22);
         String issuer=db.setting("name").trim();
         String oib=db.setting("oib").trim();
         String address=db.setting("address").trim();
@@ -5002,7 +5002,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout hero=vertical();
         hero.setGravity(Gravity.CENTER);
-        pad(hero,18,18);
+        pad(hero,18,23);
         hero.setBackground(shape(dark?0xff253451:0xffedf0ff,20));
         ImageView symbol=icon(R.drawable.ic_eracun_exchange,BLUE);
         symbol.setPadding(dp(16),dp(16),dp(16),dp(16));
@@ -5040,9 +5040,9 @@ public final class MainActivity extends Activity {
             "Provjera prije stvarnog slanja",false,this::eracunRequirements);
         place(body,section);gap(body,15);
 
-        LinearLayout notice=vertical();pad(notice,17,16);
+        LinearLayout notice=vertical();pad(notice,17,12);
         notice.setBackground(shape(dark?0xff263853:0xfff1f5ff,18));
-        place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,8);
+        place(notice,label("ⓘ  Važno za eRačun",13,ink(),true));gap(notice,6);
         place(notice,label(
             "PDF datoteka nije strukturirani eRačun. Za razmjenu je potrebna "+
             "odgovarajuća integracija.",
@@ -5058,7 +5058,7 @@ public final class MainActivity extends Activity {
             String heading,String subtitle,boolean checked,Runnable onClick){
         LinearLayout row=horizontal();
         row.setGravity(Gravity.CENTER_VERTICAL);
-        pad(row,2,13);
+        pad(row,2,14);
         TextView step=label(indicator,13,
             checked?0xff078a65:sub(),true);
         step.setGravity(Gravity.CENTER);
