@@ -15,7 +15,7 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
         $password=(string)($_POST['passphrase']??'');
         if(strlen($password)<12||strlen($password)>256)
             throw new FakturivaSelfHost\HttpFailure(422,'Unesite lozinku računa.');
-        $operations=['doc_add','doc_edit','doc_delete','doc_confirm','quote_accept'];
+        $operations=['doc_add','doc_edit','doc_delete','doc_confirm','quote_accept','quote_convert'];
         if(in_array($mode,$operations,true)){
             $expected=filter_var($_POST['revision']??null,FILTER_VALIDATE_INT);
             if($expected===false||$expected===null)
