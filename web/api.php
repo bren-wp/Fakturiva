@@ -31,9 +31,12 @@ try {
     if($raw===false||strlen($raw)>36000000)fail(413,'Request too large');
     $payload=json_decode($raw,true,32,JSON_THROW_ON_ERROR);
     if(!is_array($payload))fail(400,'Invalid JSON body');
-    $action=$payload['action']??'';
-    $username=(string)($payload['username']??'');
-    $password=(string)($payload['passphrase']??'');
+    // Treat JSON types as part of the public API contract. Casting objects or
+    // arrays to strings emits PHP warnings (and can corrupt JSON responses if
+    // display_errors is enabled on a shared host).
+    $action=jsonString($payload,'action');
+    $username=jsonString($payload,'username');
+    $password=jsonString($payload,'passphrase');
     $address=(string)($_SERVER['REMOTE_ADDR']??'');
     $response=match($action) {
         'register'=>registerEmailAccount($username,$password,$address),
@@ -41,7 +44,7 @@ try {
         'status'=>FakturivaSelfHost\backupStatus(authToken()),
         'load'=>FakturivaSelfHost\loadBackup(authToken()),
         'save'=>FakturivaSelfHost\saveBackup(
-            authToken(),(string)($payload['backup_b64']??''),
+            authToken(),jsonString($payload,'backup_b64'),
             requireRevision($payload['expected_revision']??null)),
         'restore_revision'=>FakturivaSelfHost\restoreEncryptedRevision(
             authToken(),requireRevision($payload['revision']??null),
@@ -65,6 +68,13 @@ try {
     echo '{"ok":false,"error":"Internal server error"}';
 }
 
+/** Reject non-string JSON values rather than coercing arrays or objects. */
+function jsonString(array $payload,string $key): string {
+    $value=$payload[$key]??'';
+    if(!is_string($value))
+        throw new FakturivaSelfHost\HttpFailure(400,'Invalid string field');
+    return $value;
+}
 function requireRevision(mixed $value): int {
     if(!is_int($value)||$value<0||$value>2147483646)
         throw new FakturivaSelfHost\HttpFailure(422,'Valid expected_revision required');
