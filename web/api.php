@@ -70,7 +70,7 @@ try {
 
 /** Reject non-string JSON values rather than coercing arrays or objects. */
 function jsonString(array $payload,string $key): string {
-    $value=$payload[$key]??'';
+    $value=array_key_exists($key,$payload)?$payload[$key]:'';
     if(!is_string($value))
         throw new FakturivaSelfHost\HttpFailure(400,'Invalid string field');
     return $value;
