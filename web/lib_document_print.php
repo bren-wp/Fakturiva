@@ -24,6 +24,32 @@ function printTax(int $code):string {
     return intdiv($basisPoints,100).
         ($basisPoints%100===0?'':','.rtrim(str_pad((string)($basisPoints%100),2,'0',STR_PAD_LEFT),'0')).'%';
 }
+/** Refuse a normal print action when amounts, parties or lines are incomplete. */
+function canPrintDocument(array $doc,array $lines):bool {
+    if(!in_array($doc['type']??null,['INVOICE','QUOTE'],true)||
+       !is_string($doc['issuer_name']??null)||
+       trim($doc['issuer_name'])===''||
+       !is_string($doc['client_name']??null)||
+       trim($doc['client_name'])===''||
+       !is_string($doc['currency_code']??null)||
+       !preg_match('/^[A-Z]{3}$/D',$doc['currency_code'])||
+       !$lines)return false;
+    $net=0;$tax=0;
+    foreach($lines as $line){
+        if(!is_array($line)||!is_int($line['qty_milli']??null)||
+           !is_int($line['unit_cents']??null)||
+           !is_int($line['net_cents']??null)||
+           !is_int($line['tax_cents']??null)||
+           !is_int($line['tax_rate']??null)||
+           $line['qty_milli']<=0||$line['unit_cents']<0||
+           $line['net_cents']<0||$line['tax_cents']<0)return false;
+        $net+=$line['net_cents'];$tax+=$line['tax_cents'];
+        if($net>2000000000000||$tax>2000000000000)return false;
+    }
+    return $net===($doc['net_cents']??null)&&
+        $tax===($doc['tax_cents']??null)&&
+        $net+$tax===($doc['total_cents']??null);
+}
 function printDocumentPreview(array $doc,array $lines):string {
     $type=($doc['type']??null)==='QUOTE'?'Ponuda':'Račun';
     $draft=($doc['status']??null)==='DRAFT';
