@@ -128,6 +128,12 @@ curl -fsS -b "$jar" -c "$jar" -X POST "$base/documents.php" \
   --data-urlencode 'revision=2' \
   --data-urlencode 'id=2' >"$temp/documents-issued.html"
 grep -Fq 'revizija 3' "$temp/documents-issued.html"
+# The real authenticated HTML response must expose only validated, readable
+# invoice details to browser/Windows Print-to-PDF, without touching FAK1 storage.
+grep -Fq 'data-print-document' "$temp/documents-issued.html"
+grep -Fq 'Ispiši / Spremi u PDF' "$temp/documents-issued.html"
+grep -Fq 'Web usluga' "$temp/documents-issued.html"
+grep -Fq '312,50 EUR' "$temp/documents-issued.html"
 api_confirmed="$(curl -fsS -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $api_token" \
   --data '{"action":"load"}' "$base/api.php")"

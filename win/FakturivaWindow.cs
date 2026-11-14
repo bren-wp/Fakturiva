@@ -31,8 +31,12 @@ internal sealed class FakturivaWindow : Form
         BackColor = Color.White;
         ForeColor = Color.FromArgb(20, 38, 63);
         AutoScaleMode = AutoScaleMode.Dpi;
-        back.Click += (_, _) => { if (browser.CanGoBack) browser.GoBack(); };
-        refresh.Click += (_, _) => browser.Reload();
+        back.Enabled = false;
+        refresh.Enabled = false;
+        home.Enabled = false;
+        privacy.Enabled = false;
+        back.Click += (_, _) => { if (browser.CoreWebView2 != null && browser.CanGoBack) browser.GoBack(); };
+        refresh.Click += (_, _) => browser.CoreWebView2?.Reload();
         home.Click += (_, _) => browser.CoreWebView2?.Navigate(BaseUrl);
         privacy.Click += (_, _) => browser.CoreWebView2?.Navigate(BaseUrl + "politika-privatnosti/");
         bar.Items.Add(back);
@@ -68,9 +72,22 @@ internal sealed class FakturivaWindow : Form
                     e.Handled = true;
                     if (WebViewSecurityPolicy.Allowed(e.Uri)) browser.CoreWebView2.Navigate(e.Uri);
                 };
+                browser.CoreWebView2.DownloadStarting += (_, e) =>
+                {
+                    // Never download from a cross-origin URL, even when opened
+                    // by a trusted portal page or a server-side redirect.
+                    if (!WebViewSecurityPolicy.Allowed(e.DownloadOperation.Uri))
+                    {
+                        e.Cancel = true;
+                        status.Text = "Preuzimanje s nepouzdane adrese blokirano.";
+                    }
+                };
                 browser.CoreWebView2.NavigationCompleted += (_, e) =>
                 {
                     back.Enabled = browser.CanGoBack;
+                    refresh.Enabled = true;
+                    home.Enabled = true;
+                    privacy.Enabled = true;
                     status.Text = e.IsSuccess
                         ? "Fakturiva · zaštićena HTTPS veza"
                         : "Nije moguće pristupiti usluzi. Provjerite mrežu.";

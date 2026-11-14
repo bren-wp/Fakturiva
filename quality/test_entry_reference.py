@@ -108,7 +108,7 @@ class EntryReferenceTest(unittest.TestCase):
             encoding="utf-8")
         self.assertIn('android:strokeWidth="2.0"',icon)
         self.assertIn('R.drawable.ic_eracun_exchange',MAIN)
-        self.assertIn('place(body,action("Pretvori u račun"',MAIN)
+        self.assertRegex(MAIN,r'place\(body,action\("(?:⇄  )?Pretvori u račun"')
         self.assertIn('long invoiceId=db.quoteToInvoice(id)',MAIN)
         self.assertIn('db.acceptQuote(id)',MAIN)
 

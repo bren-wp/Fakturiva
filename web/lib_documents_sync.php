@@ -195,6 +195,8 @@ function documentModified(array $root,string $operation,array $input):array {
         [$lines,$net,$tax,$total]=documentLines($input);
         $client=clientSnapshot($root,$clientId);
         if($operation==='doc_add'){
+            if(count($root['documents'])>=100000)
+                throw new HttpFailure(413,'Dosegnut je limit dokumenata.');
             $id=nextSnapshotId($root['documents']);
             $company=documentCompany($root);
             $doc=['id'=>$id,'type'=>$type,'number'=>null,
@@ -220,7 +222,13 @@ function documentModified(array $root,string $operation,array $input):array {
             $root['lines']=array_values(array_filter($root['lines'],
                 static fn($row)=>($row['document_id']??null)!==$id));
         }
+        // Android Store.restore rejects snapshots with more than 100,000 rows.
+        // For edits the replaced draft lines have already been removed above.
+        if(count($root['lines'])+count($lines)>100000)
+            throw new HttpFailure(413,'Dosegnut je limit stavki dokumenata.');
         $lineId=nextSnapshotId($root['lines']);
+        if($lineId+count($lines)-1>2147483646)
+            throw new HttpFailure(413,'Dosegnut je limit ID-ova stavki.');
         foreach($lines as $line){
             $root['lines'][]=['id'=>$lineId++,'document_id'=>$id]+$line;
             if($lineId>2147483647)
@@ -301,6 +309,8 @@ function documentModified(array $root,string $operation,array $input):array {
             throw new HttpFailure(422,'Ponuda nema potvrđen broj.');
         $company=documentCompany($root);
         $client=clientSnapshot($root,(int)($document['client_id']??0));
+        if(count($root['documents'])>=100000)
+            throw new HttpFailure(413,'Dosegnut je limit dokumenata.');
         $newId=nextSnapshotId($root['documents']);
         $newLines=[];$net=0;$tax=0;
         foreach($root['lines'] as $line){
@@ -315,6 +325,8 @@ function documentModified(array $root,string $operation,array $input):array {
            $tax!==($document['tax_cents']??null)||
            $net+$tax!==($document['total_cents']??null))
             throw new HttpFailure(422,'Ponuda i njezine stavke nisu usklađene.');
+        if(count($root['lines'])+count($newLines)>100000)
+            throw new HttpFailure(413,'Dosegnut je limit stavki dokumenata.');
         $new=$document;
         $new['id']=$newId;$new['type']='INVOICE';$new['number']=null;
         $new['status']='DRAFT';$new['created_at']=(int)round(microtime(true)*1000);
@@ -325,6 +337,8 @@ function documentModified(array $root,string $operation,array $input):array {
         foreach($client+documentIssuer($company) as $key=>$value)$new[$key]=$value;
         $root['documents'][]=$new;
         $nextId=nextSnapshotId($root['lines']);
+        if($nextId+count($newLines)-1>2147483646)
+            throw new HttpFailure(413,'Dosegnut je limit ID-ova stavki.');
         foreach($newLines as $line){
             if($nextId>2147483646)throw new HttpFailure(413,'Previše stavki.');
             $line['id']=$nextId++;$line['document_id']=$newId;

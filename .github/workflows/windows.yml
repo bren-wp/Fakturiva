@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+      - name: Check safe desktop origin policy with executable .NET tests
+        run: dotnet run --project quality/windows/WebViewPolicySmoke.csproj -c Release
       - name: Publish Windows x64 portable package
         shell: pwsh
         run: |

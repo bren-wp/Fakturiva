@@ -1619,7 +1619,7 @@ public final class MainActivity extends Activity {
         // Align the greeting and KPI hero with the measured 1179x2556 owner reference.
         // The original 393dp home reference positions the greeting closer
         // to the masthead than the former 41/25dp gaps.
-        place(body,bar);gap(body,dark?36:24);
+        place(body,bar);gap(body,dark?32:24);
 
         if(RecoveryVault.hasWorkingDraft(this)){
             LinearLayout resume=card();
@@ -1647,13 +1647,13 @@ public final class MainActivity extends Activity {
         String profileName=LocalAccounts.activeName();
         String initial=(profileName==null || profileName.isEmpty())?"B":
             profileName.substring(0,1).toUpperCase(Locale.forLanguageTag("hr-HR"));
-        TextView avatar=label(initial,23,BLUE,true);
+        TextView avatar=label(initial,23,dark?0xffB7C9FA:BLUE,true);
         avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(dark?0xff273962:0xffe6e9ff,16));
         avatar.setContentDescription("Profil tvrtke");
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,dark?2:8);
+        place(body,welcome);gap(body,dark?4:8);
 
         LinearLayout hero=vertical();pad(hero,19,dark?13:15);
         // The reference uses the same blue/violet hero in light and dark
@@ -1694,11 +1694,11 @@ public final class MainActivity extends Activity {
         // A 48dp-tall arrow pushed the quick-action cards and recent
         // documents below their original y positions. Keep a broad 48dp
         // horizontal target, but a compact 36dp visual row instead.
-        gap(body,1);
+        gap(body,dark?3:1);
         LinearLayout quickHeader=horizontal();
-        quickHeader.addView(label("Brze radnje",18,ink(),true),
+        quickHeader.addView(label("Brze radnje",16,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
-        TextView moreActions=label("›",24,BLUE,true);
+        TextView moreActions=label("›",18,BLUE,false);
         moreActions.setGravity(Gravity.CENTER);
         moreActions.setContentDescription("Otvori sve brze radnje");
         moreActions.setMinimumWidth(dp(48));
@@ -1720,7 +1720,7 @@ public final class MainActivity extends Activity {
         gap(body,dark?14:19);
         LinearLayout recentHeading=horizontal();
         recentHeading.setGravity(Gravity.CENTER_VERTICAL);
-        recentHeading.addView(label("Nedavni dokumenti",18,ink(),true),
+        recentHeading.addView(label("Nedavni dokumenti",16,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
         TextView all=label("Prikaži sve  ›",11,BLUE,true);
         all.setContentDescription("Otvori sve račune");
@@ -1780,7 +1780,7 @@ public final class MainActivity extends Activity {
         c.addView(image,lp(37,37));gap(c,4);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(2),0,dp(2),0);row.addView(c,p);
         c.setContentDescription(label+": "+value+" ovaj mjesec, otvori popis");
         c.setFocusable(true);
         c.setOnClickListener(v->documents("Računi".equals(label)?Store.INVOICE:Store.QUOTE));
@@ -1799,7 +1799,7 @@ public final class MainActivity extends Activity {
         // Quick actions can grow with 150% font scaling.
         c.setMinimumHeight(dp(90));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
-        p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
+        p.setMargins(dp(2),0,dp(2),0);row.addView(c,p);
         c.setContentDescription(label);c.setFocusable(true);
         c.setOnClickListener(v->action.run());
     }
@@ -2656,7 +2656,7 @@ public final class MainActivity extends Activity {
         toolbar(invoice?"Pregled računa":"Pregled ponude",
             draft?(invoice?"Provjerite podatke prije izdavanja":
                 "Provjerite podatke prije potvrde"):
-                (invoice?"Pregled potvrđenog dokumenta":"Ponuda pripremljena za dijeljenje"),true);
+                (invoice?"Pregled potvrđenog dokumenta":"Spremno za slanje klijentu"),true);
         backupAlert();
 
         // Status, true persisted number and contextual actions match the
@@ -2699,6 +2699,11 @@ public final class MainActivity extends Activity {
         TextView save=action(invoice?"↓  Preuzmi PDF":"↓  PDF",
             BLUE,false,()->savePdf(id));
         save.setContentDescription("Spremi PDF dokument");
+        if(!invoice){
+            GradientDrawable pdfOutline=shape(panel(),13);
+            pdfOutline.setStroke(dp(1),0xffc7d5ec);
+            save.setBackground(pdfOutline);
+        }
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(50),1);
         left.rightMargin=dp(6);
         actions.addView(save,left);
@@ -2729,7 +2734,7 @@ public final class MainActivity extends Activity {
                              Store.ACCEPTED.equals(d.status))){
             // Keep the primary conversion control visible above the fold, as
             // in reference #11. Client acceptance is separate and optional.
-            place(body,action("Pretvori u račun",0xff17b99a,true,()->{
+            place(body,action("⇄  Pretvori u račun",0xff17b99a,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
                     showDocument(invoiceId);
@@ -4264,61 +4269,65 @@ public final class MainActivity extends Activity {
 
         LinearLayout options=card();pad(options,0,2);
         place(body,options);
-        settingRow(options,"◉","Language",selectedLanguage().equals("en")?"English":"Hrvatski",
-            this::languagePicker);
-        settingRow(options,"¤","Default currency",selectedCurrency(),
-            this::currencyPicker);
-        settingRow(options,"▤","Printers and paper",
-            printOptions()[Math.max(0,Math.min(printOptions().length-1,
-                prefs.getInt("default_paper",0)))],
-            this::printerPreferences);
-        settingRow(options,"⌁","LAN receipt printer",
-            prefs.getString("printer_host","").isEmpty()?
-                "Configure a local network printer":
-                prefs.getString("printer_host","")+":"+
-                prefs.getString("printer_port","9100"),
-            this::networkPrinterSettings);
-        settingRow(options,"⌁","USB ESC/POS printers",
-            "USB Host · 58 / 80 mm · check connected devices",
-            this::usbPrinterInfo);
-        settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
+        // The first nine entries follow the supplied 18_postavke.png visual
+        // hierarchy. Less-frequent options stay available below, unchanged.
+        settingRow(options,"▤","Tvrtka i poslovni podaci",
+            "Naziv, adresa, OIB, IBAN",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
-            "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
-        settingRow(options,"▥","Porezi i stope",
-            "Porezni status i napomene u profilu tvrtke",this::company);
+            "Brojači računa i ponuda",this::numberingInfo);
+        settingRow(options,"▥","PDV i porezne postavke",
+            "Porezne stope i načini obračuna",this::company);
         settingRow(options,"▣","Načini plaćanja",
-            "IBAN, banka i uvjeti plaćanja",this::company);
-        settingRow(options,"✎","Podaci na dokumentima",
-            "Profil izdavatelja za nove PDF dokumente",this::company);
-        settingRow(options,"◈","Dizajn računa i vlastiti logo",
-            "Četiri izgleda · boja · vaš logo ili Fakturiva",
-            this::invoiceAppearance);
+            "Transakcijski račun, gotovina",this::company);
+        settingRow(options,"✎","Izgled dokumenta",
+            "Logo, boje i predlošci",this::invoiceAppearance);
         settingRow(options,"⇄","eRačuni i fiskalizacija",
-            "Integracije · status povezivanja",this::eracunScreen);
-        settingRow(options,"?","Pomoć i upute",
-            "Računi, ponude i načini rada",this::guide);
-        settingRow(options,"☁","Pohrana na serveru i oporavak",
-            "Šifrirane kopije · automatska sinkronizacija · HTTPS",
-            this::selfHostedSettings);
-        settingRow(options,"♧","Privatnost i brisanje podataka",
-            "Lokalni i udaljeni računi · prava korisnika",
-            this::privacyInfoScreen);
-        settingRow(options,"♙","Korisnički računi",
-            LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
-            this::localAccountSettings);
+            "Integracije i ovlaštenja",this::eracunScreen);
         settingRow(options,"◈","Sigurnost",
-            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"Zaštita i privatnost",
+            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":
+                "PIN, biometrija i privatnost",
             ()->securityScreen(false,true));
         settingRow(options,"♢","Izvoz i sigurnosne kopije",
-            "Izvoz i obnova podataka",this::backupScreen);
+            "Podaci i dokumenti",this::backupScreen);
         settingRow(options,"☼","Izgled aplikacije",
-            dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
+            dark?"Tamna tema aktivna":"Svijetla i tamna tema",()->{
                 dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
             });
-        settingRow(options,"✉","Podrška",
+
+        gap(body,17);
+        place(body,label("DODATNE POSTAVKE",11,sub(),true));gap(body,8);
+        LinearLayout advanced=card();pad(advanced,0,2);
+        settingRow(advanced,"◉","Jezik",
+            selectedLanguage().equals("en")?"English":"Hrvatski",this::languagePicker);
+        settingRow(advanced,"¤","Zadana valuta",selectedCurrency(),
+            this::currencyPicker);
+        settingRow(advanced,"▤","Pisači i formati papira",
+            printOptions()[Math.max(0,Math.min(printOptions().length-1,
+                prefs.getInt("default_paper",0)))],this::printerPreferences);
+        settingRow(advanced,"⌁","Mrežni terminalni pisač",
+            prefs.getString("printer_host","").isEmpty()?
+                "Postavite pisač na lokalnoj mreži":
+                prefs.getString("printer_host","")+":"+
+                prefs.getString("printer_port","9100"),this::networkPrinterSettings);
+        settingRow(advanced,"⌁","USB ESC/POS pisači",
+            "USB Host · 58 / 80 mm · provjera uređaja",this::usbPrinterInfo);
+        settingRow(advanced,"✎","Podaci na dokumentima",
+            "Profil izdavatelja za nove PDF dokumente",this::company);
+        settingRow(advanced,"?","Pomoć i upute",
+            "Računi, ponude i načini rada",this::guide);
+        settingRow(advanced,"☁","Pohrana na serveru i oporavak",
+            "Šifrirane kopije · automatska sinkronizacija · HTTPS",
+            this::selfHostedSettings);
+        settingRow(advanced,"♧","Privatnost i brisanje podataka",
+            "Lokalni i udaljeni računi · prava korisnika",this::privacyInfoScreen);
+        settingRow(advanced,"♙","Korisnički računi",
+            LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
+            this::localAccountSettings);
+        settingRow(advanced,"✉","Podrška",
             "Pomoć i kontakt",this::supportScreen);
-        settingRow(options,"ⓘ","O aplikaciji",
+        settingRow(advanced,"ⓘ","O aplikaciji",
             "Fakturiva · Brendigo · pravni dokumenti",this::aboutScreen);
+        place(body,advanced);
         gap(body,14);
         place(body,label("POSLOVNI ALATI",11,sub(),true));gap(body,8);
         LinearLayout tools=card();pad(tools,0,2);
