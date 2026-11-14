@@ -1257,8 +1257,9 @@ public final class MainActivity extends Activity {
         button(body,"Spremi i poveži automatsku sinkronizaciju",()->
             new AlertDialog.Builder(this).setTitle("Prijenos na vlastiti hosting")
                 .setMessage("Poslat će se cijela šifrirana kopija ovog lokalnog "+
-                    "profila na odabrani HTTPS hosting. Ako ondje postoji ranija "+
-                    "kopija, bit će zamijenjena. Ne prenosite podatke bez ovlaštenja.")
+                    "profila na odabrani HTTPS hosting. Ako ondje postoji "+
+                    "novija ili nepovezana kopija, prijenos će biti odbijen "+
+                    "radi zaštite podataka. Ne prenosite podatke bez ovlaštenja.")
                 .setNegativeButton("Odustani",null)
                 .setPositiveButton("Pošalji",(dialog,which)->
                     remoteAction(SelfHostedSyncClient.Action.UPLOAD,url,user,pass))
@@ -1324,14 +1325,14 @@ public final class MainActivity extends Activity {
                 .putString("host_user_"+id,user).apply();
             final char[] syncSecret=action==SelfHostedSyncClient.Action.DELETE?
                 null:code.clone();
-            if(action==SelfHostedSyncClient.Action.DOWNLOAD)
-                CloudMirror.suspend(this,id);
+            // Block newly queued automatic uploads for every manual transfer,
+            // not just a restore. Existing tasks finish first on WORK.
+            CloudMirror.suspend(this,id);
             selfHostedBusy=true;
             SelfHostedSyncClient.execute(this,action,api,user,code,db,(error,result)->{
                 selfHostedBusy=false;
                 if(error!=null){
-                    if(action==SelfHostedSyncClient.Action.DOWNLOAD)
-                        CloudMirror.resume(this,id);
+                    CloudMirror.resume(this,id);
                     if(syncSecret!=null)Arrays.fill(syncSecret,'\0');
                     toast(error);
                 }else if(action==SelfHostedSyncClient.Action.DELETE){
@@ -1343,6 +1344,7 @@ public final class MainActivity extends Activity {
                     // the complete restored snapshot. Save the remote credential
                     // in Keystore-sealed form for automatic future uploads.
                     CloudMirror.enable(this,id,api,user,syncSecret,cloudError->{
+                        CloudMirror.resume(this,id);
                         if(cloudError==null){
                             toast("Podatci povezani. Buduće promjene spremaju "+
                                 "se automatski na server.");
