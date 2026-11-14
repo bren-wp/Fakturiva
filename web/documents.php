@@ -4,7 +4,7 @@ require __DIR__.'/bootstrap.php';
 require_once __DIR__.'/lib_business_sync.php';
 
 $account=requireWeb();
-$error='';$success='';$snapshot=null;
+$error='';$success='';$snapshot=null;$unsavedConflict=null;
 $revision=(int)($account['revision']??0);
 $mode=(string)($_POST['mode']??'');
 if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
@@ -55,6 +55,21 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
         $error=$e instanceof FakturivaSelfHost\HttpFailure?
             $e->getMessage():'Dokumenti se nisu mogli sigurno obraditi.';
         $snapshot=null;
+        // Never auto-rebase an invoice or a quote onto a newer snapshot.
+        // Show the original submitted fields for manual comparison only.
+        if($e instanceof FakturivaSelfHost\HttpFailure &&
+           $e->statusCode===409 && in_array($mode,['doc_add','doc_edit'],true)){
+            $carry=[];
+            foreach(['id','type','client_id','issue_date','due_date',
+                     'supply_date','notes','quote_title'] as $key){
+                $value=$_POST[$key]??null;
+                if(is_string($value)||is_int($value))$carry[$key]=$value;
+            }
+            $lines=$_POST['lines']??null;
+            if(is_array($lines)&&count($lines)<=40)$carry['lines']=$lines;
+            $json=json_encode($carry,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
+            if(is_string($json)&&strlen($json)<=60000)$unsavedConflict=$json;
+        }
         unset($password);
     }
 }
@@ -161,6 +176,15 @@ povijest, broj, identitet izdavatelja i iznose.</p>
 <p><strong>Revizija servera:</strong> <?=$revision?></p>
 <?php if($error!==''):?><p class="error-note" role="alert"><?=h($error)?></p><?php endif;?>
 <?php if($success!==''):?><p class="success-note" role="status"><?=h($success)?></p><?php endif;?>
+<?php if($unsavedConflict!==null):?>
+<section class="panel" role="alert"><h2>Sukob revizija — promjene nisu spremljene</h2>
+<p>Drugi uređaj ili web sesija već je promijenila poslovne podatke. Ove
+nespremljene podatke kopirajte ili sačuvajte prije ponovnog otključavanja,
+zatim ručno usporedite aktualnu verziju. Nemojte prebrisati novije podatke.
+Lozinka nije uključena.</p>
+<pre class="document-conflict"><?=h($unsavedConflict)?></pre>
+</section>
+<?php endif;?>
 <section class="panel">
 <h2>Otključajte dokumente</h2>
 <p>Lozinka se ne pamti u pregledniku, web sesiji ni serverovoj tekstualnoj datoteci.
