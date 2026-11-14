@@ -151,3 +151,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .sync-business select{display:block;width:100%;min-height:50px;border:1px solid #cbd5e7;border-radius:12px;padding:12px 14px;background:#fff;color:#0c2040;font:inherit}
 .sync-business select:focus-visible{outline:3px solid #3171e8;outline-offset:3px}
 .sync-business input[type=search]{appearance:none}
+
+/* Shared Android/web business receipt editor: keyboard-safe controls and narrow screens. */
+.sync-business .panel select{display:block;width:100%;min-width:0;max-width:100%;border:1px solid #cbd5e7;border-radius:12px;padding:12px 14px;min-height:50px;background:#fff;color:#102747;font:inherit}
+.sync-business .panel select:focus-visible{outline:3px solid #3171e8;outline-offset:3px}
+.sync-business .panel input[type="date"]{min-width:0;max-width:100%}
+@media(max-width:480px){.sync-business{padding:24px 14px 36px}.sync-business .panel{padding:18px 15px;border-radius:16px}.sync-business .panel select{font-size:16px}}
