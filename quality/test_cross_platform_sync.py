@@ -13,6 +13,7 @@ MAIN=(ANDROID/"MainActivity.java").read_text(encoding="utf-8")
 MIRROR=(ANDROID/"CloudMirror.java").read_text(encoding="utf-8")
 NETWORK=(ANDROID/"SelfHostedSyncClient.java").read_text(encoding="utf-8")
 BUSINESS=(WEB/"lib_business_sync.php").read_text(encoding="utf-8")
+PAYMENTS=(WEB/"lib_payment_sync.php").read_text(encoding="utf-8")
 API=(WEB/"api.php").read_text(encoding="utf-8")
 LIB=(WEB/"lib.php").read_text(encoding="utf-8")
 PAGE=(WEB/"business.php").read_text(encoding="utf-8")
@@ -30,6 +31,8 @@ class CrossPlatformSyncChecks(unittest.TestCase):
         self.assertIn('!p.getBoolean("paused",false)',MIRROR)
         self.assertIn('store.restore(snapshot)',MIRROR)
         self.assertIn('SyncIntegrity.verifyRemote(remote,ciphertext)',MIRROR)
+        self.assertIn('if(p.getBoolean("conflict",false)||p.getBoolean("paused",false))',MIRROR)
+        self.assertIn('RecoveryVault.hasWorkingDraft(app)',MIRROR)
 
     def test_revision_probe_only_transfers_backup_when_newer(self):
         self.assertIn('"action","status"',NETWORK)
@@ -56,6 +59,19 @@ class CrossPlatformSyncChecks(unittest.TestCase):
         self.assertIn("requireWeb()",PAGE)
         self.assertIn("autocomplete=\"off\"",PAGE)
         self.assertNotIn("$_SESSION['passphrase']",PAGE)
+
+    def test_web_payment_writes_share_android_revision_and_preserve_invoice_totals(self):
+        self.assertIn("require_once __DIR__.'/lib_payment_sync.php'",BUSINESS)
+        self.assertIn("return paymentModified($root,$input)",BUSINESS)
+        self.assertIn("'payment_add'",PAGE)
+        self.assertIn("syncHidden('payment_add',$revision)",PAGE)
+        self.assertIn("function payableInvoices(",PAYMENTS)
+        self.assertIn("function paymentModified(",PAYMENTS)
+        self.assertIn("priceInCents($input['amount']",PAYMENTS)
+        self.assertIn("$amount>$available[$id]['outstanding']",PAYMENTS)
+        self.assertIn("$document['status']='PAID'",PAYMENTS)
+        self.assertIn("in_array($channel,['CASH','BANK','CARD','CHEQUE']",PAYMENTS)
+        self.assertNotIn("$_SESSION",PAYMENTS)
 
     def test_catalog_uses_integer_cents_and_issuer_history_is_preserved(self):
         self.assertIn("function priceInCents(",BUSINESS)
