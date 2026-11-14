@@ -147,6 +147,24 @@ function documentModified(array $root,string $operation,array $input):array {
            count($root[$table])>100000)
             throw new HttpFailure(422,'Neispravna poslovna baza: '.$table);
     }
+    // Refuse mutations of malformed or ambiguous backups before rewriting them.
+    $docIds=[];$lineIds=[];
+    foreach($root['documents'] as $entry){
+        $key=$entry['id']??null;
+        if(!is_array($entry)||!is_int($key)||$key<1||
+           $key>2147483646||isset($docIds[$key]))
+            throw new HttpFailure(422,'Duplicirani ili nevaljani dokumenti.');
+        $docIds[$key]=true;
+    }
+    foreach($root['lines'] as $entry){
+        $key=$entry['id']??null;
+        $documentId=$entry['document_id']??null;
+        if(!is_array($entry)||!is_int($key)||$key<1||
+           $key>2147483646||isset($lineIds[$key])||
+           !is_int($documentId)||!isset($docIds[$documentId]))
+            throw new HttpFailure(422,'Nevaljani ID-ovi ili veze stavki.');
+        $lineIds[$key]=true;
+    }
     if(in_array($operation,['doc_add','doc_edit'],true)){
         $type=requiredField($input,'type',8,true);
         if(!in_array($type,['INVOICE','QUOTE'],true))
