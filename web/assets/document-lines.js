@@ -26,6 +26,26 @@ document.addEventListener("DOMContentLoaded", () => {
       if (count + 1 >= 40) button.disabled = true;
     });
   });
+  // Browser print / Save as PDF uses only the document's current decrypted
+  // read-only preview; never sends its plaintext to another endpoint.
+  document.querySelectorAll("[data-print-document]").forEach(button => {
+    button.addEventListener("click", () => {
+      const card = button.closest("[data-print-card]");
+      if (!(card instanceof HTMLElement)) return;
+      document.querySelectorAll(".print-target").forEach(element => {
+        element.classList.remove("print-target");
+      });
+      card.classList.add("print-target");
+      document.body.classList.add("print-document");
+      window.print();
+    });
+  });
+  window.addEventListener("afterprint", () => {
+    document.body.classList.remove("print-document");
+    document.querySelectorAll(".print-target").forEach(element => {
+      element.classList.remove("print-target");
+    });
+  });
   document.querySelectorAll("[data-confirm-delete]").forEach(button => {
     button.addEventListener("click", event => {
       if (!window.confirm("Trajno izbrisati ovaj NACRT? Potvrđeni dokumenti nisu obrisivi.")) {
