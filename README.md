@@ -46,7 +46,9 @@ Android aplikacija • Web pristup poslovnom pregledu • Windows klijent
 
 ## Stvarni zasloni aplikacije
 
-Svih **20 slika su stvarne snimke pokrenute Android aplikacije na QA emulatoru**, nisu dizajnerski mockupovi ni AI generirane ilustracije. GitHub Actions pri izdavanju ponovno pokreće APK, snima svih 20 ekrana i po uspješno provedenoj provjeri osvježava galeriju. Referentne dizajnerske slike koriste se isključivo za usporedbu, nikad kao dokaz implementacije. **Pixel-perfect odstupanje mora se izmjeriti zasebno; nije potvrđeno 0 %.**
+Svih **20 slika su stvarne snimke pokrenute Android aplikacije na QA emulatoru**, nisu dizajnerski mockupovi ni AI generirane ilustracije. GitHub Actions pri izdavanju ponovno pokreće APK i snima svih 20 ekrana u zaseban CI artefakt; **galerija u README-u ne osvježava se automatski ako se novi screenshotovi razlikuju od commita**. Referentne dizajnerske slike koriste se isključivo za usporedbu, nikad kao dokaz implementacije.
+
+**Provjereni vizualni audit v0.18.6 (14. 11. 2026.):** 20 stvarnih snimki s merge commita `7de2d9ad` uspoređeno je s vlasnikovih 20 originalnih PNG referenci 1179 × 2556. Prosječni **RGB MAE 8,273/255**, svi zasloni imaju različite piksele; **potpuna 1:1 podudarnost nije postignuta**. Najveća odstupanja: Tamna tema, Početna, Pregled ponude. [Potpuni audit: 20 zaslona, SSIM i odstupanja](docs/V0.18.6_20_SCREEN_PIXEL_AUDIT_2026-11-14.md).
 
 <div align="center">
 <table>
