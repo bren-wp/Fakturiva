@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'win/**'
+      - 'web/**'
+      - 'quality/web-hosting/**'
       - '.github/workflows/windows.yml'
       - '.github/workflows/preview-release.yml'
       - 'docs/screenshots/**'
