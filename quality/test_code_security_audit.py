@@ -62,8 +62,13 @@ class StaticCodeAuditTest(unittest.TestCase):
             manifest.parent.mkdir(parents=True)
             manifest.write_text(
                 '<application android:allowBackup="true"/>', encoding="utf-8")
+            webview = root / "app/src/main/java/UnsafeBrowser.java"
+            webview.parent.mkdir(parents=True)
+            webview.write_text("webView.getSettings().setAllowUniversalAccessFromFileURLs(true);",
+                               encoding="utf-8")
             result = audit.scan_static(root)
             rules = {finding["rule"] for finding in result["critical_findings"]}
+            self.assertIn("android-universal-file-access", rules)
             self.assertIn("windows-webview-host-objects", rules)
             self.assertIn("windows-webview-messages", rules)
             self.assertIn("android-backup-enabled", rules)
