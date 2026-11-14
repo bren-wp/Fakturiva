@@ -30,6 +30,53 @@ class SettingsReferenceOrderTests(unittest.TestCase):
             "Izgled aplikacije",
         ])
 
+    def test_all_settings_titles_and_descriptions_have_english_translations(self):
+        catalog=(Path(__file__).resolve().parents[1]/
+                 "app/src/main/java/com/brendigo/fakturiva/UiStrings.java"
+                ).read_text(encoding="utf-8")
+        translated=set(re.findall(r'EN\.put\("([^"]+)",',catalog))
+        start=JAVA.index('private void settings()')
+        end=JAVA.index('private void languagePicker()',start)
+        settings=JAVA[start:end]
+        titles=re.findall(r'settingRow\(\w+,"[^"]+","([^"]+)"',settings)
+        descriptions=re.findall(
+            r'settingRow\(\w+,"[^"]+","[^"]+",\s*"([^"]+)"',settings)
+        important=[
+            "Jezik","Zadana valuta","DODATNE POSTAVKE",
+            "PIN, biometrija i privatnost","Svijetla i tamna tema",
+            "Postavite pisač na lokalnoj mreži",
+            "Knjiga prometa i godišnji porezni obračun",
+        ]
+        self.assertGreaterEqual(len(titles),24)
+        for value in titles+descriptions+important:
+            with self.subTest(value=value):
+                self.assertIn(value,translated)
+
+    def test_primary_settings_icons_use_real_vector_drawables(self):
+        import xml.etree.ElementTree as ET
+        root=Path(__file__).resolve().parents[1]
+        icons={
+            "Tvrtka i poslovni podaci":"ic_setting_company",
+            "Numeracija dokumenata":"ic_setting_numbering",
+            "PDV i porezne postavke":"ic_setting_tax",
+            "Načini plaćanja":"ic_setting_payment",
+            "Izgled dokumenta":"ic_setting_pencil",
+            "eRačuni i fiskalizacija":"ic_eracun_exchange",
+            "Sigurnost":"ic_setting_shield",
+            "Izvoz i sigurnosne kopije":"ic_setting_cloud",
+            "Izgled aplikacije":"ic_setting_sun",
+        }
+        for label,drawable in icons.items():
+            with self.subTest(label=label):
+                self.assertIn(f'case "{label}": return R.drawable.{drawable}',JAVA)
+                file=root/"app/src/main/res/drawable"/f"{drawable}.xml"
+                self.assertTrue(file.is_file())
+                svg=ET.parse(file).getroot()
+                self.assertTrue(svg.tag.endswith("vector"))
+                self.assertTrue(any(child.tag.endswith("path") for child in svg))
+        self.assertIn('ImageView vector=icon(iconId,BLUE)',JAVA)
+        self.assertIn('View.IMPORTANT_FOR_ACCESSIBILITY_NO',JAVA)
+
     def test_all_existing_advanced_callbacks_remain_reachable(self):
         beginning=JAVA.index('private void settings()')
         end=JAVA.index('private void languagePicker()',beginning)

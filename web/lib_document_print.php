@@ -8,10 +8,12 @@ function printField(mixed $value):string {
         ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
 }
 function printCents(int $cents):string {
-    $negative=$cents<0;
-    $absolute=$negative?-$cents:$cents;
-    $whole=preg_replace('/\\B(?=(\\d{3})+(?!\\d))/', '.',(string)intdiv($absolute,100));
-    return ($negative?'-':'').$whole.','.str_pad((string)($absolute%100),2,'0',STR_PAD_LEFT);
+    // intdiv() prevents negating PHP_INT_MIN (whose absolute value cannot
+    // be represented as a signed 64-bit integer).
+    $whole=abs(intdiv($cents,100));
+    $fraction=abs($cents%100);
+    $grouped=preg_replace('/\\B(?=(\\d{3})+(?!\\d))/', '.',(string)$whole);
+    return ($cents<0?'-':'').$grouped.','.str_pad((string)$fraction,2,'0',STR_PAD_LEFT);
 }
 function printQuantity(int $milli):string {
     $whole=intdiv($milli,1000);
@@ -23,6 +25,44 @@ function printTax(int $code):string {
     $basisPoints=$code>=10000?$code-10000:$code*100;
     return intdiv($basisPoints,100).
         ($basisPoints%100===0?'':','.rtrim(str_pad((string)($basisPoints%100),2,'0',STR_PAD_LEFT),'0')).'%';
+}
+/** Safe display of invalid remote fields without casting arbitrary values. */
+function printSafeCents(mixed $value):string {
+    return is_int($value)?printCents($value):'—';
+}
+/** Android-compatible, positive HALF_UP arithmetic without intermediate int overflow.
+ * This is a read-only verifier, not the narrower web-form input validator.
+ */
+function printVerifiedLine(array $line):?array {
+    $qty=$line['qty_milli']??null;
+    $price=$line['unit_cents']??null;
+    $savedNet=$line['net_cents']??null;
+    $savedTax=$line['tax_cents']??null;
+    $rate=$line['tax_rate']??null;
+    if(!is_int($qty)||!is_int($price)||!is_int($savedNet)||
+       !is_int($savedTax)||!is_int($rate)||
+       $qty<1||$qty>1000000000||$price<0||
+       $savedNet<0||$savedTax<0||
+       !(($rate>=0&&$rate<=100)||($rate>=10001&&$rate<=20000)))
+        return null;
+    // qty * price / 1000 rounded half-up; split before multiplication.
+    $majorPrice=intdiv($price,1000);
+    if($majorPrice>intdiv(PHP_INT_MAX,$qty))return null;
+    $major=$majorPrice*$qty;
+    $minor=intdiv(($price%1000)*$qty+500,1000);
+    if($major>PHP_INT_MAX-$minor)return null;
+    $net=$major+$minor;
+    $bp=$rate>=10000?$rate-10000:$rate*100;
+    // net * basisPoints / 10000 rounded half-up.
+    $large=intdiv($net,10000);
+    if($bp!==0 && $large>intdiv(PHP_INT_MAX,$bp))return null;
+    $taxMajor=$large*$bp;
+    $taxMinor=intdiv(($net%10000)*$bp+5000,10000);
+    if($taxMajor>PHP_INT_MAX-$taxMinor)return null;
+    $tax=$taxMajor+$taxMinor;
+    if($net!==$savedNet||$tax!==$savedTax||
+       $net>PHP_INT_MAX-$tax)return null;
+    return [$net,$tax];
 }
 /** Refuse a normal print action when amounts, parties or lines are incomplete. */
 function canPrintDocument(array $doc,array $lines):bool {
@@ -36,27 +76,15 @@ function canPrintDocument(array $doc,array $lines):bool {
        !$lines)return false;
     $net=0;$tax=0;
     foreach($lines as $line){
-        if(!is_array($line)||!is_int($line['qty_milli']??null)||
-           !is_int($line['unit_cents']??null)||
-           !is_int($line['net_cents']??null)||
-           !is_int($line['tax_cents']??null)||
-           !is_int($line['tax_rate']??null)||
-           $line['qty_milli']<=0||$line['qty_milli']>10000000||
-           $line['unit_cents']<0||$line['unit_cents']>1000000000||
-           $line['net_cents']<0||$line['tax_cents']<0)return false;
-        $rate=$line['tax_rate'];
-        if(!(($rate>=0&&$rate<=100)||($rate>=10001&&$rate<=20000)))
-            return false;
-        // Same positive half-up integer rules as Android Money and
-        // documentLines(): never trust cached snapshot line subtotals.
-        $basisPoints=$rate>=10000?$rate-10000:$rate*100;
-        $lineNet=intdiv($line['qty_milli']*$line['unit_cents']+500,1000);
-        $lineTax=intdiv($lineNet*$basisPoints+5000,10000);
-        if($lineNet!==$line['net_cents']||$lineTax!==$line['tax_cents'])
+        if(!is_array($line))return false;
+        $verified=printVerifiedLine($line);
+        if($verified===null)return false;
+        [$lineNet,$lineTax]=$verified;
+        if($net>PHP_INT_MAX-$lineNet||$tax>PHP_INT_MAX-$lineTax)
             return false;
         $net+=$lineNet;$tax+=$lineTax;
-        if($net>2000000000000||$tax>2000000000000)return false;
     }
+    if($net>PHP_INT_MAX-$tax)return false;
     return $net===($doc['net_cents']??null)&&
         $tax===($doc['tax_cents']??null)&&
         $net+$tax===($doc['total_cents']??null);
@@ -86,30 +114,31 @@ function printDocumentPreview(array $doc,array $lines):string {
     $out.='<div class="finance-table-wrap"><table class="finance-table document-print-table">'.
         '<thead><tr><th>Stavka</th><th>Količina</th><th>Cijena</th>'.
         '<th>PDV</th><th>Ukupno</th></tr></thead><tbody>';
-    $sumNet=0;$sumTax=0;$count=0;
+    $count=0;
     foreach($lines as $line){
-        if(!is_array($line)||!is_int($line['qty_milli']??null)||
-           !is_int($line['unit_cents']??null)||
-           !is_int($line['net_cents']??null)||
-           !is_int($line['tax_cents']??null)||
-           !is_int($line['tax_rate']??null))continue;
+        if(!is_array($line))continue;
         $count++;
-        $sumNet+=$line['net_cents'];$sumTax+=$line['tax_cents'];
+        $verified=printVerifiedLine($line);
+        $qty=$line['qty_milli']??null;
+        $rate=$line['tax_rate']??null;
+        $validRate=is_int($rate)&&
+            (($rate>=0&&$rate<=100)||($rate>=10001&&$rate<=20000));
         $out.='<tr><td>'.printField($line['name']??'').'</td><td>'.
-            printField(printQuantity($line['qty_milli'])).'</td><td>'.
-            printField(printCents($line['unit_cents'])).'</td><td>'.
-            printField(printTax($line['tax_rate'])).'</td><td>'.
-            printField(printCents($line['net_cents']+$line['tax_cents'])).'</td></tr>';
+            (is_int($qty)?printField(printQuantity($qty)):'—').'</td><td>'.
+            printField(printSafeCents($line['unit_cents']??null)).'</td><td>'.
+            ($validRate?printField(printTax($rate)):'—').'</td><td>'.
+            ($verified!==null?printField(printCents($verified[0]+$verified[1])):'—').
+            '</td></tr>';
     }
     $out.='</tbody></table></div>';
     if($count===0)$out.='<p class="error-note">Stavke dokumenta nisu dostupne u preslici.</p>';
     if(!canPrintDocument($doc,$lines))
         $out.='<p class="error-note">Upozorenje: stavke i spremljeni ukupni iznos nisu usklađeni.</p>';
     $out.='<dl class="document-print-totals"><div><dt>Osnovica</dt><dd>'.
-        printField(printCents((int)($doc['net_cents']??0))).'</dd></div>'.
-        '<div><dt>PDV</dt><dd>'.printField(printCents((int)($doc['tax_cents']??0))).'</dd></div>'.
+        printField(printSafeCents($doc['net_cents']??null)).'</dd></div>'.
+        '<div><dt>PDV</dt><dd>'.printField(printSafeCents($doc['tax_cents']??null)).'</dd></div>'.
         '<div class="document-print-grand"><dt>Ukupno</dt><dd>'.
-        printField(printCents((int)($doc['total_cents']??0))).' '.printField($currency).
+        printField(printSafeCents($doc['total_cents']??null)).' '.printField($currency).
         '</dd></div></dl>';
     $notes=(string)($doc['notes']??'');
     if($notes!=='')$out.='<p class="document-print-notes"><strong>Napomena:</strong> '.

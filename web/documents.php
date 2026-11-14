@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
+require_once __DIR__.'/ui-shell.php';
 require_once __DIR__.'/lib_business_sync.php';
 require_once __DIR__.'/lib_document_print.php';
 
@@ -196,6 +197,7 @@ if(is_array($snapshot)){
 </head><body><main class="account-page finance-page sync-business document-page">
 <?=logoMarkup()?>
 <h1>Računi i ponude</h1>
+<?php fakturivaPortalNavigation('documents'); ?>
 <p>Prijavljeni ste kao <strong><?=h((string)$account['username'])?></strong>.
 Dokumenti se zapisuju u istu šifriranu presliku kao Android i Windows portal.
 Samo nacrti mogu se uređivati ili brisati. Potvrđeni računi i ponude čuvaju

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
+require_once __DIR__.'/ui-shell.php';
 require_once __DIR__.'/lib_finance.php';
 $account=requireWeb();
 $error='';
@@ -52,6 +53,7 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
 </head><body><main class="account-page finance-page">
 <?=logoMarkup()?>
 <h1>Pregled poslovnih podataka</h1>
+<?php fakturivaPortalNavigation('finance'); ?>
 <p>Prijavljeni račun: <strong><?=h((string)$account['username'])?></strong>.
 Dokumenti su šifrirani na serveru. Za pregled je potrebna zasebna
 lozinka kojom se štiti Android sigurnosna kopija.</p>

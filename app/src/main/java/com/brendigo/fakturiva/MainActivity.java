@@ -4690,6 +4690,23 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Numeracija dokumenata")
             .setMessage(numbers.toString()).setPositiveButton("Zatvori",null).show();
     }
+    /** Primary Settings icons use vectors from the original reference UI,
+     * rather than font-dependent Unicode placeholder glyphs.
+     */
+    private int settingsReferenceIcon(String name){
+        switch(name){
+            case "Tvrtka i poslovni podaci": return R.drawable.ic_setting_company;
+            case "Numeracija dokumenata": return R.drawable.ic_setting_numbering;
+            case "PDV i porezne postavke": return R.drawable.ic_setting_tax;
+            case "Načini plaćanja": return R.drawable.ic_setting_payment;
+            case "Izgled dokumenta": return R.drawable.ic_setting_pencil;
+            case "eRačuni i fiskalizacija": return R.drawable.ic_eracun_exchange;
+            case "Sigurnost": return R.drawable.ic_setting_shield;
+            case "Izvoz i sigurnosne kopije": return R.drawable.ic_setting_cloud;
+            case "Izgled aplikacije": return R.drawable.ic_setting_sun;
+            default:return 0;
+        }
+    }
     private void settingRow(LinearLayout target,String symbol,String name,String subtitle,Runnable action){
         if(target.getChildCount()>0){
             View divider=new View(this);divider.setBackgroundColor(border());
@@ -4701,8 +4718,18 @@ public final class MainActivity extends Activity {
         // Native rows stay fully tappable and content can scroll at large fonts.
         LinearLayout row=horizontal();pad(row,13,11);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        TextView mark=label(symbol,19,BLUE,true);
-        mark.setGravity(Gravity.CENTER);
+        int iconId=settingsReferenceIcon(name);
+        View mark;
+        if(iconId!=0){
+            ImageView vector=icon(iconId,BLUE);
+            vector.setPadding(dp(8),dp(8),dp(8),dp(8));
+            vector.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            mark=vector;
+        }else{
+            TextView glyph=label(symbol,19,BLUE,true);
+            glyph.setGravity(Gravity.CENTER);
+            mark=glyph;
+        }
         mark.setBackground(shape(dark?0xff293a60:0xffecf0ff,12));
         row.addView(mark,lp(38,38));
         LinearLayout info=vertical();pad(info,12,0);

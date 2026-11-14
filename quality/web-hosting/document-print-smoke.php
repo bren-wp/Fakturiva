@@ -68,4 +68,43 @@ $invalidLine=$lines;
 $invalidLine[0]['unit_cents']=PHP_INT_MAX;
 printCheck(!canPrintDocument($doc,$invalidLine),
     'Oversized unit price could overflow arithmetic');
+
+// Android Money.quantity() supports up to 1,000,000 units (1e9 milli).
+// A smaller web edit form must not invalidate an otherwise valid mobile record.
+$largeDocument=$doc;
+$largeDocument['status']='ISSUED';
+$largeDocument['net_cents']=10001;
+$largeDocument['tax_cents']=0;
+$largeDocument['total_cents']=10001;
+$largeLines=[['name'=>'Android large quantity','qty_milli'=>10001000,
+    'unit_cents'=>1,'net_cents'=>10001,'tax_cents'=>0,'tax_rate'=>0]];
+printCheck(canPrintDocument($largeDocument,$largeLines),
+    'Valid 10001-unit Android document was rejected for web printing');
+$largeDocument['net_cents']=1000000;
+$largeDocument['total_cents']=1000000;
+$largeLines[0]['qty_milli']=1000000000;
+$largeLines[0]['net_cents']=1000000;
+printCheck(canPrintDocument($largeDocument,$largeLines),
+    'Maximum Android milli-quantity cannot be printed');
+
+// A malformed but decryptable snapshot must never crash /documents.php.
+printCheck(printCents(PHP_INT_MIN)==='-92.233.720.368.547.758,08',
+    'PHP_INT_MIN cents formatting overflowed');
+$invalidLine=$lines;
+$invalidLine[0]['net_cents']=PHP_INT_MAX;
+$invalidLine[0]['tax_cents']=1;
+$largeDocument['total_cents']=PHP_INT_MAX;
+$unsafeHtml=printDocumentPreview($largeDocument,$invalidLine);
+printCheck(str_contains($unsafeHtml,'nisu usklađeni'),
+    'Overflowing cached line is missing the blocking warning');
+printCheck(str_contains($unsafeHtml,'<td>—</td>'),
+    'Invalid line must not expose a fabricated numeric line sum');
+printCheck(!canPrintDocument($largeDocument,$invalidLine),
+    'Unsafe line amount was accepted');
+$invalidLine[0]['net_cents']=1000;
+$invalidLine[0]['tax_cents']=PHP_INT_MAX;
+$unsafeHtml=printDocumentPreview($largeDocument,$invalidLine);
+printCheck(str_contains($unsafeHtml,'nisu usklađeni'),
+    'Near-overflow tax amount crashed document rendering');
+
 echo 'Read-only document print: integer sums, escaped fields and draft labeling OK'.PHP_EOL;
