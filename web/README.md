@@ -11,6 +11,8 @@
 - Android zadržava postojeći profil i dokumente prilikom migracije vjerodajnice poslije uspješne server autentifikacije. Novi web poslovni uređivač na `/business.php` može **uređivati tvrtku, klijente i katalog, evidentirati stvarno primljene uplate te na `/documents.php` izrađivati, uređivati i brisati nacrte računa i ponuda, potvrđivati dokumente i označivati prihvaćene ponude**, pri čemu stvara novu FAK1 reviziju iste baze koju Android koristi. Android pri prijavi automatski provjerava server i preuzima novije podatke samo ako je lokalna kopija čista i nema otvorenog radnog nacrta ili aktivnog konflikta. Windows je WebView2 omotač ovog portala.
 - `POST /api.php` s `{"action":"status"}` i valjanim Bearer tokenom vraća samo `revision`, `has_backup` i `saved_at`, bez prijenosa pune preslike. Odvojeni `load` preuzima šifrirane bajtove samo kad je potreban. Starije verzije servera ostaju dostupne preko kontroliranog `load` fallbacka.
 - Web evidencija uplata prihvaća samo potvrđene račune s nepodmirenim iznosom, datumom i načinom primitka. Server računa preostali dug iz dokumenta i prethodnih uplata; ne vjeruje iznosima ili statusu koje je poslao preglednik. Djelomična uplata ostavlja račun otvorenim; zadnja uplata zaključuje status `PAID`. Svaka izmjena prolazi istu provjeru revizije i povijesti kao Android.
+- `/documents.php` nudi izradu, uređivanje i brisanje **samo nacrta** računa i ponuda. Potvrda dodjeljuje brojeve iz zajedničkih sekvenci, smrzava podatke izdavatelja te obračunava stavke i PDV prema Android Money pravilima. Prihvat ponude i izrada novog nacrta računa iz ponude čuvaju izvorne dokumente. Ne dopušta brisanje niti uređivanje potvrđenih dokumenata.
+- Kod statusa 409 obrazac može prikazati korisniku samo dopuštena nespremljena polja za ručnu usporedbu; nikad ne zapisuje lozinku, ne sprema niti automatski primjenjuje konfliktni sadržaj.
 - Web i Android ne rade istovremeno spajanje pojedinačnih poslovnih zapisa. Web izdaje novu verziju samo ako se `expected_revision` podudara, a sukob se mora ručno riješiti uz očuvanje lokalne i povijesne kopije.
 
 ## Arhitektura pohrane
@@ -34,7 +36,7 @@ Prije produkcije provjerite:
 find web -name '*.php' -print0 | xargs -0 -n1 php -l
 php quality/web-hosting/smoke.php
 php quality/web-hosting/web-auth-smoke.php
-php quality/web-hosting/business-sync-smoke.php # uključuje djelomične/potpune uplate i zaštitu od preplate
+php quality/web-hosting/business-sync-smoke.php # uključuje uplate, sve CRUD operacije nad nacrtima, iznos/PDV i sukobe revizija
 bash quality/web-hosting/http-smoke.sh
 bash quality/web-hosting/web-form-http.sh
 ```
