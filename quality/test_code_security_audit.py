@@ -73,6 +73,23 @@ class StaticCodeAuditTest(unittest.TestCase):
             self.assertIn("windows-webview-messages", rules)
             self.assertIn("android-backup-enabled", rules)
 
+    def test_php_functions_are_advisory_and_session_files_are_private(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            php = root / "web/entry.php"
+            php.parent.mkdir(parents=True)
+            php.write_text("<?php\\nfunction staleCode(){}\\n"
+                           "function liveCode(){}\\nliveCode();\\n", encoding="utf-8")
+            session = root / "web/storage/data/sessions/sess_test"
+            session.parent.mkdir(parents=True)
+            session.write_text("private-session", encoding="utf-8")
+            result = audit.scan_static(root)
+            names = {row["function"] for row in result["possible_dead_php_functions"]}
+            self.assertIn("staleCode", names)
+            self.assertNotIn("liveCode", names)
+            self.assertIn("web/storage/data/sessions/sess_test",
+                          result["runtime_secret_files"])
+
     def test_dead_code_is_advisory_not_auto_deleted(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
