@@ -176,3 +176,5 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
  .document-page .panel{padding:18px 14px}
  .document-page .document-editor{gap:2px}
 }
+
+.document-page .document-conflict{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5;background:var(--pale);padding:12px;border-radius:12px;max-height:440px;overflow:auto;user-select:text}
