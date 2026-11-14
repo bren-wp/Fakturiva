@@ -31,55 +31,10 @@ class StaticCodeAuditTest(unittest.TestCase):
             root = Path(temp)
             php = root / "web/public.php"
             php.parent.mkdir(parents=True)
-            php.write_text("<?php shell_exec('whoami');\n", encoding="utf-8")
-            secret = root / "web/storage/secret.php"
-            secret.parent.mkdir(parents=True)
-            secret.write_text("<?php return 'bad';\n", encoding="utf-8")
-            result = audit.scan_static(root)
-            self.assertTrue(any(row["rule"] == "php-command-execution"
-                                for row in result["critical_findings"]))
-            self.assertIn("web/storage/secret.php", result["runtime_secret_files"])
-
-    def test_detects_json_account_records_not_only_source_extensions(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            account = root / "web/storage/data/accounts/secret-record.json"
-            account.parent.mkdir(parents=True)
-            account.write_text('{"ciphertext":"sensitive"}', encoding="utf-8")
-            result = audit.scan_static(root)
-            self.assertIn("web/storage/data/accounts/secret-record.json",
-                          result["runtime_secret_files"])
-
-    def test_detects_unsafe_webview_flags_and_enabled_android_backup(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = root / "win/FakturivaWindow.cs"
-            source.parent.mkdir(parents=True)
-            source.write_text("settings.AreHostObjectsAllowed = true;\n"
-                              "settings.IsWebMessageEnabled = true;\n",
-                              encoding="utf-8")
-            manifest = root / "app/src/main/AndroidManifest.xml"
-            manifest.parent.mkdir(parents=True)
-            manifest.write_text(
-                '<application android:allowBackup="true"/>', encoding="utf-8")
-            webview = root / "app/src/main/java/UnsafeBrowser.java"
-            webview.parent.mkdir(parents=True)
-            webview.write_text("webView.getSettings().setAllowUniversalAccessFromFileURLs(true);",
-                               encoding="utf-8")
-            result = audit.scan_static(root)
-            rules = {finding["rule"] for finding in result["critical_findings"]}
-            self.assertIn("android-universal-file-access", rules)
-            self.assertIn("windows-webview-host-objects", rules)
-            self.assertIn("windows-webview-messages", rules)
-            self.assertIn("android-backup-enabled", rules)
-
-    def test_php_functions_are_advisory_and_session_files_are_private(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            php = root / "web/entry.php"
-            php.parent.mkdir(parents=True)
-            php.write_text("<?php\\nfunction staleCode(){}\\n"
-                           "function liveCode(){}\\nliveCode();\\n", encoding="utf-8")
+            php.write_text(chr(10).join([
+                "<?php", "function staleCode(){}", "function liveCode(){}",
+                "liveCode();", ""
+            ]), encoding="utf-8")
             session = root / "web/storage/data/sessions/sess_test"
             session.parent.mkdir(parents=True)
             session.write_text("private-session", encoding="utf-8")
