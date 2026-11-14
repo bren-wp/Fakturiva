@@ -207,11 +207,19 @@ Stavki: <?=count($documentLines)?>.</p>
 <?php documentFormHidden('doc_delete',$revision,$id);documentPassword();?>
 <button class="danger" type="submit" data-confirm-delete>Trajno izbriši samo nacrt</button>
 </form>
-<?php elseif(($doc['type']??'')==='QUOTE' && $status==='SENT'):?>
+<?php else:?>
+<?php if(($doc['type']??'')==='QUOTE' && $status==='SENT'):?>
 <form action="documents.php" method="post" autocomplete="off">
 <?php documentFormHidden('quote_accept',$revision,$id);documentPassword();?>
 <button class="secondary" type="submit">Označi potvrđenu ponudu prihvaćenom</button>
 </form>
+<?php endif;?>
+<?php if(($doc['type']??'')==='QUOTE' && in_array($status,['SENT','ACCEPTED'],true)):?>
+<form action="documents.php" method="post" autocomplete="off">
+<?php documentFormHidden('quote_convert',$revision,$id);documentPassword();?>
+<button class="secondary" type="submit">Izradi novi nacrt računa iz ponude</button>
+</form>
+<?php endif;?>
 <?php endif;?>
 </details>
 <?php endforeach;?>
