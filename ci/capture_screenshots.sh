@@ -137,12 +137,41 @@ PY
   # An identical frame for a different screen is never accepted as evidence.
   output="$QA_OUTPUT_DIR/${number}_${names[$index]}.png"
   unique=false
-  for retry in 1 2 3 4; do
+  for retry in 1 2 3 4 5 6; do
     sleep 1
     timeout 18s adb exec-out screencap -p > "$output" ||
       capture_failure "Screen capture timed out on screen $number (attempt $retry)"
     test "$(stat -c%s "$output")" -gt 14000 ||
       capture_failure "Truncated screenshot for screen $number"
+    if [ "$number" = "01" ] &&
+       ! python3 ci/splash_frame_guard.py "$output"; then
+      # SystemUI can show the one-time immersive tutorial BETWEEN the
+      # pre-capture XML dump and the PNG compositor frame. Detect it from
+      # the actual bright Splash frame, re-dump the UI, and acknowledge
+      # ONLY the known Android system-owned "Viewing full screen" dialog.
+      # Never accept this obstructed capture as app design evidence.
+      dismissed=false
+      for prompt_try in 1 2 3; do
+        if timeout 35s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 &&
+           timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml"; then
+          coords="$(python3 ci/acknowledge_immersive_prompt.py "$xml")" ||
+            capture_failure "Unable to inspect fullscreen tutorial XML"
+          if [[ "$coords" =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
+            read -r tap_x tap_y <<< "$coords"
+            timeout 8s adb shell input tap "$tap_x" "$tap_y" ||
+              capture_failure "Cannot acknowledge Android fullscreen tutorial"
+            sleep 2
+            dismissed=true
+            break
+          fi
+        fi
+        sleep 2
+      done
+      if [ "$dismissed" != true ]; then
+        capture_failure "Splash is obscured by SystemUI; see captured XML and PNG"
+      fi
+      continue
+    fi
     repeated=false
     for previous in "$QA_OUTPUT_DIR"/*.png; do
       [ -f "$previous" ] || continue
