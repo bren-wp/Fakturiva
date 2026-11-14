@@ -2656,7 +2656,7 @@ public final class MainActivity extends Activity {
         toolbar(invoice?"Pregled računa":"Pregled ponude",
             draft?(invoice?"Provjerite podatke prije izdavanja":
                 "Provjerite podatke prije potvrde"):
-                (invoice?"Pregled potvrđenog dokumenta":"Ponuda pripremljena za dijeljenje"),true);
+                (invoice?"Pregled potvrđenog dokumenta":"Spremno za slanje klijentu"),true);
         backupAlert();
 
         // Status, true persisted number and contextual actions match the
@@ -2699,6 +2699,11 @@ public final class MainActivity extends Activity {
         TextView save=action(invoice?"↓  Preuzmi PDF":"↓  PDF",
             BLUE,false,()->savePdf(id));
         save.setContentDescription("Spremi PDF dokument");
+        if(!invoice){
+            GradientDrawable pdfOutline=shape(panel(),13);
+            pdfOutline.setStroke(dp(1),0xffc7d5ec);
+            save.setBackground(pdfOutline);
+        }
         LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(50),1);
         left.rightMargin=dp(6);
         actions.addView(save,left);
@@ -2729,7 +2734,7 @@ public final class MainActivity extends Activity {
                              Store.ACCEPTED.equals(d.status))){
             // Keep the primary conversion control visible above the fold, as
             // in reference #11. Client acceptance is separate and optional.
-            place(body,action("Pretvori u račun",0xff17b99a,true,()->{
+            place(body,action("⇄  Pretvori u račun",0xff17b99a,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
                     showDocument(invoiceId);
