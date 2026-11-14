@@ -134,7 +134,7 @@ public final class SelfHostedSyncClient {
             throw new IllegalArgumentException("Nedostaju podaci za hosting");
         final char[] secret=passphrase==null?new char[0]:passphrase.clone();
         final String expectedProfile=LocalAccounts.activeId();
-        new Thread(()->{
+        CloudMirror.executeManualTransfer(()->{
             String token=null;
             String url=null;
             String error=null;
@@ -249,6 +249,6 @@ public final class SelfHostedSyncClient {
                 if(!activity.isFinishing()&&!activity.isDestroyed())
                     callback.finished(message,success);
             });
-        },"FakturivaSelfHostedSync").start();
+        });
     }
 }
