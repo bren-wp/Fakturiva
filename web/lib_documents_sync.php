@@ -63,6 +63,24 @@ function documentCurrency(array $company):string {
         throw new HttpFailure(422,'Nepodržana valuta poslovnog računa.');
     return $currency;
 }
+/** Match Android Money.parseRate: whole percent or 0.01%-resolution code. */
+function documentTaxRate(mixed $raw):int {
+    if(!is_string($raw)||strlen($raw)>10)
+        throw new HttpFailure(422,'Neispravna stopa PDV-a.');
+    $raw=trim(str_replace('%','',$raw));
+    if(preg_match('/^([0-9]{1,3})(?:[.,]([0-9]{1,2}))?$/D',$raw,$parts)){
+        $whole=(int)$parts[1];
+        $fraction=(int)str_pad($parts[2]??'0',2,'0');
+        if($whole>100||($whole===100&&$fraction>0))
+            throw new HttpFailure(422,'PDV mora biti u rasponu od 0 do 100 %.');
+        return $fraction===0?$whole:10000+$whole*100+$fraction;
+    }
+    // Backward compatibility for existing schema-8 extended tax codes.
+    if(preg_match('/^[0-9]{5}$/D',$raw) &&
+       (int)$raw>=10001&&(int)$raw<=20000)
+        return (int)$raw;
+    throw new HttpFailure(422,'Neispravna stopa PDV-a.');
+}
 /** Match Android Money.subtotal/Money.tax: positive half-up integer rounding. */
 function documentLines(array $input):array {
     $source=$input['lines']??null;
@@ -86,10 +104,7 @@ function documentLines(array $input):array {
         $price=priceInCents($raw['price']??null);
         if($qtyMilli<1||$qtyMilli>10000000||$price>1000000000)
             throw new HttpFailure(422,'Prevelika količina ili jedinična cijena.');
-        $rate=filter_var($raw['tax_rate']??null,FILTER_VALIDATE_INT);
-        if($rate===false||$rate===null||
-            !(($rate>=0&&$rate<=100)||($rate>=10001&&$rate<=20000)))
-            throw new HttpFailure(422,'Neispravna stopa PDV-a.');
+        $rate=documentTaxRate($raw['tax_rate']??null);
         $bp=$rate>=10000?$rate-10000:$rate*100;
         $net=intdiv($qtyMilli*$price+500,1000);
         $tax=intdiv($net*$bp+5000,10000);
