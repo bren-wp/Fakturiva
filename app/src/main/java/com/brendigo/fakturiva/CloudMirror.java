@@ -36,6 +36,16 @@ public final class CloudMirror {
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private CloudMirror(){}
 
+    /**
+     * Manual uploads, restores and deletes must never race automatic writes to
+     * the same remote snapshot. Queue them behind any in-flight mirror task.
+     * This serializes network/SQLite work without blocking the UI thread.
+     */
+    static void executeManualTransfer(Runnable transfer){
+        if(transfer==null)throw new IllegalArgumentException("Missing transfer");
+        WORK.execute(transfer);
+    }
+
     public interface Callback{void completed(String error);}
     private static SharedPreferences state(Context ctx,String id){
         if(!LocalAccounts.validProfileId(id))
@@ -415,8 +425,11 @@ public final class CloudMirror {
         if(!enabled(ctx,id)||state(ctx,id).getBoolean("paused",false))return;
         final Context app=ctx.getApplicationContext();
         WORK.execute(()->{
+            // This task may have been queued before a user started a manual
+            // restore; re-check pause on the executor to avoid stale writes.
             if(!enabled(app,id))return;
             SharedPreferences p=state(app,id);
+            if(p.getBoolean("paused",false))return;
             if(!p.getBoolean("dirty",false)||p.getBoolean("conflict",false))return;
             if(!id.equals(LocalAccounts.activeId()))return;
             // Capture the revision marker BEFORE reading SQLite and before any
