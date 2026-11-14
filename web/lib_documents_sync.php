@@ -278,6 +278,45 @@ function documentModified(array $root,string $operation,array $input):array {
         $root['documents'][$index]=$document;
         return $root;
     }
+    if($operation==='quote_convert'){
+        if($type!=='QUOTE'||!in_array($status,['SENT','ACCEPTED'],true))
+            throw new HttpFailure(409,'Samo potvrđena ponuda može postati nacrt računa.');
+        $number=$document['number']??null;
+        if(!is_string($number)||$number==='')
+            throw new HttpFailure(422,'Ponuda nema potvrđen broj.');
+        $company=documentCompany($root);
+        $client=clientSnapshot($root,(int)($document['client_id']??0));
+        $newId=nextSnapshotId($root['documents']);
+        $newLines=[];$net=0;$tax=0;
+        foreach($root['lines'] as $line){
+            if(($line['document_id']??null)!==$id)continue;
+            if(!is_int($line['net_cents']??null)||!is_int($line['tax_cents']??null)||
+               $line['net_cents']<0||$line['tax_cents']<0)
+                throw new HttpFailure(422,'Nevaljani iznosi izvorne ponude.');
+            $net+=$line['net_cents'];$tax+=$line['tax_cents'];
+            $newLines[]=$line;
+        }
+        if(!$newLines||$net!==($document['net_cents']??null)||
+           $tax!==($document['tax_cents']??null)||
+           $net+$tax!==($document['total_cents']??null))
+            throw new HttpFailure(422,'Ponuda i njezine stavke nisu usklađene.');
+        $new=$document;
+        $new['id']=$newId;$new['type']='INVOICE';$new['number']=null;
+        $new['status']='DRAFT';$new['created_at']=(int)round(microtime(true)*1000);
+        $new['notes']='Prema ponudi '.$number;
+        $new['quote_title']='';
+        $new['currency_code']=documentCurrency(
+            ['currency'=>$document['currency_code']??'EUR']);
+        foreach($client+documentIssuer($company) as $key=>$value)$new[$key]=$value;
+        $root['documents'][]=$new;
+        $nextId=nextSnapshotId($root['lines']);
+        foreach($newLines as $line){
+            if($nextId>2147483646)throw new HttpFailure(413,'Previše stavki.');
+            $line['id']=$nextId++;$line['document_id']=$newId;
+            $root['lines'][]=$line;
+        }
+        return $root;
+    }
     if($operation==='quote_accept'){
         if($type!=='QUOTE'||$status!=='SENT')
             throw new HttpFailure(409,'Prihvatiti se može samo potvrđena ponuda.');
