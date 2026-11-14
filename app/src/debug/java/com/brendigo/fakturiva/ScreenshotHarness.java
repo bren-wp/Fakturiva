@@ -300,7 +300,22 @@ public final class ScreenshotHarness {
                 break;
             }
             case "12":call(a,"clients");break;
-            case "13":call(a,"clientDetails",new Class<?>[]{Store.Client.class},db.clients().get(0));break;
+            case "13":{
+                // The owner's #13 reference shows Studio Sjever, not the
+                // newest client. Select that real synthetic Store record by
+                // identity rather than trusting a mutable list sort order.
+                long id=fixtureClient(db.clients(),"Studio Sjever d.o.o.");
+                db.updateClient(id,"Studio Sjever d.o.o.","",
+                    "Zagreb, Hrvatska","kontakt@primjer.hr","","");
+                Store.Client selected=null;
+                for(Store.Client candidate:db.clients()){
+                    if(candidate.id==id){selected=candidate;break;}
+                }
+                if(selected==null)throw new IllegalStateException(
+                    "Missing reference client after update");
+                call(a,"clientDetails",new Class<?>[]{Store.Client.class},selected);
+                break;
+            }
             case "14":call(a,"catalog");break;
             case "15":
                 ((java.util.Calendar)get(a,"reportMonth")).set(2026,java.util.Calendar.OCTOBER,1);

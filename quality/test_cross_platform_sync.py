@@ -68,6 +68,26 @@ class CrossPlatformSyncChecks(unittest.TestCase):
             "function backupStatus(string $token)",1)[1].split(
             "function loadBackup(string $token)",1)[0])
 
+    def test_manual_and_auto_sync_cannot_run_parallel_network_transfers(self):
+        # Manual register/upload/download/delete now share the same single
+        # executor as the automatic encrypted FAK1 revision writer.
+        self.assertIn("Executors.newSingleThreadExecutor()", MIRROR)
+        self.assertIn("static void executeManualTransfer(Runnable transfer)", MIRROR)
+        self.assertIn("WORK.execute(transfer);", MIRROR)
+        manual = NETWORK.split("public static void execute(", 1)[1]
+        self.assertIn("CloudMirror.executeManualTransfer(()->{", manual)
+        self.assertNotIn("new Thread(", manual)
+        pending = MIRROR.split("public static void runPending(", 1)[1]
+        self.assertIn('if(p.getBoolean("paused",false))return;', pending)
+        settings = MAIN.split("private void remoteAction(", 1)[1].split(
+            "private void privacyInfoScreen(", 1)[0]
+        self.assertIn("CloudMirror.suspend(this,id);", settings)
+        self.assertIn("CloudMirror.resume(this,id);", settings)
+        self.assertIn("CloudMirror.enable(this,id,api,user,syncSecret", settings)
+        # No silent data deletion or automatic server rollback on 409.
+        self.assertIn("if(revision!=0 && acknowledged!=revision)", NETWORK)
+        self.assertIn("catch(SelfHostedSyncClient.RevisionConflictException e)", MIRROR)
+
     def test_web_mutations_are_sealed_atomic_and_identity_isolated(self):
         self.assertIn("\\FakturivaSelfHost\\transaction(",BUSINESS)
         self.assertIn("\\FakturivaSelfHost\\webAuthorized($id,$webToken)",BUSINESS)

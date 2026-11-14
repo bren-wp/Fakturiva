@@ -2,13 +2,13 @@
 
 ## 20 referentnih zaslona
 
-Reference iz korisničkog ZIP paketa `Fakturiva_Android_Brending_i_20_Ekrana` imaju 1179 × 2556 px. Prije tvrdnje o pixel-perfect podudarnosti provjeriti stvarne snimke s istog profila Android uređaja, skaliranja i teme.
+Reference iz privatnog ZIP paketa `Fakturiva_Android_Brending_i_20_Ekrana(8).zip` imaju 1179 × 2556 px. Svih 20 stvarnih Android snimki iz `main` commita `bef1bcc67e` već je izmjereno: prosječni RGB MAE **8,229576/255**, **0/20** točnih podudaranja. Potpuni podaci i dokaz porijekla: [PIXEL_AUDIT_MAIN_BEF1BCC_2026-11-14.md](PIXEL_AUDIT_MAIN_BEF1BCC_2026-11-14.md). CI bez pada ne znači pixel-perfect 1:1.
 
 | # | Referenca | Funkcionalni ekvivalent | Status verifikacije |
 |---|---|---|---|
 | 01 | Početni zaslon | originalni native launcher/splash | emulatorska usporedba potrebna |
 | 02 | Dobrodošli | prvi ulazak | usporedba potrebna |
-| 03 | Prijava | nije potrebna za offline-first aplikaciju | zasebna odluka, ne fingirati korisnički račun |
+| 03 | Prijava | zaslon prijave e-adresom i lozinkom na zajednički Android/web račun; lokalni offline rad je odvojen | screenshot snimljen, 1:1 nije potvrđen |
 | 04 | Početna | dashboard | usporedba potrebna |
 | 05 | Računi | popis, pretraga, filtri | test s podacima |
 | 06 | Novi račun | unos klijenta i datuma | test prekida rada |
@@ -22,7 +22,7 @@ Reference iz korisničkog ZIP paketa `Fakturiva_Android_Brending_i_20_Ekrana` im
 | 14 | Artikli/usluge | katalog | test unosa |
 | 15 | Izvještaji | sažetak iz SQLite | provjera agregata |
 | 16 | Naplata | evidencija uplata | provjera parcijalne naplate |
-| 17 | Pomoć (promjena zahtjeva) | upute za račune i ponude i funkcionalni prečaci | nova referenca potrebna; stara slika se više ne boduje |
+| 17 | eRačun integracija | priprema profila, posrednika i ovlaštenja; nema dokaza o certificiranom slanju ili fiskalizaciji | screenshot izmjeren, 1:1 nije potvrđen |
 | 18 | Postavke | navigacija i sigurnosne kopije | test obnove |
 | 19 | Profil tvrtke | izdavatelj i podaci | test trajnog spremanja |
 | 20 | Tamna tema | Android native tema | test kontrasta i rubova |

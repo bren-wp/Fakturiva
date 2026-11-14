@@ -20,8 +20,8 @@ Fakturiva je aplikacija za izradu računa i ponuda, vođenje klijenata, katalog 
 ## Kontrole kvalitete
 - Svi testovi kompilacije, obračuna, oporavka, navigacije i radnih nacrta.
 - Usporedba sa stvarnim Android snimkama na raznim veličinama zaslona.
-- Zaslon 17 sada prikazuje **Pomoć**, umjesto ranijeg dizajna integracija. Njegova stara PNG referenca nije valjana za ocjenjivanje novog zaslona.
+- Zaslon 17 prikazuje **eRačune i fiskalizaciju** kao pripremu i postavke integracije. Stvarna produkcijska razmjena i certifikacija nisu potvrđene; postojeća referenca zaslona 17 i dalje se mjeri u vizualnom auditu.
 - Bez lažnih poslovnih podataka, nedostupnih funkcija ili demonstracijskih poruka u aplikaciji.
 - Produkcijska isporuka samo nakon provjere potpisa, testova i korisničkih tokova.
 
-Dokumenti su predlošci za poslovnu upotrebu. Korisnik treba provjeriti zahtjeve koji vrijede u njegovoj državi. Trenutačni prikaz iznosa je u EUR; više valuta još nije implementirano.
+Dokumenti su predlošci za poslovnu upotrebu. Korisnik treba provjeriti zahtjeve koji vrijede u njegovoj državi. U kodu postoje podrška za valutu dokumenta i više valutnih oznaka; ispravnost prikaza, zaokruživanja i usporedne Android–web–Windows obrade svake podržane valute treba zasebno potvrditi.

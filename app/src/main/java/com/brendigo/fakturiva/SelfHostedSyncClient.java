@@ -134,7 +134,7 @@ public final class SelfHostedSyncClient {
             throw new IllegalArgumentException("Nedostaju podaci za hosting");
         final char[] secret=passphrase==null?new char[0]:passphrase.clone();
         final String expectedProfile=LocalAccounts.activeId();
-        new Thread(()->{
+        CloudMirror.executeManualTransfer(()->{
             String token=null;
             String url=null;
             String error=null;
@@ -246,9 +246,19 @@ public final class SelfHostedSyncClient {
             final String message=error;
             final String success=outcome;
             new Handler(Looper.getMainLooper()).post(()->{
-                if(!activity.isFinishing()&&!activity.isDestroyed())
+                if(!activity.isFinishing()&&!activity.isDestroyed()){
                     callback.finished(message,success);
+                }else if(expectedProfile!=null &&
+                    CloudMirror.enabled(activity.getApplicationContext(),expectedProfile)){
+                    // Activity rotation/exit must never leave an enabled mirror
+                    // permanently paused. A successful remote deletion also
+                    // invalidates its former background-sync credentials.
+                    if(action==Action.DELETE && message==null)
+                        CloudMirror.disconnect(activity.getApplicationContext(),expectedProfile);
+                    else
+                        CloudMirror.resume(activity.getApplicationContext(),expectedProfile);
+                }
             });
-        },"FakturivaSelfHostedSync").start();
+        });
     }
 }
