@@ -33,8 +33,16 @@ class CrossPlatformSyncChecks(unittest.TestCase):
         self.assertIn('!p.getBoolean("paused",false)',MIRROR)
         self.assertIn('store.restore(snapshot)',MIRROR)
         self.assertIn('SyncIntegrity.verifyRemote(remote,ciphertext)',MIRROR)
-        self.assertIn('if(p.getBoolean("conflict",false)||p.getBoolean("paused",false))',MIRROR)
+        self.assertIn('public static void resolveConflictUsingServer(',MIRROR)
+        self.assertIn('pullWithPolicy(ctx,id,true,callback)',MIRROR)
+        self.assertIn('if(!p.getBoolean("conflict",false))',MIRROR)
+        self.assertIn('if(p.getBoolean("paused",false))',MIRROR)
+        self.assertIn('if(resolveConflict&&advertised<=known)',MIRROR)
+        self.assertIn('!marker.equals(p.getString("pending_change",""))',MIRROR)
         self.assertIn('RecoveryVault.hasWorkingDraft(app)',MIRROR)
+        self.assertIn('CloudMirror.resolveConflictUsingServer(this,profile',MAIN)
+        self.assertIn('Izvezi lokalnu kopiju',MAIN)
+        self.assertIn('Razriješi sukob sa serverom',MAIN)
 
     def test_revision_probe_only_transfers_backup_when_newer(self):
         self.assertIn('"action","status"',NETWORK)
