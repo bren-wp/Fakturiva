@@ -4,8 +4,10 @@
 AppId={{319A1CA7-725D-4AD2-8B22-E6BE95205499}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppPublisher=Brendigo
-AppPublisherURL=https://fakturiva.com
+AppPublisher=BRENDIGO
+AppPublisherURL=https://brendigo.com
+AppSupportURL=https://fakturiva.eu
+AppUpdatesURL=https://github.com/bren-wp/Fakturiva/releases
 DefaultDirName={autopf}\Fakturiva
 DefaultGroupName=Fakturiva
 DisableProgramGroupPage=yes
