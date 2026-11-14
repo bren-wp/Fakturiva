@@ -133,7 +133,7 @@ function syncCatalogFields(array $item=[]):void {
 <?=logoMarkup()?>
 <h1>Poslovni podatci na serveru</h1>
 <p>Prijavljeni ste kao <strong><?=h((string)$account['username'])?></strong>.
-Promjene tvrtke i klijenata zapisuju se kao nova šifrirana revizija iste
+Promjene tvrtke, klijenata, artikala i uplata zapisuju se kao nova šifrirana revizija iste
 sigurnosne kopije koju koristi Android. Windows prikazuje ovaj web portal.
 Već izdani dokumenti i njihove povijesne vrijednosti ne mijenjaju se.</p>
 <p><strong>Revizija servera:</strong> <?=$revision?></p>
