@@ -128,3 +128,26 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .legacy-login a{font-weight:700}
 @media(max-width:360px){.auth-reference-login .auth-head h1{font-size:28px}.auth-reference-login .login-actions{font-size:11px}}
 @media(max-height:780px){.auth-reference-login .auth-form{margin-top:42px}.auth-reference-login .auth-switch{margin-top:27px}}
+
+/* Responsive cross-platform business editor: no JS or third-party assets. */
+.sync-business{max-width:820px}
+.sync-business .panel{box-shadow:0 7px 22px #14263f08}
+.sync-business .panel form{max-width:640px}
+.sync-client{border:1px solid #d9e0ee;border-radius:13px;margin:12px 0;padding:13px 17px}
+.sync-client summary{cursor:pointer;font-weight:680;color:#1c3356;min-height:29px}
+.sync-client[open]{background:#f6f8fc}
+.sync-client form{padding:10px 0 5px}
+.sync-business input{max-width:100%;min-width:0}
+@media(max-width:420px){
+.sync-business{padding:18px 15px 35px}
+.sync-business .panel{padding:18px;border-radius:16px}
+.sync-business h1{font-size:25px}
+.sync-client{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+.sync-business *{scroll-behavior:auto!important;transition:none!important}
+}
+
+.sync-business select{display:block;width:100%;min-height:50px;border:1px solid #cbd5e7;border-radius:12px;padding:12px 14px;background:#fff;color:#0c2040;font:inherit}
+.sync-business select:focus-visible{outline:3px solid #3171e8;outline-offset:3px}
+.sync-business input[type=search]{appearance:none}

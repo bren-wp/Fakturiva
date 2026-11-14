@@ -89,6 +89,23 @@ public final class SelfHostedSyncClient {
         }finally{connection.disconnect();}
     }
 
+    /**
+     * New servers return only revision metadata. Old, user-owned PHP servers
+     * may not yet implement status; keep those installations usable using
+     * the existing authenticated load action. Never turn a login, TLS, or
+     * other server failure into an insecure fallback.
+     */
+    static JSONObject revisionStatus(String url,String token)throws Exception {
+        try{
+            return request(url,new JSONObject().put("action","status"),token);
+        }catch(IllegalStateException unsupported){
+            if(unsupported.getMessage()==null ||
+               !unsupported.getMessage().contains("Hosting: Unknown action"))
+                throw unsupported;
+            return request(url,new JSONObject().put("action","load"),token);
+        }
+    }
+
     static JSONObject command(String action,String username,String password){
         try {
             return new JSONObject().put("action",action).put("username",username)

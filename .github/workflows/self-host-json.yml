@@ -32,6 +32,8 @@ jobs:
         run: php quality/web-hosting/storage-engine-smoke.php
       - name: Verify durable encrypted revision history and safe rollback
         run: php quality/web-hosting/history-smoke.php
+      - name: Verify encrypted web edits synchronize with Android account revisions
+        run: php quality/web-hosting/business-sync-smoke.php
       - name: Verify account administration and tenant isolation
         run: php quality/web-hosting/admin-smoke.php
       - name: Verify server-side tax reports and draft-only XML

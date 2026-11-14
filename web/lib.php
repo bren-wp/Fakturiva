@@ -169,6 +169,20 @@ function encryptedRevisionList(array $account): array {
     }
     return $rows;
 }
+/** Authenticated lightweight revision probe; never send backup bytes.
+ * Uses the same encrypted account/transaction lock as load and save.
+ */
+function backupStatus(string $token): array {
+    return transaction(function()use($token):array {
+        $account=authorized($token);
+        return [
+            'revision'=>(int)$account['revision'],
+            'has_backup'=>is_string($account['backup']??null) &&
+                (string)$account['backup']!=='',
+            'saved_at'=>$account['saved_at']??null
+        ];
+    });
+}
 function loadBackup(string $token): array {
     return transaction(function() use($token): array {
         $account=authorized($token);
