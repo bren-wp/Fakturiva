@@ -19,6 +19,11 @@ EXCLUDE_DIRS = {".git", ".gradle", "build", ".idea", "node_modules"}
 RULES = (
     ("android-cleartext", "*.xml", r'android:usesCleartextTraffic\s*=\s*"true"'),
     ("android-debuggable", "*.xml", r'android:debuggable\s*=\s*"true"'),
+    ("android-backup-enabled", "*.xml", r'android:allowBackup\s*=\s*"true"'),
+    ("android-universal-file-access", "*.java", r'\bsetAllowUniversalAccessFromFileURLs\s*\(\s*true\s*\)'),
+    ("windows-webview-host-objects", "*.cs", r'\bAreHostObjectsAllowed\s*=\s*true\b'),
+    ("windows-webview-messages", "*.cs", r'\bIsWebMessageEnabled\s*=\s*true\b'),
+    ("windows-webview-devtools", "*.cs", r'\bAreDevToolsEnabled\s*=\s*true\b'),
     ("permissive-tls", "*.java", r'setHostnameVerifier\s*\([^;]*->\s*true'),
     ("trust-all-certs", "*.java", r'X509TrustManager\s*\[\s*\]\s*.*trustAll'),
     ("android-js-bridge", "*.java", r'\baddJavascriptInterface\s*\('),
@@ -86,17 +91,27 @@ def scan_static(root: Path = ROOT) -> dict:
                     "line": lineno, "method": name
                 })
 
-    # Runtime accounts, keys, and backups must never be committed.
+    # Scan the full tree for runtime records (including .json excluded from
+    # source scans). This is a filesystem inventory, not just a PHP scan.
     secret_files = []
-    for path in paths:
+    for path in root.rglob("*"):
+        if not path.is_file() or any(part in EXCLUDE_DIRS for part in path.relative_to(root).parts):
+            continue
         relative = path.relative_to(root).as_posix()
         if re.match(r"web/storage/(?:secret\.php|data/(?:accounts|index|limits)/.*\.json)$",
                     relative):
             secret_files.append(relative)
+    large_modules = sorted((
+        {"file": path.relative_to(root).as_posix(),
+         "lines": code.count("\n") + 1}
+        for path, code in texts.items()
+        if code.count("\n") + 1 > 600
+    ), key=lambda row: -row["lines"])
     return {
         "scanned_files": len(paths), "by_extension": dict(sorted(counts.items())),
         "critical_findings": critical, "possible_dead_private_methods": possible_dead,
         "runtime_secret_files": secret_files,
+        "large_source_modules_for_refactoring": large_modules,
         "limits": "Static heuristics only; runtime, server configuration, third-party "
                   "dependencies and UX visual comparisons need separate verification.",
     }
