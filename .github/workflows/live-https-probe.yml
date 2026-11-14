@@ -1,0 +1,28 @@
+name: Public Fakturiva HTTPS read-only probe
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'quality/web-hosting/live-https-probe.sh'
+      - '.github/workflows/live-https-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  external-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify canonical public TLS and health contract without credentials
+        id: verify
+        continue-on-error: true
+        run: bash quality/web-hosting/live-https-probe.sh
+      - name: Report external production status without blocking safe development
+        if: always()
+        run: |
+          if [[ "${{ steps.verify.outcome }}" != "success" ]]; then
+            echo "::warning::Public fakturiva.eu health could not be verified. Deployment / DNS / TLS / routing requires independent review. No write or login request was sent."
+          else
+            echo "Public read-only health contract verified. This does NOT prove deployment of this PR or authenticated cross-platform synchronization."
+          fi

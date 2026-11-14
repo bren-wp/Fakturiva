@@ -91,6 +91,10 @@ public final class CloudMirror {
     static int expectedRevision(Context ctx,String id){
         return enabled(ctx,id)?state(ctx,id).getInt("revision",-1):-1;
     }
+    /** Only the account owner can explicitly resolve a detected CAS conflict. */
+    public static boolean hasConflict(Context ctx,String id){
+        return enabled(ctx,id)&&state(ctx,id).getBoolean("conflict",false);
+    }
     /**
      * A safe, clean account may check for newer web/server changes before the
      * business UI becomes interactive. A dirty, conflicted or paused profile
@@ -249,6 +253,23 @@ public final class CloudMirror {
      * is taken by Store.restore BEFORE the replacement SQLite transaction.
      */
     public static void pullNewer(Context ctx,String id,PullCallback callback){
+        pullWithPolicy(ctx,id,false,callback);
+    }
+
+    /**
+     * Explicit conflict resolution: the user has reviewed the warning and
+     * chosen the newer remote snapshot after exporting local data separately.
+     * NEVER called on login or during background sync. Store.restore creates
+     * a durable encrypted local recovery snapshot before replacing SQLite.
+     * No automatic three-way merge or silent upload is attempted.
+     */
+    public static void resolveConflictUsingServer(Context ctx,String id,
+                                                  PullCallback callback){
+        pullWithPolicy(ctx,id,true,callback);
+    }
+
+    private static void pullWithPolicy(Context ctx,String id,boolean resolveConflict,
+                                       PullCallback callback){
         final Context app=ctx.getApplicationContext();
         WORK.execute(()->{
             String error=null;
@@ -261,9 +282,19 @@ public final class CloudMirror {
                 if(!enabled(app,id) || !id.equals(LocalAccounts.activeId()))
                     throw new SecurityException("Prijavite se u povezani račun.");
                 SharedPreferences p=state(app,id);
-                if(p.getBoolean("dirty",false))
+                if(resolveConflict){
+                    if(!p.getBoolean("conflict",false))
+                        throw new IllegalStateException(
+                            "Nema potvrđenog sukoba revizija. Koristite uobičajenu sinkronizaciju.");
+                }else if(p.getBoolean("dirty",false)||p.getBoolean("conflict",false))
                     throw new IllegalStateException(
-                        "Lokalne promjene nisu prenesene. Prvo provjerite pohranu ili izvezite kopiju.");
+                        "Neprenesene promjene ili sukob verzija. Lokalni podatci ostaju netaknuti.");
+                if(p.getBoolean("paused",false))
+                    throw new IllegalStateException(
+                        "Sinkronizacija je pauzirana. Prije razrješenja provjerite stanje.");
+                if(RecoveryVault.hasWorkingDraft(app))
+                    throw new IllegalStateException(
+                        "Otvoreni nacrt nije spremljen. Najprije ga dovršite ili sigurno spremite.");
                 if(p.getInt("revision",-1)<1)
                     throw new SecurityException("Nije potvrđena prethodna server revizija.");
                 final String marker=p.getString("pending_change","");
@@ -281,6 +312,9 @@ public final class CloudMirror {
                 if(advertised<known)
                     throw new SecurityException(
                         "Server ima stariju reviziju; lokalni podatci nisu promijenjeni.");
+                if(resolveConflict&&advertised<=known)
+                    throw new IllegalStateException(
+                        "Server nema noviju reviziju; podaci nisu zamijenjeni.");
                 if(advertised>known){
                     JSONObject remote=status.has("backup_b64")?status:
                         SelfHostedSyncClient.request(url,
@@ -308,7 +342,12 @@ public final class CloudMirror {
                     // this runs; additionally reject a pending marker changed
                     // in the meantime. Upload jobs serialize through WORK.
                     synchronized(STATE_LOCK){
-                        if(p.getBoolean("dirty",false) ||
+                        if((resolveConflict
+                               ? !p.getBoolean("conflict",false)
+                               : (p.getBoolean("dirty",false) ||
+                                  p.getBoolean("conflict",false))) ||
+                           p.getBoolean("paused",false) ||
+                           RecoveryVault.hasWorkingDraft(app) ||
                            !marker.equals(p.getString("pending_change","")) ||
                            !id.equals(LocalAccounts.activeId()))
                             throw new IllegalStateException(
@@ -438,6 +477,12 @@ public final class CloudMirror {
                         catch(Exception ignored){}
                     }
                 }finally{Arrays.fill(cipher,(byte)0);}
+            }catch(SelfHostedSyncClient.RevisionConflictException e){
+                // A server may advance between the status probe and save POST.
+                // Treat that exact HTTP 409 as a durable conflict, NEVER as a
+                // retryable error; the dirty local database remains untouched.
+                p.edit().putBoolean("conflict",true)
+                    .putString("last_error",e.getMessage()).commit();
             }catch(Exception e){
                 p.edit().putString("last_error",
                     e.getMessage()==null?"Prijenos nije uspio":e.getMessage()).commit();

@@ -20,19 +20,26 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
         if(strlen($password)<12 || strlen($password)>256)
             throw new FakturivaSelfHost\HttpFailure(422,'Unesite lozinku poslovnih podataka.');
         if(in_array($mode,['profile','client_add','client_edit',
-                       'catalog_add','catalog_edit'],true)){
+                       'catalog_add','catalog_edit','payment_add'],true)){
             $expected=filter_var($_POST['revision']??null,FILTER_VALIDATE_INT);
             if($expected===false||$expected===null)
                 throw new FakturivaSelfHost\HttpFailure(422,'Nevaljana revizija.');
             $fields=[];
             foreach(['name','oib','address','city','postal_code','email',
-                     'phone','vat_id','price','tax_rate','kind','unit'] as $key)
+                     'phone','vat_id','price','tax_rate','kind','unit',
+                     'amount','paid_on','channel'] as $key)
                 if(array_key_exists($key,$_POST))$fields[$key]=$_POST[$key];
             if($mode==='client_edit'||$mode==='catalog_edit'){
                 $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
                 if($id===false||$id===null)
                     throw new FakturivaSelfHost\HttpFailure(422,'Nevaljan klijent.');
                 $fields['id']=$id;
+            }
+            if($mode==='payment_add'){
+                $docId=filter_var($_POST['document_id']??null,FILTER_VALIDATE_INT);
+                if($docId===false||$docId===null||$docId<1)
+                    throw new FakturivaSelfHost\HttpFailure(422,'Odaberite izdani račun.');
+                $fields['document_id']=$docId;
             }
             $ack=FakturivaWebBusiness\publish(
                 (string)$_SESSION['web_id'],(string)$_SESSION['web_token'],
@@ -56,7 +63,7 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
         unset($password);
     }
 }
-$company=[];$clients=[];$catalog=[];
+$company=[];$clients=[];$catalog=[];$payableInvoices=[];
 if(is_array($snapshot)){
     foreach($snapshot['company'] as $row)
         if(is_array($row)&&is_string($row['key']??null))
@@ -74,6 +81,11 @@ if(is_array($snapshot)){
             stripos((string)($item['email']??''),$clientSearch)!==false));
     if($catalogSearch!=='')$catalog=array_values(array_filter($catalog,
         static fn($item)=>stripos((string)($item['name']??''),$catalogSearch)!==false));
+    try{$payableInvoices=FakturivaWebBusiness\payableInvoices($snapshot);}
+    catch(FakturivaSelfHost\HttpFailure $e){
+        $error=$e->getMessage();
+        $payableInvoices=[];
+    }
 }
 function syncField(string $name,string $label,string $value='',bool $required=false):void {
     $id='sync-'.preg_replace('/[^a-z0-9_-]/','',strtolower($name)).'-'.
@@ -121,7 +133,7 @@ function syncCatalogFields(array $item=[]):void {
 <?=logoMarkup()?>
 <h1>Poslovni podatci na serveru</h1>
 <p>Prijavljeni ste kao <strong><?=h((string)$account['username'])?></strong>.
-Promjene tvrtke i klijenata zapisuju se kao nova šifrirana revizija iste
+Promjene tvrtke, klijenata, artikala i uplata zapisuju se kao nova šifrirana revizija iste
 sigurnosne kopije koju koristi Android. Windows prikazuje ovaj web portal.
 Već izdani dokumenti i njihove povijesne vrijednosti ne mijenjaju se.</p>
 <p><strong>Revizija servera:</strong> <?=$revision?></p>
@@ -227,9 +239,55 @@ zaokruživanja preko floating-point izračuna.</p>
 ili Android aplikaciju.</p>
 <?php endif;?>
 </section>
+<section class="panel">
+<h2>Evidencija primljenih uplata</h2>
+<p>Nova uplata evidentira se na istom serveru kao Android računi i čuva
+u šifriranoj kopiji. Iznos se ne može evidentirati ako je račun već
+podmiren ili nije izdan. Uplaćenu svotu i datum potvrdite prema stvarnoj uplati.</p>
+<?php if($payableInvoices):?>
+<form action="business.php" method="post" autocomplete="off">
+<?php syncHidden('payment_add',$revision); ?>
+<label for="payment-document">Izdani račun s nepodmirenim iznosom</label>
+<select id="payment-document" name="document_id" required>
+<option value="">Odaberite račun</option>
+<?php foreach(array_slice($payableInvoices,0,100,true) as $id=>$balance):
+$doc=$balance['document'];
+$currency=(string)($doc['currency_code']??'EUR');
+$displayAmount=number_format($balance['outstanding']/100,2,',','.');
+?>
+<option value="<?=(int)$id?>"><?=h((string)($doc['number']??('ID '.$id)))?>
+ — <?=h($displayAmount.' '.$currency)?> preostalo</option>
+<?php endforeach;?>
+</select>
+<?php if(count($payableInvoices)>100):?>
+<p>Prikazano je najnovijih 100 otvorenih računa. Za ostale uplate
+koristite Android aplikaciju.</p>
+<?php endif;?>
+<label for="payment-amount">Stvarno primljeni iznos (npr. 125,50)</label>
+<input id="payment-amount" name="amount" inputmode="decimal"
+type="text" maxlength="20" autocomplete="off" required>
+<label for="payment-date">Datum primitka</label>
+<input id="payment-date" name="paid_on" type="date"
+value="<?=h(date('Y-m-d'))?>" required>
+<label for="payment-channel">Način primitka</label>
+<select id="payment-channel" name="channel" required>
+<option value="BANK">Uplata na račun</option>
+<option value="CASH">Gotovina</option>
+<option value="CARD">Kartica</option>
+<option value="CHEQUE">Ček</option>
+</select>
+<?php syncPassword(); ?>
+<button class="primary-action" type="submit">Evidentiraj stvarnu uplatu</button>
+</form>
+<?php else:?>
+<p>Trenutačno nema izdanih računa s iznosom za naplatu ili podatke
+nije moguće sigurno provjeriti.</p>
+<?php endif;?>
+</section>
 <?php endif;?>
 <nav class="account-links" aria-label="Navigacija">
 <a href="dashboard.php">Moj račun</a>
 <a href="finance.php">Financijski pregled</a>
+<a href="documents.php">Računi i ponude</a>
 <a href="tax-reports.php">Porezni izvještaji</a>
 </nav></main></body></html>
