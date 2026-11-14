@@ -217,3 +217,80 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
   body.print-document .document-page .document-print-parties,
   body.print-document .document-page .document-print-totals{break-inside:avoid}
 }
+
+/*
+ * Shared business-portal design tokens mirror native Android surfaces.
+ * Authentication reference screens retain their own measured layout.
+ * These classes apply to the authenticated web and Windows WebView2 portal.
+ */
+:root{
+  --f-app-canvas:#f6f8fc;
+  --f-app-panel:#ffffff;
+  --f-app-text:#253449;
+  --f-app-muted:#8592a5;
+  --f-app-blue:#5566f8;
+  --f-app-outline:#e9edf5;
+  --f-app-hero:#14263f;
+}
+body:has(>.account-page){background:var(--f-app-canvas)}
+.account-page{color:var(--f-app-text);padding-bottom:calc(48px + env(safe-area-inset-bottom,0px))}
+.account-page h1{color:var(--f-app-text);letter-spacing:-.6px}
+.account-page .panel{
+  border-color:var(--f-app-outline);
+  border-radius:17px;
+  background:var(--f-app-panel);
+  box-shadow:0 8px 28px rgba(20,38,63,.045);
+}
+.account-page .panel h2{color:var(--f-app-hero)}
+.account-page .panel .primary-action,.account-page a.primary-action{
+  background:var(--f-app-blue);
+  color:#fff;
+  box-shadow:0 7px 20px rgba(85,102,248,.14);
+}
+.account-page a:focus-visible,.account-page button:focus-visible,
+.account-page input:focus-visible,.account-page select:focus-visible{
+  outline:3px solid var(--f-app-blue);
+  outline-offset:2px;
+}
+/* Single source of business navigation across web and desktop. */
+.portal-tabs{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  align-items:stretch;
+  gap:6px;
+  background:var(--f-app-panel);
+  border:1px solid var(--f-app-outline);
+  border-radius:17px;
+  padding:6px;
+  margin:19px 0 18px;
+  box-shadow:0 8px 28px rgba(20,38,63,.045);
+}
+.portal-tabs a{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:11px 5px;
+  min-width:0;
+  min-height:48px;
+  border-radius:12px;
+  color:#536780;
+  font-size:13px;
+  font-weight:700;
+  text-align:center;
+  text-decoration:none;
+  overflow-wrap:anywhere;
+  transition:background-color .15s,color .15s;
+}
+.portal-tabs a:hover{background:#f1f4fc;text-decoration:none}
+.portal-tabs a[aria-current="page"]{background:#e9ecff;color:#354ed0}
+@media(max-width:520px){
+  .account-page{padding-left:16px;padding-right:16px}
+  .portal-tabs{gap:2px;margin:15px 0;padding:4px;border-radius:15px}
+  .portal-tabs a{font-size:11px;line-height:1.15;min-height:49px;padding:9px 1px}
+}
+@media(prefers-reduced-motion:reduce){
+  .portal-tabs a{transition:none}
+}
+@media print{
+  .portal-tabs{display:none!important}
+}
