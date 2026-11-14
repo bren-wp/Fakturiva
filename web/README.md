@@ -12,6 +12,7 @@
 - `POST /api.php` s `{"action":"status"}` i valjanim Bearer tokenom vraća samo `revision`, `has_backup` i `saved_at`, bez prijenosa pune preslike. Odvojeni `load` preuzima šifrirane bajtove samo kad je potreban. Starije verzije servera ostaju dostupne preko kontroliranog `load` fallbacka.
 - Web evidencija uplata prihvaća samo potvrđene račune s nepodmirenim iznosom, datumom i načinom primitka. Server računa preostali dug iz dokumenta i prethodnih uplata; ne vjeruje iznosima ili statusu koje je poslao preglednik. Djelomična uplata ostavlja račun otvorenim; zadnja uplata zaključuje status `PAID`. Svaka izmjena prolazi istu provjeru revizije i povijesti kao Android.
 - `/documents.php` nudi izradu, uređivanje i brisanje **samo nacrta** računa i ponuda. Potvrda dodjeljuje brojeve iz zajedničkih sekvenci, smrzava podatke izdavatelja te obračunava stavke i PDV prema Android Money pravilima. Prihvat ponude i izrada novog nacrta računa iz ponude čuvaju izvorne dokumente. Ne dopušta brisanje niti uređivanje potvrđenih dokumenata.
+- `/documents.php` sada prikazuje read-only pregled izdavatelja, klijenta, stavki i iznosa te gumb **Ispiši / Spremi u PDF** samo kada su iznosi i obvezni podaci usklađeni. Pregled je HTML-escaped i otvara standardni dijalog pisača preglednika (na Windowsu kroz WebView2); to nije server-generirani fiskalizirani PDF ni strukturirani eRačun. Izvorna šifrirana preslika ne mijenja se ispisom.
 - Kod statusa 409 obrazac može prikazati korisniku samo dopuštena nespremljena polja za ručnu usporedbu; nikad ne zapisuje lozinku, ne sprema niti automatski primjenjuje konfliktni sadržaj.
 - Web i Android ne rade istovremeno spajanje pojedinačnih poslovnih zapisa. Web izdaje novu verziju samo ako se `expected_revision` podudara, a sukob se mora ručno riješiti uz očuvanje lokalne i povijesne kopije.
 
@@ -37,6 +38,9 @@ find web -name '*.php' -print0 | xargs -0 -n1 php -l
 php quality/web-hosting/smoke.php
 php quality/web-hosting/web-auth-smoke.php
 php quality/web-hosting/business-sync-smoke.php # uključuje uplate, sve CRUD operacije nad nacrtima, iznos/PDV i sukobe revizija
+php quality/web-hosting/document-capacity-smoke.php
+php quality/web-hosting/document-publish-atomicity-smoke.php
+php quality/web-hosting/document-print-smoke.php
 bash quality/web-hosting/http-smoke.sh
 bash quality/web-hosting/web-form-http.sh
 ```
