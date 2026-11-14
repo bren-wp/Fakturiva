@@ -23,6 +23,21 @@ jobs:
         run: |
           php -v
           php -r 'if(!extension_loaded("openssl") || !extension_loaded("json")) exit(2);'
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify actual Android and PHP FAK1 encryption interoperability
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/fak1
+          javac -d build/fak1 app/src/main/java/com/brendigo/fakturiva/SecureBackup.java quality/CrossRuntimeFak1Smoke.java
+          # Random per-run synthetic password: never use real account secrets.
+          export FAKTURIVA_FIXTURE_PASS="$(openssl rand -hex 24)"
+          php quality/web-hosting/fak1-fixture.php \
+            | java -cp build/fak1 com.brendigo.fakturiva.CrossRuntimeFak1Smoke \
+            | php quality/web-hosting/verify-java-fak1.php
       - name: Lint all PHP source files
         run: |
           find web -name '*.php' -print0 | xargs -0 -n1 php -l
