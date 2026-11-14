@@ -78,7 +78,7 @@ class CrossPlatformSyncChecks(unittest.TestCase):
     def test_document_crud_and_confirmed_immutability(self):
         self.assertIn("require_once __DIR__.'/lib_documents_sync.php'",BUSINESS)
         self.assertIn("return documentModified($root,$operation,$input)",BUSINESS)
-        for operation in ('doc_add','doc_edit','doc_delete','doc_confirm','quote_accept'):
+        for operation in ('doc_add','doc_edit','doc_delete','doc_confirm','quote_accept','quote_convert'):
             self.assertIn(operation,DOCUMENTS)
         self.assertIn("if($status!=='DRAFT')",DOCUMENTS)
         self.assertIn("documentIssuer($issuer)",DOCUMENTS)
