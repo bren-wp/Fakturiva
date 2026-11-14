@@ -40,6 +40,34 @@ class StaticCodeAuditTest(unittest.TestCase):
                                 for row in result["critical_findings"]))
             self.assertIn("web/storage/secret.php", result["runtime_secret_files"])
 
+    def test_detects_json_account_records_not_only_source_extensions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            account = root / "web/storage/data/accounts/secret-record.json"
+            account.parent.mkdir(parents=True)
+            account.write_text('{"ciphertext":"sensitive"}', encoding="utf-8")
+            result = audit.scan_static(root)
+            self.assertIn("web/storage/data/accounts/secret-record.json",
+                          result["runtime_secret_files"])
+
+    def test_detects_unsafe_webview_flags_and_enabled_android_backup(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "win/FakturivaWindow.cs"
+            source.parent.mkdir(parents=True)
+            source.write_text("settings.AreHostObjectsAllowed = true;\n"
+                              "settings.IsWebMessageEnabled = true;\n",
+                              encoding="utf-8")
+            manifest = root / "app/src/main/AndroidManifest.xml"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(
+                '<application android:allowBackup="true"/>', encoding="utf-8")
+            result = audit.scan_static(root)
+            rules = {finding["rule"] for finding in result["critical_findings"]}
+            self.assertIn("windows-webview-host-objects", rules)
+            self.assertIn("windows-webview-messages", rules)
+            self.assertIn("android-backup-enabled", rules)
+
     def test_dead_code_is_advisory_not_auto_deleted(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
