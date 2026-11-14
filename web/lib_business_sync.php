@@ -21,6 +21,18 @@ function requiredField(array $data,string $name,int $max,bool $required=false):s
     return $value;
 }
 
+/** The same Croatian ISO 7064 MOD 11,10 OIB as Android Oib.valid(). */
+function validOib(string $raw):bool {
+    if(!preg_match('/^[0-9]{11}$/D',$raw))return false;
+    $a=10;
+    for($i=0;$i<10;$i++){
+        $a=($a+(int)$raw[$i])%10;
+        if($a===0)$a=10;
+        $a=($a*2)%11;
+    }
+    return (11-$a)%10===(int)$raw[10];
+}
+
 /** Strict 2-decimal monetary parser; never store PHP floating point prices. */
 function priceInCents(mixed $value):int {
     if(!is_string($value)||!preg_match('/^([0-9]{1,10})(?:[.,]([0-9]{1,2}))?$/D',$value,$parts))
@@ -54,6 +66,18 @@ function modified(array $root,string $operation,array $input):array {
         ];
         if($fields['email']!=='' && filter_var($fields['email'],FILTER_VALIDATE_EMAIL)===false)
             throw new HttpFailure(422,'Nevaljana e-adresa tvrtke.');
+        // Match Android BusinessProfileRules: a Croatian company profile
+        // must have an OIB and location before it can be persisted.
+        $country='';
+        foreach($root['company'] as $existing)
+            if(is_array($existing)&&($existing['key']??'')==='country')
+                $country=strtoupper(trim((string)($existing['value']??'')));
+        if(in_array($country,['HR','HRVATSKA','CROATIA'],true)){
+            if(!validOib($fields['oib']))
+                throw new HttpFailure(422,'OIB mora imati 11 ispravnih znamenki.');
+            if($fields['address']==='' || $fields['city']==='')
+                throw new HttpFailure(422,'Adresa i grad izdavatelja obvezni su.');
+        }
         // Leave current country/legal_form untouched and never revise the
         // historical immutable issuer snapshot on an issued document.
         $found=[];
