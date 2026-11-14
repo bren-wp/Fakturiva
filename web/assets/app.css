@@ -157,3 +157,22 @@ a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{o
 .sync-business .panel select:focus-visible{outline:3px solid #3171e8;outline-offset:3px}
 .sync-business .panel input[type="date"]{min-width:0;max-width:100%}
 @media(max-width:480px){.sync-business{padding:24px 14px 36px}.sync-business .panel{padding:18px 15px;border-radius:16px}.sync-business .panel select{font-size:16px}}
+
+/* Document CRUD: layout intentionally follows mobile account portal's tokens. */
+.document-page .document-editor{display:flex;flex-direction:column;gap:4px;min-width:0}
+.document-page .document-editor h3{font-size:17px;margin:22px 0 0}
+.document-page .document-editor textarea,
+.document-page .document-editor select{width:100%;max-width:100%;min-width:0;min-height:48px;border:1px solid var(--outline);border-radius:12px;background:#fff;color:var(--ink);padding:12px;font:inherit}
+.document-page .document-editor textarea:focus-visible{outline:3px solid #3171e8;outline-offset:3px}
+.document-page .document-lines{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.document-page .document-line{min-width:0;border:1px solid var(--line);padding:12px;border-radius:14px}
+.document-page .document-line legend{font-weight:700;padding:0 6px;color:var(--ink)}
+.document-page .document-line label{font-size:13px;margin:10px 0 4px}
+.document-page .document-line input{font-size:16px}
+.document-page .sync-client form{margin:12px 0 20px}
+.document-page .sync-client summary{overflow-wrap:anywhere}
+@media(max-width:480px){
+ .document-page .document-line{padding:12px 10px}
+ .document-page .panel{padding:18px 14px}
+ .document-page .document-editor{gap:2px}
+}
