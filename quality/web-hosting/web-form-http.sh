@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 port=18090
-FAKTURIVA_TEST_HTTP=1 php -S "127.0.0.1:$port" -t web >/tmp/fakturiva-web-http.log 2>&1 &
-pid=$!
 temp="$(mktemp -d)"
+mkdir -p "$temp/private"
+FAKTURIVA_STORAGE_ROOT="$temp/private" FAKTURIVA_TEST_HTTP=1 \
+  php -S "127.0.0.1:$port" -t web >"$temp/php.log" 2>&1 &
+pid=$!
 trap 'kill "$pid" 2>/dev/null || true; rm -rf "$temp"' EXIT
 base="http://127.0.0.1:$port"
 ready=false
@@ -79,6 +81,67 @@ curl -fsS -b "$jar" -c "$jar" -X POST "$base/finance.php" \
   --data-urlencode "to=2026-12-31" > "$temp/finance-unlocked.html"
 grep -Fq 'R-2026-WEB-E2E' "$temp/finance-unlocked.html"
 grep -Fq 'Brendigo HTTP E2E Klijent' "$temp/finance-unlocked.html"
+
+# Same authenticated browser session creates and issues a real invoice draft
+# in the encrypted Android-compatible schema-8 snapshot.
+curl -fsS -b "$jar" -c "$jar" -X POST "$base/documents.php" \
+  --data-urlencode "csrf=$finance_csrf" \
+  --data-urlencode 'mode=unlock' \
+  --data-urlencode "passphrase=$passphrase" > "$temp/documents-unlocked.html"
+grep -Fq 'Novi račun ili ponuda' "$temp/documents-unlocked.html"
+doc_csrf="$(extract_csrf "$temp/documents-unlocked.html")"
+test "${#doc_csrf}" -eq 64
+curl -fsS -b "$jar" -c "$jar" -X POST "$base/documents.php" \
+  --data-urlencode "csrf=$doc_csrf" \
+  --data-urlencode "passphrase=$passphrase" \
+  --data-urlencode 'mode=doc_add' \
+  --data-urlencode 'revision=1' \
+  --data-urlencode 'type=INVOICE' \
+  --data-urlencode 'client_id=1' \
+  --data-urlencode 'issue_date=2026-11-14' \
+  --data-urlencode 'due_date=2026-11-30' \
+  --data-urlencode 'supply_date=2026-11-14' \
+  --data-urlencode 'notes=QA-only-synthetic-document' \
+  --data-urlencode 'lines[0][name]=Web usluga' \
+  --data-urlencode 'lines[0][qty]=2.5' \
+  --data-urlencode 'lines[0][price]=100.00' \
+  --data-urlencode 'lines[0][tax_rate]=25' \
+  >"$temp/documents-created.html"
+grep -Fq 'revizija 2' "$temp/documents-created.html"
+api_draft="$(curl -fsS -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $api_token" \
+  --data '{"action":"load"}' "$base/api.php")"
+printf '%s' "$api_draft" | FAKTURIVA_FIXTURE_PASS="$passphrase" \
+  FAKTURIVA_VERIFY_PHASE=draft php quality/web-hosting/verify-synthetic-snapshot.php
+# A second device with the old version MUST NOT replace the web's revision.
+stale_payload="$(FAK1_B64="$backup_b64" python3 -c \
+  'import json,os;print(json.dumps({"action":"save","expected_revision":1,"backup_b64":os.environ["FAK1_B64"]}))')"
+stale_status="$(curl -sS -o "$temp/stale-device.json" -w '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $api_token" \
+  --data "$stale_payload" "$base/api.php")"
+test "$stale_status" = 409 || { echo "Stale Android CAS write was accepted" >&2; exit 1; }
+curl -fsS -b "$jar" -c "$jar" -X POST "$base/documents.php" \
+  --data-urlencode "csrf=$doc_csrf" \
+  --data-urlencode "passphrase=$passphrase" \
+  --data-urlencode 'mode=doc_confirm' \
+  --data-urlencode 'revision=2' \
+  --data-urlencode 'id=2' >"$temp/documents-issued.html"
+grep -Fq 'revizija 3' "$temp/documents-issued.html"
+api_confirmed="$(curl -fsS -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $api_token" \
+  --data '{"action":"load"}' "$base/api.php")"
+printf '%s' "$api_confirmed" | FAKTURIVA_FIXTURE_PASS="$passphrase" \
+  FAKTURIVA_VERIFY_PHASE=confirmed php quality/web-hosting/verify-synthetic-snapshot.php
+# Concurrent stale form submissions are displayed as conflicts, not replayed.
+curl -fsS -b "$jar" -c "$jar" -X POST "$base/documents.php" \
+  --data-urlencode "csrf=$doc_csrf" \
+  --data-urlencode "passphrase=$passphrase" \
+  --data-urlencode 'mode=doc_confirm' \
+  --data-urlencode 'revision=2' \
+  --data-urlencode 'id=2' >"$temp/stale-browser.html"
+grep -Fq 'Ponovno ih učitajte' "$temp/stale-browser.html"
+
 curl -fsS -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $api_token" \
   --data '{"action":"logout"}' "$base/api.php" >/dev/null
