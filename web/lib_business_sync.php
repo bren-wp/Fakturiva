@@ -34,12 +34,14 @@ function priceInCents(mixed $value):int {
 function modified(array $root,string $operation,array $input):array {
     if(($root['format']??null)!=='fakturiva-backup-v1' ||
        !is_int($root['schema']??null) ||
-       $root['schema']<1 || $root['schema']>8 ||
+       $root['schema']!==8 ||
        !isset($root['company'],$root['clients'],$root['documents'],
                $root['lines'],$root['payments'],$root['sequences'],$root['catalog']) ||
        !is_array($root['company']) || !is_array($root['clients']) ||
        !array_is_list($root['company']) || !array_is_list($root['clients']))
-        throw new HttpFailure(422,'Neispravna struktura poslovne preslike.');
+        throw new HttpFailure(422,
+            'Za web uređivanje potrebna je baza sheme 8. Starije podatke najprije '.
+            'otvorite i sinkronizirajte u novoj Android aplikaciji; ništa nije promijenjeno.');
     if($operation==='profile'){
         $fields=[
             'name'=>requiredField($input,'name',160,true),
