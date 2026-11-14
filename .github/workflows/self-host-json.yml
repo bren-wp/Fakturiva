@@ -40,6 +40,8 @@ jobs:
         run: php -d memory_limit=2G quality/web-hosting/document-publish-atomicity-smoke.php
       - name: Verify HTML-safe read-only document print and money formatting
         run: php quality/web-hosting/document-print-smoke.php
+      - name: Verify consistent mobile/Windows business navigation and shared design
+        run: php quality/web-hosting/portal-nav-smoke.php
       - name: Verify account administration and tenant isolation
         run: php quality/web-hosting/admin-smoke.php
       - name: Verify server-side tax reports and draft-only XML
