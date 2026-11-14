@@ -7,6 +7,7 @@ use function FakturivaWebBusiness\printCents;
 use function FakturivaWebBusiness\printQuantity;
 use function FakturivaWebBusiness\printTax;
 use function FakturivaWebBusiness\printDocumentPreview;
+use function FakturivaWebBusiness\canPrintDocument;
 
 function printCheck(bool $ok,string $label):void {
     if(!$ok)throw new RuntimeException($label);
@@ -25,6 +26,7 @@ $doc=['id'=>4,'type'=>'INVOICE','status'=>'ISSUED','number'=>'R-2026-4',
     'due_date'=>'2026-11-30','supply_date'=>'2026-11-14'];
 $lines=[['id'=>2,'name'=>'Service <unsafe>','qty_milli'=>1000,
     'unit_cents'=>1000,'net_cents'=>1000,'tax_cents'=>250,'tax_rate'=>25]];
+printCheck(canPrintDocument($doc,$lines),'Valid invoice cannot be printed');
 $html=printDocumentPreview($doc,$lines);
 foreach(['&lt;script&gt;','&lt;img src=x onerror=alert(1)&gt;',
          'Service &lt;unsafe&gt;','12,50 EUR','R-2026-4',
@@ -37,6 +39,7 @@ $doc['status']='DRAFT';
 $draft=printDocumentPreview($doc,$lines);
 printCheck(str_contains($draft,'NACRT'),'Draft is missing non-issued warning');
 $doc['total_cents']=99999;
+printCheck(!canPrintDocument($doc,$lines),'Inconsistent totals were printable');
 $invalid=printDocumentPreview($doc,$lines);
 printCheck(str_contains($invalid,'nisu usklađeni'),
     'Inconsistent document totals were silently printed');
