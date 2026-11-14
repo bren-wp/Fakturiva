@@ -145,6 +145,9 @@ PY
       capture_failure "Truncated screenshot for screen $number"
     if [ "$number" = "01" ] &&
        ! python3 ci/splash_frame_guard.py "$output"; then
+      if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" != "1" ]; then
+        capture_failure "Cannot accept obstructed Splash without accessibility-checked SystemUI dialog"
+      fi
       # SystemUI can show the one-time immersive tutorial BETWEEN the
       # pre-capture XML dump and the PNG compositor frame. Detect it from
       # the actual bright Splash frame, re-dump the UI, and acknowledge
@@ -169,6 +172,12 @@ PY
       done
       if [ "$dismissed" != true ]; then
         capture_failure "Splash is obscured by SystemUI; see captured XML and PNG"
+      fi
+      # Replace the SYSTEM UI hierarchy with Fakturiva's accessible native
+      # hierarchy before the final post-prompt screenshot is validated.
+      if ! timeout 35s adb shell uiautomator dump /sdcard/fakturiva-qa.xml >/dev/null 2>&1 ||
+         ! timeout 12s adb exec-out cat /sdcard/fakturiva-qa.xml > "$xml"; then
+        capture_failure "Unable to re-dump native Splash after SystemUI acknowledgment"
       fi
       continue
     fi
