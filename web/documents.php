@@ -246,7 +246,11 @@ $documentLines=$allLines[$id]??[];?>
     (string)($doc['currency_code']??'EUR'))?></summary>
 <p>Datum: <?=h((string)($doc['issue_date']??''))?>.
 Stavki: <?=count($documentLines)?>.</p>
+<?php if(FakturivaWebBusiness\canPrintDocument($doc,$documentLines)):?>
 <button class="secondary document-print-button" type="button" data-print-document>Ispiši / Spremi u PDF</button>
+<?php else:?>
+<p class="error-note">Ispis je nedostupan dok se ne usklade stavke, izdavatelj, primatelj i ukupan iznos.</p>
+<?php endif;?>
 <div class="document-print-preview"><?=FakturivaWebBusiness\printDocumentPreview($doc,$documentLines)?></div>
 <?php if($status==='DRAFT'):?>
 <?php if($clients):?>
