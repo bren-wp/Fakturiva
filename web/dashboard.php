@@ -39,6 +39,7 @@ Android sinkronizaciju. Poslovni podaci ostaju odvojeni po korisničkim računim
 Za otključavanje je potrebna zasebna lozinka za poslovne podatke.</p>
 <a class="primary-action" href="finance.php">Otvori poslovni pregled</a>
 <p><a href="business.php">Tvrtka, klijenti, artikli i naplata — sinkronizacija s Androidom</a></p>
+<p><a href="documents.php">Izradi i upravljaj računima i ponudama — web i Android</a></p>
 <p><a href="tax-reports.php">Knjiga prometa i PO-SD (Hrvatska)</a></p>
 </section>
 <section class="panel">
