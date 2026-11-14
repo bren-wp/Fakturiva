@@ -29,6 +29,11 @@ public final class SelfHostedSyncClient {
     }
     private SelfHostedSyncClient(){}
 
+    /** Server CAS 409 is a state conflict, not a transient transport error. */
+    static final class RevisionConflictException extends IllegalStateException {
+        RevisionConflictException(String message){super(message);}
+    }
+
     public static String apiUrl(String supplied) throws Exception {
         if(supplied==null||supplied.length()>512)
             throw new IllegalArgumentException("Unesite adresu HTTPS hostinga");
@@ -82,6 +87,9 @@ public final class SelfHostedSyncClient {
                 }
             }
             JSONObject response=new JSONObject(buffer.toString("UTF-8"));
+            if(status==409)
+                throw new RevisionConflictException("Server je izmijenjen na drugom uređaju. "+
+                    "Nijedan lokalni podatak nije automatski prepisan.");
             if(status>=400||!response.optBoolean("ok",false))
                 throw new IllegalStateException("Hosting: "+
                     response.optString("error","Zahtjev nije uspio"));
