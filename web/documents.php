@@ -89,6 +89,13 @@ function documentDecimal(int $value,int $digits):string {
     return (string)intdiv($value,$scale).'.'.
         str_pad((string)($value%$scale),$digits,'0',STR_PAD_LEFT);
 }
+function documentTaxLabel(int $code):string {
+    if($code>=10000){
+        $raw=documentDecimal($code-10000,2);
+        return rtrim(rtrim($raw,'0'),'.');
+    }
+    return (string)$code;
+}
 function documentEditor(array $clients,array $doc,array $lines,int $revision):void {
     $edit=isset($doc['id']);
     $type=(string)($doc['type']??'INVOICE');
@@ -127,13 +134,13 @@ function documentEditor(array $clients,array $doc,array $lines,int $revision):vo
             documentDecimal((int)$line['qty_milli'],3):'';
         $price=isset($line['unit_cents'])?
             documentDecimal((int)$line['unit_cents'],2):'';
-        $rate=(string)($line['tax_rate']??'');
+        $rate=isset($line['tax_rate'])?documentTaxLabel((int)$line['tax_rate']):'';
         echo '<fieldset class="document-line"><legend>Stavka '.($i+1).'</legend>'.
             '<label>Naziv<input name="lines['.$i.'][name]" maxlength="200" value="'.h($name).'"></label>'.
             '<label>Količina<input inputmode="decimal" name="lines['.$i.'][qty]" maxlength="24" value="'.h($qty).'"></label>'.
             '<label>Jedinična cijena<input inputmode="decimal" name="lines['.$i.'][price]" maxlength="20" value="'.h($price).'"></label>'.
-            '<label>PDV kod (npr. 25 ili 11250 za 12,5 %)<input inputmode="numeric"'.
-            ' name="lines['.$i.'][tax_rate]" maxlength="5" value="'.h($rate).'"></label>'.
+            '<label>Stopa PDV-a (%)<input inputmode="numeric"'.
+            ' name="lines['.$i.'][tax_rate]" maxlength="10" inputmode="decimal" value="'.h($rate).'"></label>'.
             '</fieldset>';
     }
     echo '</div><button type="button" class="secondary" data-add-document-line>'.
@@ -257,7 +264,7 @@ Stavki: <?=count($documentLines)?>.</p>
 <label>Naziv<input name="lines[__INDEX__][name]" maxlength="200"></label>
 <label>Količina<input name="lines[__INDEX__][qty]" inputmode="decimal" maxlength="24"></label>
 <label>Jedinična cijena<input name="lines[__INDEX__][price]" inputmode="decimal" maxlength="20"></label>
-<label>PDV kod<input name="lines[__INDEX__][tax_rate]" inputmode="numeric" maxlength="5"></label>
+<label>Stopa PDV-a (%)<input name="lines[__INDEX__][tax_rate]" inputmode="decimal" maxlength="10"></label>
 </fieldset>
 </template>
 <nav class="account-links" aria-label="Navigacija">
