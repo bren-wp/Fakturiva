@@ -38,12 +38,19 @@ find web -name '*.php' -print0 | xargs -0 -n1 php -l
 php quality/web-hosting/smoke.php
 php quality/web-hosting/web-auth-smoke.php
 php quality/web-hosting/business-sync-smoke.php # uključuje uplate, sve CRUD operacije nad nacrtima, iznos/PDV i sukobe revizija
-php quality/web-hosting/document-capacity-smoke.php
-php quality/web-hosting/document-publish-atomicity-smoke.php
+# Isključivo izolirani sintetski stres-testovi (100 000 redaka);
+# na testnom stroju osigurajte slobodnih najmanje 2 GiB RAM-a.
+# Ne mijenjati memory_limit produkcijskog PHP hostinga.
+php -d memory_limit=2G quality/web-hosting/document-capacity-smoke.php
+php -d memory_limit=2G quality/web-hosting/document-publish-atomicity-smoke.php
 php quality/web-hosting/document-print-smoke.php
 bash quality/web-hosting/http-smoke.sh
 bash quality/web-hosting/web-form-http.sh
 ```
+
+### Sigurnost prikaza i Android kompatibilnost
+
+Prikaz dokumenta prije ispisa ponovno obračunava osnovicu i porez za **svaku stavku** cjelobrojnom aritmetikom, uspoređuje ih sa spremljenim iznosima i odbija nedosljedan dokument. Čak i neispravna šifrirana preslika treba ostati čitljiva kao upozorenje, bez iznimke ili gubitka cijele stranice. Uvoz i Android dokumenti mogu sadržavati količine do 1 000 000 jedinica (1 000 000 000 tisućinki), što je šire od obrasca za uređivanje na webu. Web ispis mora podržati cijeli valjani Android raspon, bez promjene postojećih izdanih dokumenata. Ispis nije potvrda fiskalizacije.
 
 ## Sigurnosne i funkcionalne granice
 
