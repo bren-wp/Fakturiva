@@ -288,5 +288,6 @@ nije moguće sigurno provjeriti.</p>
 <nav class="account-links" aria-label="Navigacija">
 <a href="dashboard.php">Moj račun</a>
 <a href="finance.php">Financijski pregled</a>
+<a href="documents.php">Računi i ponude</a>
 <a href="tax-reports.php">Porezni izvještaji</a>
 </nav></main></body></html>
