@@ -117,6 +117,21 @@ for index in "${!names[@]}"; do
       capture_failure "Screen $number is obscured by Android system UI or has no Fakturiva accessibility tree"
     fi
   fi
+  # Keep a small, non-sensitive on-screen diagnosis in the CI log.
+  # Android 16 may display the system-owned "Viewing full screen" dialog
+  # after the first UI dump; the screenshot itself must be checked too.
+  if [ "$number" = "01" ] && [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
+    python3 - "$QA_OUTPUT_DIR/01_${names[0]}.xml" <<'PY'
+import sys
+from xml.etree import ElementTree as ET
+root = ET.parse(sys.argv[1]).getroot()
+nodes = list(root.iter("node"))
+packages = sorted(set(n.get("package", "") for n in nodes))
+print("Splash accessibility diagnostic: nodes=", len(nodes),
+      "packages=", packages,
+      "visible_text=", [n.get("text", "")[:50] for n in nodes if n.get("text")][:12])
+PY
+  fi
   # The readiness marker is written AFTER Activity pre-draw, but Android
   # SplashScreen can still remain in the compositor for a short time.
   # An identical frame for a different screen is never accepted as evidence.
