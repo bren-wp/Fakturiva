@@ -1360,8 +1360,13 @@ public final class MainActivity extends Activity {
             });
             pass.setText("");
             toast("Zahtjev poslan na vaš HTTPS hosting");
-        }catch(Exception error){toast(error.getMessage()==null?
-            "Neispravne postavke hostinga":error.getMessage());}
+        }catch(Exception error){
+            // An immediate validation/enqueue failure must not leave a
+            // previously enabled mirror paused without any worker callback.
+            CloudMirror.resume(this,LocalAccounts.activeId());
+            toast(error.getMessage()==null?
+                "Neispravne postavke hostinga":error.getMessage());
+        }
         finally{Arrays.fill(code,'\0');}
     }
 
