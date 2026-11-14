@@ -116,10 +116,16 @@ function documentEditor(array $clients,array $doc,array $lines,int $revision):vo
     $date=date('Y-m-d');
     echo '<form action="documents.php" method="post" autocomplete="off" class="document-editor">';
     documentFormHidden($edit?'doc_edit':'doc_add',$revision,$id);
-    echo '<label>Vrsta dokumenta<select name="type" required>'.
-        '<option value="INVOICE"'.($type==='INVOICE'?' selected':'').'>Račun</option>'.
-        '<option value="QUOTE"'.($type==='QUOTE'?' selected':'').'>Ponuda</option>'.
-        '</select></label>';
+    if($edit){
+        echo '<input type="hidden" name="type" value="'.h($type).'">'.
+            '<p><strong>Vrsta:</strong> '.h($type==='INVOICE'?'Račun':'Ponuda').
+            ' (za postojeći nacrt nije moguće promijeniti vrstu)</p>';
+    }else{
+        echo '<label>Vrsta dokumenta<select name="type" required>'.
+            '<option value="INVOICE"'.($type==='INVOICE'?' selected':'').'>Račun</option>'.
+            '<option value="QUOTE"'.($type==='QUOTE'?' selected':'').'>Ponuda</option>'.
+            '</select></label>';
+    }
     echo '<label>Klijent<select name="client_id" required>';
     echo '<option value="">Odaberite klijenta</option>';
     foreach($clients as $client){
