@@ -185,7 +185,7 @@ function modified(array $root,string $operation,array $input):array {
         }
     }elseif($operation==='payment_add'){
         return paymentModified($root,$input);
-    }elseif(in_array($operation,['doc_add','doc_edit','doc_delete','doc_confirm','quote_accept'],true)){
+    }elseif(in_array($operation,['doc_add','doc_edit','doc_delete','doc_confirm','quote_accept','quote_convert'],true)){
         return documentModified($root,$operation,$input);
     }else{
         throw new HttpFailure(422,'Nepoznata poslovna radnja.');
