@@ -36,6 +36,8 @@ jobs:
         run: php quality/web-hosting/business-sync-smoke.php
       - name: Verify Android-compatible snapshot row limits across web document operations
         run: php quality/web-hosting/document-capacity-smoke.php
+      - name: Verify rejected web publications leave ciphertext and revision history unchanged
+        run: php quality/web-hosting/document-publish-atomicity-smoke.php
       - name: Verify account administration and tenant isolation
         run: php quality/web-hosting/admin-smoke.php
       - name: Verify server-side tax reports and draft-only XML
