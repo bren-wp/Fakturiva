@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace FakturivaWebBusiness;
 
 require_once __DIR__.'/lib_finance.php';
+require_once __DIR__.'/lib_payment_sync.php';
 
 use FakturivaSelfHost\HttpFailure;
 
@@ -181,6 +182,8 @@ function modified(array $root,string $operation,array $input):array {
             }
             unset($row);
         }
+    }elseif($operation==='payment_add'){
+        return paymentModified($root,$input);
     }else{
         throw new HttpFailure(422,'Nepoznata poslovna radnja.');
     }
