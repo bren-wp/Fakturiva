@@ -369,6 +369,35 @@ try{
     checkSync(FakturivaSelfHost\backupStatus($api['token'])['revision']===16,
         'Android status did not show document lifecycle changes');
 
+    $rounding=FakturivaWebBusiness\documentLines(['lines'=>[[
+        'name'=>'Decimal tax','qty'=>'1.250','price'=>'10,00','tax_rate'=>'11250'
+    ]]]);
+    checkSync($rounding[1]===1250&&$rounding[2]===156&&$rounding[3]===1406,
+        'Android half-up monetary math differs for fractional quantities or VAT');
+    $corrupt=$afterDelete;
+    $corrupt['documents'][]=$afterDelete['documents'][1];
+    deniedSync(fn()=>FakturivaWebBusiness\documentModified(
+        $corrupt,'doc_confirm',['id'=>8]),422,
+        'Duplicated document IDs were accepted');
+    $converted=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,16,'quote_convert',['id'=>9]);
+    checkSync($converted['revision']===17,'Quote conversion not versioned');
+    $afterConversion=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync(count($afterConversion['documents'])===4 &&
+        $afterConversion['documents'][2]['status']==='ACCEPTED' &&
+        $afterConversion['documents'][3]['type']==='INVOICE' &&
+        $afterConversion['documents'][3]['status']==='DRAFT' &&
+        $afterConversion['documents'][3]['currency_code']==='EUR' &&
+        $afterConversion['documents'][3]['total_cents']===25000 &&
+        count($afterConversion['lines'])===3 &&
+        $afterConversion['lines'][2]['document_id']===
+            $afterConversion['documents'][3]['id'] &&
+        $afterConversion['documents'][2]['number']==='P-2026-0001',
+        'Quote conversion changed historical documents or misplaced line references');
+    checkSync(FakturivaSelfHost\backupStatus($api['token'])['revision']===17,
+        'Android does not see latest web quote conversion');
+
     echo "Web and Android FAK1 sync, CAS, history, isolation and immutable invoices: OK\n";
 }finally{
     removeFixture($temporary);
