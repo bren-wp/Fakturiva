@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
+require_once __DIR__.'/ui-shell.php';
 require_once __DIR__.'/lib_tax.php';
 $account=requireWeb();
 $error='';$book=null;$report=null;
@@ -57,6 +58,7 @@ $money=static fn(int $amount):string=>FakturivaWebFinance\eur($amount);
 </head><body><main class="account-page finance-page">
 <?=logoMarkup()?>
 <h1>Knjiga prometa i PO-SD</h1>
+<?php fakturivaPortalNavigation('tax-reports'); ?>
 <p>Podatci se čitaju iz vaše šifrirane kopije na serveru nakon što
 potvrdite zasebnu lozinku. Obračun koristi evidentirane uplate prema
 datumu stvarne naplate, ne samo izdane račune. Prikaz vrijedi za
