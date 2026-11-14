@@ -1696,9 +1696,9 @@ public final class MainActivity extends Activity {
         // horizontal target, but a compact 36dp visual row instead.
         gap(body,dark?3:1);
         LinearLayout quickHeader=horizontal();
-        quickHeader.addView(label("Brze radnje",dark?16:18,ink(),true),
+        quickHeader.addView(label("Brze radnje",16,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
-        TextView moreActions=label("›",24,BLUE,true);
+        TextView moreActions=label("›",18,BLUE,false);
         moreActions.setGravity(Gravity.CENTER);
         moreActions.setContentDescription("Otvori sve brze radnje");
         moreActions.setMinimumWidth(dp(48));
@@ -1720,7 +1720,7 @@ public final class MainActivity extends Activity {
         gap(body,dark?14:19);
         LinearLayout recentHeading=horizontal();
         recentHeading.setGravity(Gravity.CENTER_VERTICAL);
-        recentHeading.addView(label("Nedavni dokumenti",dark?16:18,ink(),true),
+        recentHeading.addView(label("Nedavni dokumenti",16,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
         TextView all=label("Prikaži sve  ›",11,BLUE,true);
         all.setContentDescription("Otvori sve račune");
@@ -1780,7 +1780,7 @@ public final class MainActivity extends Activity {
         c.addView(image,lp(37,37));gap(c,4);
         c.addView(label(label,12,sub(),false));gap(c,3);
         c.addView(label(value,24,ink(),true));c.addView(label("Ovaj mjesec",10,sub(),false));
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(dp(2),0,dp(2),0);row.addView(c,p);
         c.setContentDescription(label+": "+value+" ovaj mjesec, otvori popis");
         c.setFocusable(true);
         c.setOnClickListener(v->documents("Računi".equals(label)?Store.INVOICE:Store.QUOTE));
@@ -1799,7 +1799,7 @@ public final class MainActivity extends Activity {
         // Quick actions can grow with 150% font scaling.
         c.setMinimumHeight(dp(90));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
-        p.setMargins(dp(3),0,dp(3),0);row.addView(c,p);
+        p.setMargins(dp(2),0,dp(2),0);row.addView(c,p);
         c.setContentDescription(label);c.setFocusable(true);
         c.setOnClickListener(v->action.run());
     }
