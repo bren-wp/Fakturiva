@@ -259,6 +259,116 @@ try{
     $history=FakturivaSelfHost\loadBackup($api['token'])['history'];
     checkSync(count($history)>=2 && $history[0]['revision']===8 &&
         $history[1]['revision']===7,'Encrypted revision history was not preserved');
+    // Invoice / quote draft operations remain Android schema-8 compatible.
+    // Existing issued receipts and all account records must remain intact.
+    $newInvoice=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,8,'doc_add',[
+            'type'=>'INVOICE','client_id'=>3,'issue_date'=>'2026-11-14',
+            'due_date'=>'2026-11-30','supply_date'=>'2026-11-14',
+            'notes'=>'Nova usluga','quote_title'=>'',
+            'lines'=>[['name'=>'Savjetovanje','qty'=>'2.500',
+                'price'=>'100.00','tax_rate'=>'25']]]);
+    checkSync($newInvoice['revision']===9,'Invoice draft revision was not committed');
+    $invoiceState=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync(count($invoiceState['documents'])===2 &&
+        $invoiceState['documents'][1]['id']===8 &&
+        $invoiceState['documents'][1]['status']==='DRAFT' &&
+        $invoiceState['documents'][1]['total_cents']===31250 &&
+        $invoiceState['documents'][1]['client_id']===3 &&
+        count($invoiceState['lines'])===1 &&
+        $invoiceState['lines'][0]['qty_milli']===2500 &&
+        $invoiceState['lines'][0]['net_cents']===25000 &&
+        $invoiceState['lines'][0]['tax_cents']===6250,
+        'Web draft does not match Android integer math or schema');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,8,'doc_delete',['id'=>8]),409,
+        'Stale web draft deletion accepted');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,9,'doc_add',[
+            'type'=>'INVOICE','client_id'=>3,'issue_date'=>'2026-11-14',
+            'due_date'=>'2026-11-30','supply_date'=>'2026-11-14',
+            'notes'=>'','lines'=>[['name'=>'Fraction','qty'=>'1.0001',
+                'price'=>'1.00','tax_rate'=>'25']]]),422,'Fractional milli-quantity accepted');
+    $editedInvoice=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,9,'doc_edit',[
+            'id'=>8,'type'=>'INVOICE','client_id'=>4,
+            'issue_date'=>'2026-11-14','due_date'=>'2026-12-14',
+            'supply_date'=>'2026-11-14','notes'=>'Izmjena nacrta',
+            'lines'=>[['name'=>'Savjetovanje','qty'=>'3',
+                'price'=>'100.00','tax_rate'=>'25']]]);
+    checkSync($editedInvoice['revision']===10,'Invoice edit revision missing');
+    $issued=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,10,'doc_confirm',['id'=>8]);
+    checkSync($issued['revision']===11,'Invoice confirmation was not versioned');
+    $invoiceState=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    $newDoc=$invoiceState['documents'][1];
+    checkSync($newDoc['number']==='R-2026-0001' &&
+        $newDoc['type']==='INVOICE'&&$newDoc['status']==='ISSUED' &&
+        $newDoc['issuer_name']==='Novi izdavatelj' &&
+        $newDoc['client_id']===4 && $newDoc['total_cents']===37500 &&
+        $invoiceState['lines'][0]['net_cents']===30000 &&
+        $invoiceState['lines'][0]['tax_cents']===7500 &&
+        $invoiceState['payments'][1]['amount_cents']===7500,
+        'Confirmed web invoice is incompatible or history changed');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,11,'doc_delete',['id'=>8]),409,
+        'Confirmed invoice was deleted');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,11,'doc_edit',[
+            'id'=>8,'type'=>'INVOICE','client_id'=>3,
+            'issue_date'=>'2026-11-14','due_date'=>'2026-11-30',
+            'supply_date'=>'2026-11-14','notes'=>'Do not change',
+            'lines'=>[['name'=>'Hack','qty'=>'1','price'=>'1.00',
+                'tax_rate'=>'0']]]),409,'Confirmed invoice edited');
+
+    $newQuote=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,11,'doc_add',[
+            'type'=>'QUOTE','client_id'=>4,'issue_date'=>'2026-11-14',
+            'due_date'=>'2026-12-01','supply_date'=>'2026-11-14',
+            'notes'=>'','quote_title'=>'Ponuda za održavanje',
+            'lines'=>[['name'=>'Održavanje','qty'=>'1','price'=>'200.00',
+                'tax_rate'=>'25']]]);
+    checkSync($newQuote['revision']===12,'Quote draft revision missing');
+    $quoteConfirm=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,12,'doc_confirm',['id'=>9]);
+    checkSync($quoteConfirm['revision']===13,'Quote confirmation missing');
+    $accepted=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,13,'quote_accept',['id'=>9]);
+    checkSync($accepted['revision']===14,'Quote acceptance missing');
+    $quoteState=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync($quoteState['documents'][2]['number']==='P-2026-0001' &&
+        $quoteState['documents'][2]['status']==='ACCEPTED' &&
+        $quoteState['documents'][2]['quote_title']==='Ponuda za održavanje' &&
+        count($quoteState['payments'])===2 &&
+        $quoteState['documents'][1]['issuer_name']==='Novi izdavatelj',
+        'Quote lifecycle changed prior invoice or payments');
+
+    $draftToDelete=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,14,'doc_add',[
+            'type'=>'QUOTE','client_id'=>3,'issue_date'=>'2026-11-14',
+            'due_date'=>'2026-12-01','supply_date'=>'2026-11-14',
+            'notes'=>'','quote_title'=>'Privremena ponuda',
+            'lines'=>[['name'=>'Test','qty'=>'1','price'=>'1.00',
+                'tax_rate'=>'0']]]);
+    $deleted=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,15,'doc_delete',['id'=>10]);
+    checkSync($deleted['revision']===16,'Draft deletion was not versioned');
+    $afterDelete=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync(count($afterDelete['documents'])===3 &&
+        count($afterDelete['lines'])===2 &&
+        $afterDelete['documents'][1]['status']==='ISSUED' &&
+        $afterDelete['documents'][2]['status']==='ACCEPTED',
+        'Draft deletion corrupted confirmed document history');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,16,'doc_confirm',['id'=>10]),404,
+        'Deleted draft could be confirmed');
+    checkSync(FakturivaSelfHost\backupStatus($api['token'])['revision']===16,
+        'Android status did not show document lifecycle changes');
+
     echo "Web and Android FAK1 sync, CAS, history, isolation and immutable invoices: OK\n";
 }finally{
     removeFixture($temporary);
