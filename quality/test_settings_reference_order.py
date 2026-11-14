@@ -30,6 +30,28 @@ class SettingsReferenceOrderTests(unittest.TestCase):
             "Izgled aplikacije",
         ])
 
+    def test_all_settings_titles_and_descriptions_have_english_translations(self):
+        catalog=(Path(__file__).resolve().parents[1]/
+                 "app/src/main/java/com/brendigo/fakturiva/UiStrings.java"
+                ).read_text(encoding="utf-8")
+        translated=set(re.findall(r'EN\.put\("([^"]+)",',catalog))
+        start=JAVA.index('private void settings()')
+        end=JAVA.index('private void languagePicker()',start)
+        settings=JAVA[start:end]
+        titles=re.findall(r'settingRow\(\w+,"[^"]+","([^"]+)"',settings)
+        descriptions=re.findall(
+            r'settingRow\(\w+,"[^"]+","[^"]+",\s*"([^"]+)"',settings)
+        important=[
+            "Jezik","Zadana valuta","DODATNE POSTAVKE",
+            "PIN, biometrija i privatnost","Svijetla i tamna tema",
+            "Postavite pisač na lokalnoj mreži",
+            "Knjiga prometa i godišnji porezni obračun",
+        ]
+        self.assertGreaterEqual(len(titles),24)
+        for value in titles+descriptions+important:
+            with self.subTest(value=value):
+                self.assertIn(value,translated)
+
     def test_all_existing_advanced_callbacks_remain_reachable(self):
         beginning=JAVA.index('private void settings()')
         end=JAVA.index('private void languagePicker()',beginning)
