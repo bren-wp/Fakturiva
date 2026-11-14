@@ -66,7 +66,20 @@ if(($_SERVER['REQUEST_METHOD']??'')==='POST'){
                 if(is_string($value)||is_int($value))$carry[$key]=$value;
             }
             $lines=$_POST['lines']??null;
-            if(is_array($lines)&&count($lines)<=40)$carry['lines']=$lines;
+            if(is_array($lines)&&count($lines)<=40){
+                $safeLines=[];
+                foreach($lines as $line){
+                    if(!is_array($line))continue;
+                    $safeLine=[];
+                    foreach(['name','qty','price','tax_rate'] as $key){
+                        $value=$line[$key]??null;
+                        if(is_string($value)&&strlen($value)<=200)
+                            $safeLine[$key]=$value;
+                    }
+                    $safeLines[]=$safeLine;
+                }
+                $carry['lines']=$safeLines;
+            }
             $json=json_encode($carry,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
             if(is_string($json)&&strlen($json)<=60000)$unsavedConflict=$json;
         }
