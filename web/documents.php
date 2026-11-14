@@ -152,8 +152,8 @@ function documentEditor(array $clients,array $doc,array $lines,int $revision):vo
             '<label>Naziv<input name="lines['.$i.'][name]" maxlength="200" value="'.h($name).'"></label>'.
             '<label>Količina<input inputmode="decimal" name="lines['.$i.'][qty]" maxlength="24" value="'.h($qty).'"></label>'.
             '<label>Jedinična cijena<input inputmode="decimal" name="lines['.$i.'][price]" maxlength="20" value="'.h($price).'"></label>'.
-            '<label>Stopa PDV-a (%)<input inputmode="numeric"'.
-            ' name="lines['.$i.'][tax_rate]" maxlength="10" inputmode="decimal" value="'.h($rate).'"></label>'.
+            '<label>Stopa PDV-a (%)<input inputmode="decimal"'.
+            ' name="lines['.$i.'][tax_rate]" maxlength="10" value="'.h($rate).'"></label>'.
             '</fieldset>';
     }
     echo '</div><button type="button" class="secondary" data-add-document-line>'.
