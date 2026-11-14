@@ -164,6 +164,30 @@ try{
             'tax_rate'=>'25','kind'=>'SERVICE','unit'=>'sat']),422,
         'Fractional-cent price accepted');
 
+    // Legacy schema 1/2 restores derive historical issuer/client fields.
+    // Editing the profile before Android migration would rewrite issued
+    // document identities. Fail closed and keep original encrypted bytes.
+    foreach([1,2] as $legacySchema){
+        $legacyName='legacy-'.$legacySchema.'-'.
+            bin2hex(random_bytes(4)).'@example.invalid';
+        $legacy=FakturivaSelfHost\webRegister($legacyName,$ip,$pass);
+        $legacyApi=FakturivaSelfHost\signIn($legacyName,$pass,$ip);
+        $oldRoot=$root;
+        $oldRoot['schema']=$legacySchema;
+        $sealedOld=FakturivaWebBusiness\sealSnapshot($oldRoot,$pass);
+        FakturivaSelfHost\saveBackup($legacyApi['token'],
+            base64_encode($sealedOld),0);
+        deniedSync(fn()=>FakturivaWebBusiness\publish(
+            $legacy['id'],$legacy['token'],$pass,1,'profile',[
+                'name'=>'Risky overwrite','oib'=>'','address'=>'Other address',
+                'city'=>'Rijeka','postal_code'=>'51000',
+                'email'=>'change@example.invalid','phone'=>'']),422,
+            'Legacy schema '.$legacySchema.' cannot edit issuer snapshots');
+        $still=FakturivaSelfHost\loadBackup($legacyApi['token']);
+        checkSync($still['revision']===1 &&
+            hash_equals($still['backup_b64'],base64_encode($sealedOld)),
+            'Rejected legacy web change unexpectedly replaced backup');
+    }
     $history=FakturivaSelfHost\loadBackup($api['token'])['history'];
     checkSync(count($history)>=2 && $history[0]['revision']===6 &&
         $history[1]['revision']===5,'Encrypted revision history was not preserved');
