@@ -370,8 +370,10 @@ try{
         'Android status did not show document lifecycle changes');
 
     $rounding=FakturivaWebBusiness\documentLines(['lines'=>[[
-        'name'=>'Decimal tax','qty'=>'1.250','price'=>'10,00','tax_rate'=>'11250'
+        'name'=>'Decimal tax','qty'=>'1.250','price'=>'10,00','tax_rate'=>'12,5'
     ]]]);
+    checkSync($rounding[0][0]['tax_rate']===11250,
+        'Fractional percentage was not encoded like Android Money.parseRate');
     checkSync($rounding[1]===1250&&$rounding[2]===156&&$rounding[3]===1406,
         'Android half-up monetary math differs for fractional quantities or VAT');
     $corrupt=$afterDelete;
