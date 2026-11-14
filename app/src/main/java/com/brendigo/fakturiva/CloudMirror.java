@@ -477,6 +477,12 @@ public final class CloudMirror {
                         catch(Exception ignored){}
                     }
                 }finally{Arrays.fill(cipher,(byte)0);}
+            }catch(SelfHostedSyncClient.RevisionConflictException e){
+                // A server may advance between the status probe and save POST.
+                // Treat that exact HTTP 409 as a durable conflict, NEVER as a
+                // retryable error; the dirty local database remains untouched.
+                p.edit().putBoolean("conflict",true)
+                    .putString("last_error",e.getMessage()).commit();
             }catch(Exception e){
                 p.edit().putString("last_error",
                     e.getMessage()==null?"Prijenos nije uspio":e.getMessage()).commit();
