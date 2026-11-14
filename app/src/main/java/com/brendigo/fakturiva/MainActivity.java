@@ -4264,61 +4264,65 @@ public final class MainActivity extends Activity {
 
         LinearLayout options=card();pad(options,0,2);
         place(body,options);
-        settingRow(options,"◉","Language",selectedLanguage().equals("en")?"English":"Hrvatski",
-            this::languagePicker);
-        settingRow(options,"¤","Default currency",selectedCurrency(),
-            this::currencyPicker);
-        settingRow(options,"▤","Printers and paper",
-            printOptions()[Math.max(0,Math.min(printOptions().length-1,
-                prefs.getInt("default_paper",0)))],
-            this::printerPreferences);
-        settingRow(options,"⌁","LAN receipt printer",
-            prefs.getString("printer_host","").isEmpty()?
-                "Configure a local network printer":
-                prefs.getString("printer_host","")+":"+
-                prefs.getString("printer_port","9100"),
-            this::networkPrinterSettings);
-        settingRow(options,"⌁","USB ESC/POS printers",
-            "USB Host · 58 / 80 mm · check connected devices",
-            this::usbPrinterInfo);
-        settingRow(options,"▤","Tvrtka i poslovni podaci","Naziv, adresa i kontakt podaci",this::company);
+        // The first nine entries follow the supplied 18_postavke.png visual
+        // hierarchy. Less-frequent options stay available below, unchanged.
+        settingRow(options,"▤","Tvrtka i poslovni podaci",
+            "Naziv, adresa, OIB, IBAN",this::company);
         settingRow(options,"▣","Numeracija dokumenata",
-            "Pregled dodijeljenih brojeva računa i ponuda",this::numberingInfo);
-        settingRow(options,"▥","Porezi i stope",
-            "Porezni status i napomene u profilu tvrtke",this::company);
+            "Brojači računa i ponuda",this::numberingInfo);
+        settingRow(options,"▥","PDV i porezne postavke",
+            "Porezne stope i načini obračuna",this::company);
         settingRow(options,"▣","Načini plaćanja",
-            "IBAN, banka i uvjeti plaćanja",this::company);
-        settingRow(options,"✎","Podaci na dokumentima",
-            "Profil izdavatelja za nove PDF dokumente",this::company);
-        settingRow(options,"◈","Dizajn računa i vlastiti logo",
-            "Četiri izgleda · boja · vaš logo ili Fakturiva",
-            this::invoiceAppearance);
+            "Transakcijski račun, gotovina",this::company);
+        settingRow(options,"✎","Izgled dokumenta",
+            "Logo, boje i predlošci",this::invoiceAppearance);
         settingRow(options,"⇄","eRačuni i fiskalizacija",
-            "Integracije · status povezivanja",this::eracunScreen);
-        settingRow(options,"?","Pomoć i upute",
-            "Računi, ponude i načini rada",this::guide);
-        settingRow(options,"☁","Pohrana na serveru i oporavak",
-            "Šifrirane kopije · automatska sinkronizacija · HTTPS",
-            this::selfHostedSettings);
-        settingRow(options,"♧","Privatnost i brisanje podataka",
-            "Lokalni i udaljeni računi · prava korisnika",
-            this::privacyInfoScreen);
-        settingRow(options,"♙","Korisnički računi",
-            LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
-            this::localAccountSettings);
+            "Integracije i ovlaštenja",this::eracunScreen);
         settingRow(options,"◈","Sigurnost",
-            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":"Zaštita i privatnost",
+            prefs.getBoolean("device_lock",false)?"Zaštita uređajem aktivna":
+                "PIN, biometrija i privatnost",
             ()->securityScreen(false,true));
         settingRow(options,"♢","Izvoz i sigurnosne kopije",
-            "Izvoz i obnova podataka",this::backupScreen);
+            "Podaci i dokumenti",this::backupScreen);
         settingRow(options,"☼","Izgled aplikacije",
-            dark?"Tamna tema aktivna":"Svijetla tema aktivna",()->{
+            dark?"Tamna tema aktivna":"Svijetla i tamna tema",()->{
                 dark=!dark;prefs.edit().putBoolean("dark",dark).apply();settings();
             });
-        settingRow(options,"✉","Podrška",
+
+        gap(body,17);
+        place(body,label("DODATNE POSTAVKE",11,sub(),true));gap(body,8);
+        LinearLayout advanced=card();pad(advanced,0,2);
+        settingRow(advanced,"◉","Jezik",
+            selectedLanguage().equals("en")?"English":"Hrvatski",this::languagePicker);
+        settingRow(advanced,"¤","Zadana valuta",selectedCurrency(),
+            this::currencyPicker);
+        settingRow(advanced,"▤","Pisači i formati papira",
+            printOptions()[Math.max(0,Math.min(printOptions().length-1,
+                prefs.getInt("default_paper",0)))],this::printerPreferences);
+        settingRow(advanced,"⌁","Mrežni terminalni pisač",
+            prefs.getString("printer_host","").isEmpty()?
+                "Postavite pisač na lokalnoj mreži":
+                prefs.getString("printer_host","")+":"+
+                prefs.getString("printer_port","9100"),this::networkPrinterSettings);
+        settingRow(advanced,"⌁","USB ESC/POS pisači",
+            "USB Host · 58 / 80 mm · provjera uređaja",this::usbPrinterInfo);
+        settingRow(advanced,"✎","Podaci na dokumentima",
+            "Profil izdavatelja za nove PDF dokumente",this::company);
+        settingRow(advanced,"?","Pomoć i upute",
+            "Računi, ponude i načini rada",this::guide);
+        settingRow(advanced,"☁","Pohrana na serveru i oporavak",
+            "Šifrirane kopije · automatska sinkronizacija · HTTPS",
+            this::selfHostedSettings);
+        settingRow(advanced,"♧","Privatnost i brisanje podataka",
+            "Lokalni i udaljeni računi · prava korisnika",this::privacyInfoScreen);
+        settingRow(advanced,"♙","Korisnički računi",
+            LocalAccounts.activeName()==null?"Lokalni računi":LocalAccounts.activeName(),
+            this::localAccountSettings);
+        settingRow(advanced,"✉","Podrška",
             "Pomoć i kontakt",this::supportScreen);
-        settingRow(options,"ⓘ","O aplikaciji",
+        settingRow(advanced,"ⓘ","O aplikaciji",
             "Fakturiva · Brendigo · pravni dokumenti",this::aboutScreen);
+        place(body,advanced);
         gap(body,14);
         place(body,label("POSLOVNI ALATI",11,sub(),true));gap(body,8);
         LinearLayout tools=card();pad(tools,0,2);
