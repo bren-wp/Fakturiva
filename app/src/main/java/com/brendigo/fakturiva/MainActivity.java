@@ -1108,6 +1108,65 @@ public final class MainActivity extends Activity {
                     });
                 }).show();
         });
+        // A conflict is not a normal sync retry: only an explicit, warned
+        // server-wins decision may replace a dirty local SQLite copy.
+        if(CloudMirror.hasConflict(this,LocalAccounts.activeId())){
+            gap(body,12);
+            secondary(body,"Razriješi sukob sa serverom",()->{
+                final String profile=LocalAccounts.activeId();
+                if(selfHostedBusy||profile==null||!CloudMirror.hasConflict(this,profile)){
+                    toast("Sukob više nije aktivan ili je prijenos u tijeku.");
+                    return;
+                }
+                new AlertDialog.Builder(this)
+                    .setTitle("Sukob podataka na dva uređaja")
+                    .setMessage("Server ima novije podatke, ali ovaj uređaj čuva "+
+                        "neprenesene lokalne promjene. Preporučeno: najprije "+
+                        "IZVEZITE šifriranu kopiju u datoteku. "+
+                        "Ako odaberete serversku verziju, lokalna baza bit će "+
+                        "zamijenjena tek nakon izrade šifrirane lokalne "+
+                        "sigurnosne kopije. Automatsko spajanje ne postoji. "+
+                        "Nespremljeni otvoreni nacrt blokira obnovu.")
+                    .setNegativeButton("Odustani",null)
+                    .setNeutralButton("Izvezi lokalnu kopiju",(d,w)->backupScreen())
+                    .setPositiveButton("Odaberi serversku verziju",(d,w)->
+                        new AlertDialog.Builder(this)
+                        .setTitle("Potvrdite zamjenu lokalne baze")
+                        .setMessage("Želite li svjesno odabrati potvrđenu "+
+                            "noviju verziju sa servera? Offline promjene ostat će "+
+                            "samo u lokalnom RecoveryVaultu i zasebnom izvozu "+
+                            "koji ste napravili. Ne nastavljajte bez izvoza "+
+                            "ako želite te izmjene sačuvati i izvan uređaja.")
+                        .setNegativeButton("Ne, sačuvaj lokalno",null)
+                        .setPositiveButton("Da, preuzmi sa servera",(dialog,which)->{
+                            selfHostedBusy=true;
+                            AlertDialog progress=new AlertDialog.Builder(this)
+                                .setTitle("Sigurna obnova s poslužitelja")
+                                .setMessage("Provjera revizija i zaštita lokalne baze...")
+                                .setCancelable(false).create();
+                            progress.show();
+                            CloudMirror.resolveConflictUsingServer(this,profile,(error,updated)->{
+                                progress.dismiss();selfHostedBusy=false;
+                                if(!profile.equals(LocalAccounts.activeId()))return;
+                                if(error!=null){
+                                    toast(error);localAccountSettings();return;
+                                }
+                                if(updated){
+                                    try{
+                                        if(db!=null)db.close();
+                                        db=new Store(this,profile);
+                                        toast("Sukob razriješen; serverska kopija preuzeta.");
+                                        home();
+                                    }catch(Exception ex){accountStorageError(ex);}
+                                }else{
+                                    toast("Nije bilo novijih podataka za obnovu.");
+                                    localAccountSettings();
+                                }
+                            });
+                        }).show()
+                    ).show();
+            });
+        }
         gap(body,12);
         button(body,"Odjava s uređaja",()->new AlertDialog.Builder(this)
             .setTitle("Odjava").setMessage("Odjaviti lokalni korisnički račun?")
