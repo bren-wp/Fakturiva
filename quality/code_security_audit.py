@@ -98,9 +98,9 @@ def scan_static(root: Path = ROOT) -> dict:
     all_php = "\n".join(php_files.values())
     possible_dead_php = []
     for path, code in php_files.items():
-        for match in re.finditer(r"(?m)^\\s*function\\s+([A-Za-z_]\\w*)\\s*\\(", code):
+        for match in re.finditer(r"(?m)^\s*function\s+([A-Za-z_]\w*)\s*\(", code):
             name = match.group(1)
-            calls = len(re.findall(r"\\b" + re.escape(name) + r"\\s*\\(", all_php))
+            calls = len(re.findall(r"\b" + re.escape(name) + r"\s*\(", all_php))
             refs = all_php.count("'" + name + "'") + all_php.count('"' + name + '"')
             if calls == 1 and refs == 0:
                 possible_dead_php.append({
