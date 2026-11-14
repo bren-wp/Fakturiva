@@ -60,7 +60,7 @@ def scan_static(root: Path = ROOT) -> dict:
             if not path.match(pattern):
                 continue
             # Android manifest attributes count only inside production manifest.
-            if name.startswith("android-") and name not in ("android-js-bridge",):
+            if name in ("android-cleartext", "android-debuggable", "android-backup-enabled"):
                 if relative != "app/src/main/AndroidManifest.xml":
                     continue
             for match in re.finditer(regex, raw, flags=re.IGNORECASE | re.DOTALL):
