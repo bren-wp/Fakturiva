@@ -14,6 +14,8 @@ MIRROR=(ANDROID/"CloudMirror.java").read_text(encoding="utf-8")
 NETWORK=(ANDROID/"SelfHostedSyncClient.java").read_text(encoding="utf-8")
 BUSINESS=(WEB/"lib_business_sync.php").read_text(encoding="utf-8")
 PAYMENTS=(WEB/"lib_payment_sync.php").read_text(encoding="utf-8")
+DOCUMENTS=(WEB/"lib_documents_sync.php").read_text(encoding="utf-8")
+DOCUMENT_PAGE=(WEB/"documents.php").read_text(encoding="utf-8")
 API=(WEB/"api.php").read_text(encoding="utf-8")
 LIB=(WEB/"lib.php").read_text(encoding="utf-8")
 PAGE=(WEB/"business.php").read_text(encoding="utf-8")
@@ -72,6 +74,21 @@ class CrossPlatformSyncChecks(unittest.TestCase):
         self.assertIn("$document['status']='PAID'",PAYMENTS)
         self.assertIn("in_array($channel,['CASH','BANK','CARD','CHEQUE']",PAYMENTS)
         self.assertNotIn("$_SESSION",PAYMENTS)
+
+    def test_document_crud_and_confirmed_immutability(self):
+        self.assertIn("require_once __DIR__.'/lib_documents_sync.php'",BUSINESS)
+        self.assertIn("return documentModified($root,$operation,$input)",BUSINESS)
+        for operation in ('doc_add','doc_edit','doc_delete','doc_confirm','quote_accept'):
+            self.assertIn(operation,DOCUMENTS)
+        self.assertIn("if($status!=='DRAFT')",DOCUMENTS)
+        self.assertIn("documentIssuer($issuer)",DOCUMENTS)
+        self.assertIn("intdiv($qtyMilli*$price+500,1000)",DOCUMENTS)
+        self.assertIn("intdiv($net*$bp+5000,10000)",DOCUMENTS)
+        self.assertIn("FakturivaWebBusiness\\publish(",DOCUMENT_PAGE)
+        self.assertIn("checkCsrf()",DOCUMENT_PAGE)
+        self.assertIn("requireWeb()",DOCUMENT_PAGE)
+        self.assertIn("sync",BUSINESS)
+        self.assertNotIn("$_SESSION['passphrase']",DOCUMENT_PAGE)
 
     def test_catalog_uses_integer_cents_and_issuer_history_is_preserved(self):
         self.assertIn("function priceInCents(",BUSINESS)
