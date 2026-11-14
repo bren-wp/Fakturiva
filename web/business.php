@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
+require_once __DIR__.'/ui-shell.php';
 require_once __DIR__.'/lib_business_sync.php';
 
 $account=requireWeb();
@@ -132,6 +133,7 @@ function syncCatalogFields(array $item=[]):void {
 </head><body><main class="account-page finance-page sync-business">
 <?=logoMarkup()?>
 <h1>Poslovni podatci na serveru</h1>
+<?php fakturivaPortalNavigation('business'); ?>
 <p>Prijavljeni ste kao <strong><?=h((string)$account['username'])?></strong>.
 Promjene tvrtke, klijenata, artikala i uplata zapisuju se kao nova šifrirana revizija iste
 sigurnosne kopije koju koristi Android. Windows prikazuje ovaj web portal.
