@@ -43,4 +43,29 @@ printCheck(!canPrintDocument($doc,$lines),'Inconsistent totals were printable');
 $invalid=printDocumentPreview($doc,$lines);
 printCheck(str_contains($invalid,'nisu usklađeni'),
     'Inconsistent document totals were silently printed');
+// A forged snapshot may have consistent cached totals but contradictory
+// unit × quantity / tax-rate arithmetic. Never offer it to a printer.
+$doc['total_cents']=1250;
+$invalidLine=$lines;
+$invalidLine[0]['tax_rate']=0;
+printCheck(!canPrintDocument($doc,$invalidLine),
+    'Tax 0% and cached 25% tax wrongly allowed printing');
+printCheck(str_contains(printDocumentPreview($doc,$invalidLine),'nisu usklađeni'),
+    'Tampered line calculation has no visible warning');
+$invalidLine=$lines;
+$invalidLine[0]['qty_milli']=1250;
+printCheck(!canPrintDocument($doc,$invalidLine),
+    'Cached net was trusted over quantity x price');
+$invalidLine=$lines;
+$invalidLine[0]['tax_rate']=20001;
+printCheck(!canPrintDocument($doc,$invalidLine),
+    'Out-of-range extended tax code was allowed');
+$invalidLine=$lines;
+$invalidLine[0]['tax_rate']=101;
+printCheck(!canPrintDocument($doc,$invalidLine),
+    'Out-of-range ordinary tax code was allowed');
+$invalidLine=$lines;
+$invalidLine[0]['unit_cents']=PHP_INT_MAX;
+printCheck(!canPrintDocument($doc,$invalidLine),
+    'Oversized unit price could overflow arithmetic');
 echo 'Read-only document print: integer sums, escaped fields and draft labeling OK'.PHP_EOL;
