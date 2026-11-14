@@ -125,7 +125,7 @@ računa. Cjelovita arhiva ostaje u šifriranoj kopiji.</p><?php endif;?>
 <?php endif;?>
 <nav class="account-links" aria-label="Navigacija">
 <a href="dashboard.php">Moj račun</a>
-<a href="business.php">Tvrtka i klijenti</a>
+<a href="business.php">Tvrtka, klijenti i naplata</a>
 <a href="tax-reports.php">KPR i PO-SD</a>
 <a href="delete-account.php">Brisanje računa</a>
 <a href="privacy.php">Privatnost</a>
