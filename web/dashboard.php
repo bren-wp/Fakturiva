@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
+require_once __DIR__.'/ui-shell.php';
 $account=requireWeb();
 $flash=takeFlash();
 $canSync=is_string($account['password_hash']??null) &&
@@ -17,6 +18,7 @@ $canSync=is_string($account['password_hash']??null) &&
 <main class="account-page">
 <?=logoMarkup()?>
 <h1>Moj korisnički račun</h1>
+<?php fakturivaPortalNavigation('dashboard'); ?>
 <p>Prijavljeni ste kao <strong><?=h((string)$account['username'])?></strong>.
 Na ovoj domeni možete upravljati svojom web prijavom i dozvolom za
 Android sinkronizaciju. Poslovni podaci ostaju odvojeni po korisničkim računima.</p>
