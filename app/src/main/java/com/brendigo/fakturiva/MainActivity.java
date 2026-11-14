@@ -1619,7 +1619,7 @@ public final class MainActivity extends Activity {
         // Align the greeting and KPI hero with the measured 1179x2556 owner reference.
         // The original 393dp home reference positions the greeting closer
         // to the masthead than the former 41/25dp gaps.
-        place(body,bar);gap(body,dark?36:24);
+        place(body,bar);gap(body,dark?32:24);
 
         if(RecoveryVault.hasWorkingDraft(this)){
             LinearLayout resume=card();
@@ -1647,13 +1647,13 @@ public final class MainActivity extends Activity {
         String profileName=LocalAccounts.activeName();
         String initial=(profileName==null || profileName.isEmpty())?"B":
             profileName.substring(0,1).toUpperCase(Locale.forLanguageTag("hr-HR"));
-        TextView avatar=label(initial,23,BLUE,true);
+        TextView avatar=label(initial,23,dark?0xffB7C9FA:BLUE,true);
         avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(dark?0xff273962:0xffe6e9ff,16));
         avatar.setContentDescription("Profil tvrtke");
         avatar.setOnClickListener(v->company());
         LinearLayout.LayoutParams avatarLp=lp(48,48);
         avatarLp.leftMargin=dp(10);welcome.addView(avatar,avatarLp);
-        place(body,welcome);gap(body,dark?2:8);
+        place(body,welcome);gap(body,dark?4:8);
 
         LinearLayout hero=vertical();pad(hero,19,dark?13:15);
         // The reference uses the same blue/violet hero in light and dark
@@ -1694,9 +1694,9 @@ public final class MainActivity extends Activity {
         // A 48dp-tall arrow pushed the quick-action cards and recent
         // documents below their original y positions. Keep a broad 48dp
         // horizontal target, but a compact 36dp visual row instead.
-        gap(body,1);
+        gap(body,dark?3:1);
         LinearLayout quickHeader=horizontal();
-        quickHeader.addView(label("Brze radnje",18,ink(),true),
+        quickHeader.addView(label("Brze radnje",dark?16:18,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
         TextView moreActions=label("›",24,BLUE,true);
         moreActions.setGravity(Gravity.CENTER);
@@ -1720,7 +1720,7 @@ public final class MainActivity extends Activity {
         gap(body,dark?14:19);
         LinearLayout recentHeading=horizontal();
         recentHeading.setGravity(Gravity.CENTER_VERTICAL);
-        recentHeading.addView(label("Nedavni dokumenti",18,ink(),true),
+        recentHeading.addView(label("Nedavni dokumenti",dark?16:18,ink(),true),
             new LinearLayout.LayoutParams(0,-2,1));
         TextView all=label("Prikaži sve  ›",11,BLUE,true);
         all.setContentDescription("Otvori sve račune");
