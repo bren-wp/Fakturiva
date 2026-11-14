@@ -91,6 +91,24 @@ def scan_static(root: Path = ROOT) -> dict:
                     "line": lineno, "method": name
                 })
 
+    # PHP global-function reachability is only a conservative text heuristic.
+    # Dynamic callbacks and cross-file entrypoints require manual verification.
+    php_files = {path: code for path, code in texts.items()
+                 if path.suffix == ".php" and path.relative_to(root).parts[0] == "web"}
+    all_php = "\n".join(php_files.values())
+    possible_dead_php = []
+    for path, code in php_files.items():
+        for match in re.finditer(r"(?m)^\\s*function\\s+([A-Za-z_]\\w*)\\s*\\(", code):
+            name = match.group(1)
+            calls = len(re.findall(r"\\b" + re.escape(name) + r"\\s*\\(", all_php))
+            refs = all_php.count("'" + name + "'") + all_php.count('"' + name + '"')
+            if calls == 1 and refs == 0:
+                possible_dead_php.append({
+                    "file": path.relative_to(root).as_posix(),
+                    "line": code.count("\n", 0, match.start()) + 1,
+                    "function": name
+                })
+
     # Scan the full tree for runtime records (including .json excluded from
     # source scans). This is a filesystem inventory, not just a PHP scan.
     secret_files = []
@@ -98,7 +116,7 @@ def scan_static(root: Path = ROOT) -> dict:
         if not path.is_file() or any(part in EXCLUDE_DIRS for part in path.relative_to(root).parts):
             continue
         relative = path.relative_to(root).as_posix()
-        if re.match(r"web/storage/(?:secret\.php|data/(?:accounts|index|limits)/.*\.json)$",
+        if re.match(r"web/storage/(?:secret\.php|data/(?:accounts|index|limits)/.*\.json|data/sessions/sess_.*)$",
                     relative):
             secret_files.append(relative)
     large_modules = sorted((
@@ -110,6 +128,7 @@ def scan_static(root: Path = ROOT) -> dict:
     return {
         "scanned_files": len(paths), "by_extension": dict(sorted(counts.items())),
         "critical_findings": critical, "possible_dead_private_methods": possible_dead,
+        "possible_dead_php_functions": possible_dead_php,
         "runtime_secret_files": secret_files,
         "large_source_modules_for_refactoring": large_modules,
         "limits": "Static heuristics only; runtime, server configuration, third-party "
