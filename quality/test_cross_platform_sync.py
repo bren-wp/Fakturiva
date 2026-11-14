@@ -44,6 +44,17 @@ class CrossPlatformSyncChecks(unittest.TestCase):
         self.assertIn('Izvezi lokalnu kopiju',MAIN)
         self.assertIn('Razriješi sukob sa serverom',MAIN)
 
+    def test_racing_server_409_latches_android_conflict_without_overwrite(self):
+        self.assertIn("static final class RevisionConflictException",NETWORK)
+        self.assertIn("if(status==409)",NETWORK)
+        self.assertIn("throw new RevisionConflictException(",NETWORK)
+        self.assertIn("catch(SelfHostedSyncClient.RevisionConflictException e)",MIRROR)
+        self.assertIn('putBoolean("conflict",true)',MIRROR)
+        self.assertIn("if(savedRevision!=serverRevision)",MIRROR)
+        self.assertIn("return; // fail closed: NEVER auto-clobber",MIRROR)
+        self.assertIn("resolveConflictUsingServer(",MIRROR)
+        self.assertIn('!marker.equals(p.getString("pending_change",""))',MIRROR)
+
     def test_revision_probe_only_transfers_backup_when_newer(self):
         self.assertIn('"action","status"',NETWORK)
         self.assertIn("Hosting: Unknown action",NETWORK)
