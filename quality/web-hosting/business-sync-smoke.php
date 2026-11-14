@@ -68,6 +68,14 @@ try{
         FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
     checkSync($fromWeb===$root,'Android-style payload failed PHP decrypt');
 
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,1,'profile',[
+            'name'=>'Neispravan izdavatelj','oib'=>'12345678901',
+            'address'=>'Rijeka','city'=>'Rijeka','postal_code'=>'51000',
+            'email'=>'test@example.invalid','phone'=>'']),422,
+        'Croatian invalid OIB accepted');
+    checkSync(FakturivaSelfHost\backupStatus($api['token'])['revision']===1,
+        'Rejected invalid issuer unexpectedly wrote a server revision');
     $updated=FakturivaWebBusiness\publish(
         $web['id'],$web['token'],$pass,1,'profile',[
             'name'=>'Novi izdavatelj','oib'=>'12345678903',
