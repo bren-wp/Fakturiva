@@ -17,7 +17,7 @@ class SettingsReferenceOrderTests(unittest.TestCase):
         settings=JAVA[beginning:end]
         primary=settings.split('LinearLayout options=card();',1)[1].split(
             'LinearLayout advanced=card();',1)[0]
-        rows=re.findall(r'settingRow\\(options,"[^"]+","([^"]+)"',primary)
+        rows=re.findall(r'settingRow\(options,"[^"]+","([^"]+)"',primary)
         self.assertEqual(rows,[
             "Tvrtka i poslovni podaci",
             "Numeracija dokumenata",
