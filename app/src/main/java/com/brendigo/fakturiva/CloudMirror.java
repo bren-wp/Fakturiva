@@ -264,6 +264,12 @@ public final class CloudMirror {
                 if(p.getBoolean("dirty",false))
                     throw new IllegalStateException(
                         "Lokalne promjene nisu prenesene. Prvo provjerite pohranu ili izvezite kopiju.");
+                if(p.getBoolean("conflict",false)||p.getBoolean("paused",false))
+                    throw new IllegalStateException(
+                        "Sinkronizacija je zaustavljena ili u sukobu. Najprije provjerite kopije i revizije.");
+                if(RecoveryVault.hasWorkingDraft(app))
+                    throw new IllegalStateException(
+                        "Otvoreni nacrt nije spremljen. Najprije ga dovršite ili sigurno spremite.");
                 if(p.getInt("revision",-1)<1)
                     throw new SecurityException("Nije potvrđena prethodna server revizija.");
                 final String marker=p.getString("pending_change","");
@@ -309,6 +315,9 @@ public final class CloudMirror {
                     // in the meantime. Upload jobs serialize through WORK.
                     synchronized(STATE_LOCK){
                         if(p.getBoolean("dirty",false) ||
+                           p.getBoolean("conflict",false) ||
+                           p.getBoolean("paused",false) ||
+                           RecoveryVault.hasWorkingDraft(app) ||
                            !marker.equals(p.getString("pending_change","")) ||
                            !id.equals(LocalAccounts.activeId()))
                             throw new IllegalStateException(
