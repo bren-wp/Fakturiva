@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require_once __DIR__.'/lib_business_sync.php';
+require_once __DIR__.'/lib_document_print.php';
 
 $account=requireWeb();
 $error='';$success='';$snapshot=null;$unsavedConflict=null;
@@ -232,11 +233,11 @@ Pri svakoj izmjeni unosi se ponovno.</p>
 <?php documentEditor($clients,[],[[],[]],$revision); ?>
 </section>
 <?php endif;?>
-<section class="panel"><h2>Dokumenti (najnoviji prvi)</h2>
+<section class="panel document-list-panel"><h2>Dokumenti (najnoviji prvi)</h2>
 <?php foreach(array_slice($docs,0,200) as $doc):
 $id=(int)$doc['id'];$status=(string)($doc['status']??'');
 $documentLines=$allLines[$id]??[];?>
-<details class="sync-client">
+<details class="sync-client" data-print-card>
 <summary><?=h((string)($doc['number']??('Nacrt #'.$id)))?>
  · <?=h(($doc['type']??'')==='INVOICE'?'Račun':'Ponuda')?>
  · <?=h($status)?>
@@ -245,6 +246,8 @@ $documentLines=$allLines[$id]??[];?>
     (string)($doc['currency_code']??'EUR'))?></summary>
 <p>Datum: <?=h((string)($doc['issue_date']??''))?>.
 Stavki: <?=count($documentLines)?>.</p>
+<button class="secondary document-print-button" type="button" data-print-document>Ispiši / Spremi u PDF</button>
+<div class="document-print-preview"><?=FakturivaWebBusiness\printDocumentPreview($doc,$documentLines)?></div>
 <?php if($status==='DRAFT'):?>
 <?php if($clients):?>
 <?php documentEditor($clients,$doc,$documentLines,$revision); ?>
