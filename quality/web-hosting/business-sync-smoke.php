@@ -48,7 +48,9 @@ try{
         'catalog'=>[],
         'documents'=>[['id'=>7,'type'=>'INVOICE',
             'number'=>'R-2026-009','client_name'=>'Stari klijent',
-            'issuer_name'=>'Stari izdavatelj','total_cents'=>12500]],
+            'issuer_name'=>'Stari izdavatelj','total_cents'=>12500,
+            'status'=>'ISSUED','issue_date'=>'2026-11-14',
+            'currency_code'=>'EUR','issuer_business_unit'=>'PP2']],
         'lines'=>[],'payments'=>[],'sequences'=>[],'branding_assets'=>[]
     ];
     $backup=FakturivaWebBusiness\sealSnapshot($root,$pass);
@@ -172,6 +174,64 @@ try{
             'tax_rate'=>'25','kind'=>'SERVICE','unit'=>'sat']),422,
         'Fractional-cent price accepted');
 
+    // Web payment entry is the same encrypted revision Android will pull.
+    // No extra web-specific payment store may exist.
+    $partial=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,6,'payment_add',[
+            'document_id'=>7,'amount'=>'50,00','paid_on'=>'2026-11-14',
+            'channel'=>'BANK']);
+    checkSync($partial['revision']===7,'Partial web receipt not versioned');
+    $afterPartial=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync(count($afterPartial['payments'])===1 &&
+        $afterPartial['payments'][0]['id']===1 &&
+        $afterPartial['payments'][0]['document_id']===7 &&
+        $afterPartial['payments'][0]['amount_cents']===5000 &&
+        $afterPartial['payments'][0]['business_unit']==='PP2' &&
+        $afterPartial['documents'][0]['status']==='ISSUED',
+        'Partial payment changed currency, business unit or invoice status');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,7,'payment_add',[
+            'document_id'=>7,'amount'=>'75.01','paid_on'=>'2026-11-14',
+            'channel'=>'BANK']),422,'Overpayment was allowed');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,7,'payment_add',[
+            'document_id'=>7,'amount'=>'1.00','paid_on'=>'2026-02-30',
+            'channel'=>'BANK']),422,'Invalid date was allowed');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,7,'payment_add',[
+            'document_id'=>7,'amount'=>'1.00','paid_on'=>'2026-11-14',
+            'channel'=>'UNKNOWN']),422,'Unverified receipt channel was allowed');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,7,'payment_add',[
+            'document_id'=>999,'amount'=>'1.00','paid_on'=>'2026-11-14',
+            'channel'=>'CASH']),422,'Nonexistent invoice was payable');
+    $complete=FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,7,'payment_add',[
+            'document_id'=>7,'amount'=>'75.00','paid_on'=>'2026-11-14',
+            'channel'=>'CASH']);
+    checkSync($complete['revision']===8,'Full receipt not versioned');
+    $afterComplete=FakturivaWebFinance\openSnapshot(
+        FakturivaSelfHost\webAuthorized($web['id'],$web['token']),$pass);
+    checkSync(count($afterComplete['payments'])===2 &&
+        $afterComplete['payments'][1]['id']===2 &&
+        $afterComplete['payments'][1]['amount_cents']===7500 &&
+        $afterComplete['documents'][0]['status']==='PAID' &&
+        $afterComplete['documents'][0]['total_cents']===12500 &&
+        $afterComplete['documents'][0]['issuer_name']==='Stari izdavatelj' &&
+        $afterComplete['catalog']===$afterProduct['catalog'],
+        'Receipt changed historical invoice amounts, seller or product data');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,8,'payment_add',[
+            'document_id'=>7,'amount'=>'1.00','paid_on'=>'2026-11-14',
+            'channel'=>'BANK']),422,'Fully paid invoice can be paid again');
+    deniedSync(fn()=>FakturivaWebBusiness\publish(
+        $web['id'],$web['token'],$pass,7,'payment_add',[
+            'document_id'=>7,'amount'=>'1.00','paid_on'=>'2026-11-14',
+            'channel'=>'BANK']),409,'Stale payment revision was accepted');
+    checkSync(FakturivaSelfHost\backupStatus($api['token'])['revision']===8,
+        'Android status did not reflect web payment changes');
+
     // Legacy schema 1/2 restores derive historical issuer/client fields.
     // Editing the profile before Android migration would rewrite issued
     // document identities. Fail closed and keep original encrypted bytes.
@@ -197,8 +257,8 @@ try{
             'Rejected legacy web change unexpectedly replaced backup');
     }
     $history=FakturivaSelfHost\loadBackup($api['token'])['history'];
-    checkSync(count($history)>=2 && $history[0]['revision']===6 &&
-        $history[1]['revision']===5,'Encrypted revision history was not preserved');
+    checkSync(count($history)>=2 && $history[0]['revision']===8 &&
+        $history[1]['revision']===7,'Encrypted revision history was not preserved');
     echo "Web and Android FAK1 sync, CAS, history, isolation and immutable invoices: OK\n";
 }finally{
     removeFixture($temporary);
