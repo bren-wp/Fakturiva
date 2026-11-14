@@ -50,7 +50,8 @@ if(($doc['id']??null)!==2||($doc['client_id']??null)!==1||
    ($line['tax_cents']??null)!==6250)
     throw new RuntimeException('Web document is not compatible with Android integer-money schema');
 if($phase==='draft'){
-    if(($doc['status']??'')!=='DRAFT'||($doc['number']??false)!==null)
+    if(($doc['status']??'')!=='DRAFT'||
+       !array_key_exists('number',$doc)||$doc['number']!==null)
         throw new RuntimeException('Draft received a premature document number');
 }else{
     if(($doc['status']??null)!=='ISSUED'||
