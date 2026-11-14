@@ -10,8 +10,8 @@ android {
         applicationId 'com.brendigo.fakturiva'
         minSdk 24
         targetSdk 36
-        versionCode 25
-        versionName '0.18.5-preview.1'
+        versionCode 26
+        versionName '0.18.6-preview.1'
         // Android 16 no longer loads the legacy instrumentation runner.
         // AndroidX test runner is packaged only into the androidTest APK.
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
