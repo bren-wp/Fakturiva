@@ -41,9 +41,20 @@ function canPrintDocument(array $doc,array $lines):bool {
            !is_int($line['net_cents']??null)||
            !is_int($line['tax_cents']??null)||
            !is_int($line['tax_rate']??null)||
-           $line['qty_milli']<=0||$line['unit_cents']<0||
+           $line['qty_milli']<=0||$line['qty_milli']>10000000||
+           $line['unit_cents']<0||$line['unit_cents']>1000000000||
            $line['net_cents']<0||$line['tax_cents']<0)return false;
-        $net+=$line['net_cents'];$tax+=$line['tax_cents'];
+        $rate=$line['tax_rate'];
+        if(!(($rate>=0&&$rate<=100)||($rate>=10001&&$rate<=20000)))
+            return false;
+        // Same positive half-up integer rules as Android Money and
+        // documentLines(): never trust cached snapshot line subtotals.
+        $basisPoints=$rate>=10000?$rate-10000:$rate*100;
+        $lineNet=intdiv($line['qty_milli']*$line['unit_cents']+500,1000);
+        $lineTax=intdiv($lineNet*$basisPoints+5000,10000);
+        if($lineNet!==$line['net_cents']||$lineTax!==$line['tax_cents'])
+            return false;
+        $net+=$lineNet;$tax+=$lineTax;
         if($net>2000000000000||$tax>2000000000000)return false;
     }
     return $net===($doc['net_cents']??null)&&
@@ -92,9 +103,7 @@ function printDocumentPreview(array $doc,array $lines):string {
     }
     $out.='</tbody></table></div>';
     if($count===0)$out.='<p class="error-note">Stavke dokumenta nisu dostupne u preslici.</p>';
-    if($count>0 && ($sumNet!==($doc['net_cents']??null)||
-        $sumTax!==($doc['tax_cents']??null)||
-        $sumNet+$sumTax!==($doc['total_cents']??null)))
+    if(!canPrintDocument($doc,$lines))
         $out.='<p class="error-note">Upozorenje: stavke i spremljeni ukupni iznos nisu usklađeni.</p>';
     $out.='<dl class="document-print-totals"><div><dt>Osnovica</dt><dd>'.
         printField(printCents((int)($doc['net_cents']??0))).'</dd></div>'.
