@@ -5651,19 +5651,18 @@ public final class MainActivity extends Activity {
     }
     private final class RevenueLine extends View{
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
-        // The owner's line reference is an ascending cumulative paid total.
-        // Each point aggregates genuine dated receipts (never billed turnover);
-        // the sparkline can plateau but cannot invent revenue or fall below
-        // an earlier settled cumulative balance.
+        // Match the reference's rising-and-falling interval trend, never a
+        // monotonic cumulative revenue total. Every point still derives
+        // exclusively from persisted, dated SQLite payments in this currency.
         private final long[] receipts;
         RevenueLine(android.content.Context context,Calendar selectedMonth){
             super(context);
             Calendar calendar=(Calendar)selectedMonth.clone();
             String month=new SimpleDateFormat("yyyy-MM",Locale.ROOT).format(calendar.getTime());
-            receipts=ReceiptsChart.cumulative(
+            receipts=ReceiptsChart.intervals(
                 paymentsForCurrency(db.payments(),selectedCurrency()),month,
                 calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
-            setContentDescription("Kumulativni rast evidentiranih uplata tijekom mjeseca");
+            setContentDescription("Trend evidentiranih uplata po razdobljima mjeseca");
             setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         }
         @Override protected void onDraw(android.graphics.Canvas canvas){

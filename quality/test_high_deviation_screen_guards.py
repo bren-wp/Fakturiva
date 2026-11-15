@@ -28,6 +28,13 @@ class HighDeviationScreenGuards(unittest.TestCase):
         self.assertNotIn("money(db.receivedCents(selectedCurrency()))",payments)
         self.assertIn("19",HARNESS)  # 20-screen genuine harness stays present
 
+    def test_reference_home_trend_uses_actual_interval_receipts_not_cumulative(self):
+        source=method(MAIN,"    private final class RevenueLine extends View{","\n}\n")
+        self.assertIn("ReceiptsChart.intervals(",source)
+        self.assertNotIn("ReceiptsChart.cumulative(",source)
+        self.assertIn("paymentsForCurrency(db.payments(),selectedCurrency())",source)
+        self.assertNotIn("BitmapFactory.decode",source)
+
     def test_company_first_card_contains_core_fields_before_country_options(self):
         company=method(MAIN,"    private void company(){","    /** Guidance to create an invoice")
         self.assertIn("int[][] sections={{0,1,3,7,8,19",company)

@@ -51,6 +51,17 @@ if [ "${QA_ALLOW_DATA_RESET:-0}" != "1" ] ||
    [ "$(timeout 8s adb shell getprop ro.kernel.qemu 2>/dev/null | tr -d '\r')" != "1" ]; then
   capture_failure "Screenshot dataset reset requires explicit opt-in on a disposable Android emulator"
 fi
+# Status bars in the owner's 20 fixed-date references show 09:41. Ask
+# SystemUI to render that clock on this disposable emulator only. These
+# are real OS pixels, never a baked-in screenshot or altered app view.
+# Some AOSP images ignore demo commands; QA must still inspect real UI.
+if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
+  timeout 8s adb shell settings put global sysui_demo_allowed 1 >/dev/null 2>&1 || true
+  timeout 8s adb shell am broadcast -a com.android.systemui.demo \
+    -e command enter >/dev/null 2>&1 || true
+  timeout 8s adb shell am broadcast -a com.android.systemui.demo \
+    -e command clock -e hhmm 0941 >/dev/null 2>&1 || true
+fi
 for index in "${!names[@]}"; do
   number=$(printf '%02d' $((index+1)))
   # 08 creates a temporary invoice and 11 a quote for the genuine document
