@@ -17,6 +17,21 @@ try {
         throw new RuntimeException('Encrypted record exposed plaintext');
     if(FakturivaSelfHost\readRecord($path)!==$record)
         throw new RuntimeException('Record did not roundtrip after storage refactor');
+    // A read-only ciphertext stream must never report a successful write.
+    // A prior committed encrypted record remains unchanged after the failure.
+    $readOnly=@fopen($path,'rb');
+    if($readOnly===false)throw new RuntimeException('Cannot open read-only fixture');
+    try {
+        try {
+            FakturivaSelfHost\writeFullyAndSync($readOnly,'should-not-commit');
+            throw new RuntimeException('Read-only write was falsely acknowledged');
+        } catch(RuntimeException $expected) {
+            if($expected->getMessage()==='Read-only write was falsely acknowledged')
+                throw $expected;
+        }
+    } finally { fclose($readOnly); }
+    if(FakturivaSelfHost\readRecord($path)!==$record)
+        throw new RuntimeException('Failed write damaged committed ciphertext');
     $locked=FakturivaSelfHost\transaction(static function()use($path):array{
         return FakturivaSelfHost\readRecord($path);
     });
