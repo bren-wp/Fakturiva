@@ -41,6 +41,13 @@ class ReleaseWorkflowSafetyTest(unittest.TestCase):
         self.assertIn('if: needs.prepare-preview.outputs.should_release == \'true\'', PREVIEW)
         self.assertIn('--target "$RELEASE_TARGET"', PREVIEW)
 
+    def test_release_checks_package_parity_and_preview_metadata(self):
+        self.assertIn("python3 quality/test_version_consistency.py", PREVIEW)
+        self.assertIn("--prerelease", PREVIEW)
+        self.assertIn("--json tagName,isPrerelease,targetCommitish", PREVIEW)
+        self.assertIn(".isPrerelease == true", PREVIEW)
+        self.assertIn(".targetCommitish == $sha", PREVIEW)
+
     def test_release_gates_are_all_required(self):
         for check in REQUIRED_CHECKS:
             with self.subTest(check=check):

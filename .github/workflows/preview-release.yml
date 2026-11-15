@@ -18,6 +18,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Assert Android, Windows and installer version parity
+        run: python3 quality/test_version_consistency.py
       - name: Check version and whether an immutable release already exists
         id: version
         shell: bash
@@ -241,6 +243,12 @@ jobs:
             --title "Fakturiva v${VERSION} — Android, Windows i web pretpregled" \
             --notes-file "docs/V${VERSION%%-preview.*}_RELEASE_NOTES.md" \
             --prerelease; then
+            metadata="$(gh release view "v${VERSION}" --json tagName,isPrerelease,targetCommitish)"
+            if ! jq -e --arg tag "v${VERSION}" --arg sha "$RELEASE_TARGET" \
+              '.tagName == $tag and .isPrerelease == true and .targetCommitish == $sha' <<< "$metadata"; then
+              echo "::error::Published release metadata is not a prerelease at the verified SHA."
+              exit 1
+            fi
             echo "Published verified preview release"
           else
             echo "::error::GitHub Release could not be published. Verified packages remain in workflow artifacts."
