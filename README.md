@@ -9,7 +9,7 @@
 
 Android aplikacija • Web pristup poslovnom pregledu • Windows klijent
 
-[**Preuzmi najnovije izdanje**](https://github.com/bren-wp/Fakturiva/releases/latest) · [**Pogledaj stvarne ekrane**](#stvarni-zasloni-aplikacije) · [**Fakturiva web**](https://fakturiva.eu/)
+[**Preuzmi dostupna izdanja (uključujući preview)**](https://github.com/bren-wp/Fakturiva/releases) · [**Pogledaj stvarne ekrane**](#stvarni-zasloni-aplikacije) · [**Fakturiva web**](https://fakturiva.eu/)
 
 <img src="docs/assets/fakturiva-banner.svg" alt="Fakturiva — računi, ponude i naplata" width="900">
 
@@ -56,7 +56,7 @@ Sigurnost sinkronizacije provjerava se pomoću stvarne Java klase `SecureBackup`
 
 Svih **20 slika su stvarne snimke pokrenute Android aplikacije na QA emulatoru**, nisu dizajnerski mockupovi ni AI generirane ilustracije. GitHub Actions pri izdavanju ponovno pokreće APK i snima svih 20 ekrana u zaseban CI artefakt; **galerija u README-u ne osvježava se automatski ako se novi screenshotovi razlikuju od commita**. Referentne dizajnerske slike koriste se isključivo za usporedbu, nikad kao dokaz implementacije.
 
-**Najnoviji provjereni vizualni audit (14. 11. 2026., `main` `bef1bcc67e`):** svih 20 stvarnih Android snimki uspoređeno je s privatnim izvornim referencama 1179 × 2556. Prosječni **RGB MAE 8,229576/255**, srednji SSIM **0,868588**; **točna 1:1 podudarnost 0/20**. Najveća odstupanja: Tamna tema, Početna, Pregled ponude. [Detaljna matrica svih 20 zaslona i dokaz porijekla](docs/PIXEL_AUDIT_MAIN_BEF1BCC_2026-11-14.md). [Stariji audit v0.18.6](docs/V0.18.6_20_SCREEN_PIXEL_AUDIT_2026-11-14.md) ostaje dostupan za povijesnu usporedbu.
+**Najnovija potvrđena vizualna usporedba (15. 11. 2026., PR #42, CI `43658415687`, spojen na `main` `9b0d9151b493`):** 20 stvarnih Android snimki uspoređeno je s privatnim PNG referencama 1179 × 2556. Prosječni **RGB MAE 8,003540/255**; **0/20 zaslona** ima potpunu 1:1 podudarnost. Najveća odstupanja: Tamna tema 14,9120; Početna 10,6480; Pregled ponude 9,7432. [Aktualni otvoreni QA popis i podaci svih 20 zaslona](https://github.com/bren-wp/Fakturiva/issues/43). Nova verzija mora ponovno izmjeriti MAE, SSIM i različite piksele prije proglašenja poboljšanja; raniji audit ostaje povijesni [referentni zapis](docs/PIXEL_AUDIT_MAIN_BEF1BCC_2026-11-14.md).
 
 <div align="center">
 <table>
