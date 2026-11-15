@@ -55,10 +55,7 @@ function secret(): string {
             try {
                 chmod($filename,0600);
                 $php="<?php\nreturn '".bin2hex(random_bytes(32))."';\n";
-                if (fwrite($fp,$php)!==strlen($php))
-                    throw new \RuntimeException('Cannot store encryption key');
-                fflush($fp);
-                if(function_exists('fsync'))fsync($fp);
+                writeFullyAndSync($fp,$php);
             } finally { fclose($fp); }
         }
     }
@@ -76,6 +73,25 @@ function transaction(callable $callback): mixed {
         throw new \RuntimeException('Storage lock unavailable');
     try { return $callback(); }
     finally { flock($fd,LOCK_UN); fclose($fd); }
+}
+
+/**
+ * Persist every byte and fail closed on partial writes or a failed flush/sync.
+ * The caller closes the stream and commits the atomic rename only on success.
+ */
+function writeFullyAndSync($stream, string $data): void {
+    $size=strlen($data);
+    $offset=0;
+    while ($offset<$size) {
+        $written=@fwrite($stream,substr($data,$offset));
+        if ($written===false || $written===0)
+            throw new \RuntimeException('Incomplete storage write');
+        $offset+=$written;
+    }
+    if (!@fflush($stream))
+        throw new \RuntimeException('Cannot flush encrypted storage');
+    if (function_exists('fsync') && !@fsync($stream))
+        throw new \RuntimeException('Cannot sync encrypted storage');
 }
 
 function encryptRecord(array $record): string {
@@ -123,10 +139,7 @@ function writeRecord(string $path,array $record): void {
     if($fp===false)throw new \RuntimeException('Temporary storage unavailable');
     try {
         chmod($temporary,0600);
-        if (fwrite($fp,$data)!==strlen($data))
-            throw new \RuntimeException('Incomplete storage write');
-        fflush($fp);
-        if(function_exists('fsync'))fsync($fp);
+        writeFullyAndSync($fp,$data);
     } catch (\Throwable $error) {
         fclose($fp);@unlink($temporary);throw $error;
     }
