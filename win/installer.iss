@@ -1,9 +1,10 @@
 #define MyAppName "Fakturiva"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "0.18.8-preview.1"
 [Setup]
 AppId={{319A1CA7-725D-4AD2-8B22-E6BE95205499}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoVersion=0.18.8.0
 AppPublisher=BRENDIGO
 AppPublisherURL=https://brendigo.com
 AppSupportURL=https://fakturiva.eu
