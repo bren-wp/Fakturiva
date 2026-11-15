@@ -61,6 +61,17 @@ if [ "${QA_CAPTURE_ACCESSIBILITY:-0}" = "1" ]; then
     -e command enter >/dev/null 2>&1 || true
   timeout 8s adb shell am broadcast -a com.android.systemui.demo \
     -e command clock -e hhmm 0941 >/dev/null 2>&1 || true
+  # AOSP SystemUI demo protocol: match the owner's clean signal/Wi-Fi/
+  # battery icons and suppress emulator notifications, never app content.
+  # https://android.googlesource.com/platform/frameworks/base/+/android16-qpr2-release/packages/SystemUI/docs/demo_mode.md
+  timeout 8s adb shell am broadcast -a com.android.systemui.demo \
+    -e command battery -e level 100 -e plugged false >/dev/null 2>&1 || true
+  timeout 8s adb shell am broadcast -a com.android.systemui.demo \
+    -e command network -e wifi show -e level 4 >/dev/null 2>&1 || true
+  timeout 8s adb shell am broadcast -a com.android.systemui.demo \
+    -e command network -e mobile show -e datatype none -e level 4 >/dev/null 2>&1 || true
+  timeout 8s adb shell am broadcast -a com.android.systemui.demo \
+    -e command notifications -e visible false >/dev/null 2>&1 || true
 fi
 for index in "${!names[@]}"; do
   number=$(printf '%02d' $((index+1)))
