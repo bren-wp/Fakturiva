@@ -2727,7 +2727,7 @@ public final class MainActivity extends Activity {
 
         if(draft){
             place(body,action(invoice?"Izdaj račun":"Potvrdi ponudu",
-                0xff17b99a,true,()->confirmWarning(()->{
+                0xff17b68b,true,()->confirmWarning(()->{
                     try{db.confirm(id);showDocument(id);}
                     catch(Exception e){error(e);}
                 })));
@@ -2735,13 +2735,13 @@ public final class MainActivity extends Activity {
             secondary(body,"Uredi nacrt",()->resumeSavedDraft(id));
         }else if(invoice && !Store.DRAFT.equals(d.status) &&
                 !Store.VOID.equals(d.status) && d.outstanding()>0){
-            place(body,action("Evidentiraj uplatu",0xff17b99a,true,
+            place(body,action("Evidentiraj uplatu",0xff17b68b,true,
                 ()->payDialog(id)));
         }else if(!invoice && (Store.SENT.equals(d.status)||
                              Store.ACCEPTED.equals(d.status))){
             // Keep the primary conversion control visible above the fold, as
             // in reference #11. Client acceptance is separate and optional.
-            place(body,action("⇄  Pretvori u račun",0xff17b99a,true,()->{
+            place(body,action("⇄  Pretvori u račun",0xff17b68b,true,()->{
                 try{
                     long invoiceId=db.quoteToInvoice(id);
                     showDocument(invoiceId);

@@ -64,6 +64,10 @@ class HighDeviationScreenGuards(unittest.TestCase):
         self.assertIn("db.confirm(id)",preview)
         self.assertIn("d.number==null",preview)
         self.assertIn('invoice?"Izdaj račun":"Potvrdi ponudu"',preview)
+        # The owner's real preview references have a solid #17B68B green
+        # CTA; keep native controls, no static image substitution.
+        self.assertIn("0xff17b68b",preview)
+        self.assertNotIn("0xff17b99a",preview)
         self.assertIn("d.items",paper)
         self.assertIn('"Dokument za pregled · Nije fiskaliziran."',paper)
         self.assertIn('if(Store.INVOICE.equals(d.type))',paper)
