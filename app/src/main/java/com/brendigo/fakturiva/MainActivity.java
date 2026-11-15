@@ -233,11 +233,12 @@ public final class MainActivity extends Activity {
     }
     private TextView label(String s,int size,int color,boolean strong){TextView t=new TextView(this);t.setText(ui(s));
         t.setTextColor(color);t.setTextSize(size);t.setFontFeatureSettings("kern");
-        // The owner-provided visual identity specifies Inter on ALL twenty
-        // screens, not only Dashboard, Reports and Document preview. Keep the
-        // same font metrics throughout onboarding, forms, settings and dark UI.
-        // Fallback remains a native system font if this asset cannot load.
-        t.setTypeface(referenceTypeface(strong));
+        // Inter belongs to the original design on the highest-deviation
+        // dashboard, reports and document-preview screens.
+        t.setTypeface(("home".equals(screen)||"detail".equals(screen)||
+            "reports".equals(screen))
+            ?referenceTypeface(strong)
+            :Typeface.create("sans-serif",strong?Typeface.BOLD:Typeface.NORMAL));
         t.setGravity(Gravity.CENTER_VERTICAL);return t;}
     private LinearLayout vertical(){LinearLayout v=new LinearLayout(this);v.setOrientation(LinearLayout.VERTICAL);return v;}
     private LinearLayout horizontal(){LinearLayout v=new LinearLayout(this);v.setGravity(Gravity.CENTER_VERTICAL);return v;}
